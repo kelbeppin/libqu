@@ -1,0 +1,32 @@
+
+@PACKAGE_INIT@
+
+if(@QU_STATIC@)
+    if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+        set(LIBQU_OS_WINDOWS 1)
+    elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+        set(LIBQU_OS_LINUX 1)
+    elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
+        set(LIBQU_OS_EMSCRIPTEN 1)
+    endif()
+
+    include(CMakeFindDependencyMacro)
+
+    if(LIBQU_OS_LINUX)
+        find_dependency(X11)
+    endif()
+
+    if(@QU_USE_OPENGL@)
+        find_dependency(OpenGL)
+    endif()
+
+    if(@QU_USE_OPENAL@)
+        find_dependency(OpenAL)
+    endif()
+
+    find_dependency(Freetype)
+    find_dependency(harfbuzz)
+    find_dependency(Vorbis)
+endif()
+
+include(${CMAKE_CURRENT_LIST_DIR}/libqu-targets.cmake)
