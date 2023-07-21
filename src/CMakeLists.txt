@@ -36,10 +36,10 @@ add_library(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include/${PROJECT_NAME}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}>
     PRIVATE
-        "${CMAKE_SOURCE_DIR}/third-party")
+        "${PROJECT_SOURCE_DIR}/third-party")
 
 target_compile_definitions(${PROJECT_NAME}
     PRIVATE
