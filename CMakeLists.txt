@@ -85,7 +85,9 @@ endif()
 set(QU_USE_OPENAL 1)
 
 #-------------------------------------------------------------------------------
-# Emscripten-specific things
+# Global compile options, flags, etc.
+
+set(CMAKE_POSITION_INDEPENDENT_CODE 1)
 
 if(QU_OS_EMSCRIPTEN)
     add_compile_options(-pthread -Wno-cast-function-type-strict)

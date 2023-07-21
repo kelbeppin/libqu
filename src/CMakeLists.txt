@@ -81,7 +81,9 @@ set_target_properties(${PROJECT_NAME}
         C_STANDARD 99
         C_STANDARD_REQUIRED ON
         C_EXTENSIONS ON
-        C_VISIBILITY_PRESET hidden)
+        C_VISIBILITY_PRESET hidden
+        VERSION ${PROJECT_VERSION}
+        SOVERSION ${PROJECT_VERSION_MAJOR})
 
 #-------------------------------------------------------------------------------
 
