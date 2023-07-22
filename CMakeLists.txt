@@ -278,3 +278,15 @@ if(TARGET OpenAL)
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
     endif()
 endif()
+
+# Install static dependencies.
+if(QU_STATIC)
+    install(
+        TARGETS
+            freetype
+            harfbuzz
+            ogg
+            vorbis
+            vorbisfile
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
