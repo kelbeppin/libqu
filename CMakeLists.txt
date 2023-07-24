@@ -283,6 +283,7 @@ endif()
 if(QU_STATIC)
     install(
         TARGETS
+            OpenAL
             freetype
             harfbuzz
             ogg
