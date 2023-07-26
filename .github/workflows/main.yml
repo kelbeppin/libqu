@@ -12,7 +12,7 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.os.name }}-${{ matrix.type.name }}-${{ matrix.config.name }}-${{ matrix.compiler.name }}-${{ matrix.arch.name }}
+    name: ${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-${{ matrix.type.name }}
     runs-on: ${{ matrix.os.runner }}
 
     strategy:
@@ -61,6 +61,10 @@ jobs:
       with:
         arch: ${{ matrix.arch }}
 
+    - name: Install dependencies
+      if: matrix.os.name == 'linux'
+      run: sudo apt-get -y install ninja-build libgl1-mesa-dev libgles2-mesa-dev xorg-dev
+
     - name: Configure
       run: cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=install ${{ matrix.type.flags }} ${{ matrix.config.flags }} ${{ matrix.compiler.flags }}
 
@@ -79,6 +83,6 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: ${{ matrix.os.name }}-${{ matrix.type.name }}-${{ matrix.config.name }}-${{ matrix.compiler.name }}-${{ matrix.arch.name }}
+        name: ${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-${{ matrix.type.name }}
         path: build/libqu-*.[zip,tgz]
 
