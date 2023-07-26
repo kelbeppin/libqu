@@ -81,5 +81,5 @@ jobs:
     - uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-${{ matrix.type.name }}
-        path: build/libqu-*.[zip,tgz]
+        path: build/libqu-*.{zip,tar.gz}
 
