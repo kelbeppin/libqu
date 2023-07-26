@@ -69,12 +69,12 @@ jobs:
       shell: bash
       run: |
         cmake --install build --config Debug --prefix install-debug
-        cmake --install build --config Release --prefix install-release
         7z a libqu-${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-debug.zip install-debug/*
+        cmake --install build --config Release --prefix install-release
         7z a libqu-${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-release.zip install-release/*
 
     - uses: actions/upload-artifact@v3
       with:
-        name: libqu-binary-artifacts
+        name: libqu-${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}
         path: libqu-*.zip
 
