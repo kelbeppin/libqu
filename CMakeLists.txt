@@ -291,3 +291,11 @@ if(QU_STATIC)
             vorbisfile
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
+
+#-------------------------------------------------------------------------------
+
+set(CPACK_PROJECT_NAME ${PROJECT_NAME})
+set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
+
+include(CPack)
+

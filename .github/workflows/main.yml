@@ -1,0 +1,84 @@
+
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
+  CPM_USE_NAMED_CACHE_DIRECTORIES: TRUE
+
+jobs:
+  build:
+    name: ${{ matrix.os.name }}-${{ matrix.type.name }}-${{ matrix.config.name }}-${{ matrix.compiler.name }}-${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runner }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os:
+        - { name: windows, runner: windows-latest }
+        - { name: linux, runner: ubuntu-latest }
+        config:
+        - { name: static, flags: -DBUILD_SHARED_LIBS=0 }
+        - { name: shared, flags: -DBUILD_SHARED_LIBS=1 }
+        type:
+        - { name: dbg, flags: -DCMAKE_BUILD_TYPE=Debug }
+        - { name: rel, flags: -DCMAKE_BUILD_TYPE=Release }
+        compiler:
+        - { name: msvc, flags: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ }
+        - { name: gnu, flags: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ }
+        - { name: clang, flags: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ }
+        arch:
+        - x64
+
+        include:
+        - os: { name: windows } 
+          arch: x86
+
+        exclude:
+        - os: { name: windows }
+          compiler: { name: gnu }
+        - os: { name: windows }
+          compiler: { name: clang }
+        - os: { name: linux }
+          compiler: { name: msvc }
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/cache@v2
+      id: cache-cpm
+      with:
+        path: '**/cpm_modules'
+        key: ${{ matrix.os.name }}-cpm-modules-${{ hashFiles('**/CMakeLists.txt') }}
+
+    - uses: egor-tensin/vs-shell@v2
+      if: matrix.os.name == 'windows'
+      with:
+        arch: ${{ matrix.arch }}
+
+    - name: Configure
+      run: cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=install ${{ matrix.type.flags }} ${{ matrix.config.flags }} ${{ matrix.compiler.flags }}
+
+    - name: Build
+      run: cmake --build build --parallel 4
+
+    - name: Run CPack (ZIP)
+      if: matrix.os.name == 'windows'
+      run: cpack -G ZIP
+      working-directory: build
+
+    - name: Run CPack (TGZ)
+      if: matrix.os.name == 'linux'
+      run: cpack -G TGZ
+      working-directory: build
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.os.name }}-${{ matrix.type.name }}-${{ matrix.config.name }}-${{ matrix.compiler.name }}-${{ matrix.arch.name }}
+        path: build/libqu-*.[zip,tgz]
+
