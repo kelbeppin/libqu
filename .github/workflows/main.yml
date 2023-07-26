@@ -36,7 +36,7 @@ jobs:
         - x64
 
         include:
-        - os: { name: windows } 
+        - os: { name: windows, runner: windows-latest } 
           arch: x86
 
         exclude:
