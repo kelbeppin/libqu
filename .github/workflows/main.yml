@@ -29,15 +29,10 @@ jobs:
         - { name: dbg, flags: -DCMAKE_BUILD_TYPE=Debug }
         - { name: rel, flags: -DCMAKE_BUILD_TYPE=Release }
         compiler:
-        - { name: msvc, flags: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ }
+        - { name: msvc, flags: -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe }
         - { name: gnu, flags: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ }
         - { name: clang, flags: -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ }
-        arch:
-        - x64
-
-        include:
-        - os: { name: windows, runner: windows-latest } 
-          arch: x86
+        arch: [ x64, x86 ]
 
         exclude:
         - os: { name: windows }
@@ -46,6 +41,8 @@ jobs:
           compiler: { name: clang }
         - os: { name: linux }
           compiler: { name: msvc }
+        - os: { name: linux }
+          arch: x86
 
     steps:
     - uses: actions/checkout@v3
