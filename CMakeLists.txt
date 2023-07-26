@@ -174,7 +174,8 @@ CPMAddPackage(NAME Freetype
     EXCLUDE_FROM_ALL ON)
 
 # No alias
-if(Freetype_ADDED)
+# FindX11 can attempt to find Freetype
+if(Freetype_ADDED AND NOT TARGET Freetype::Freetype)
     add_library(Freetype::Freetype ALIAS freetype)
 endif()
 
