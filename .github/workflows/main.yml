@@ -12,7 +12,7 @@ env:
 
 jobs:
   build:
-    name: ${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-${{ matrix.type.name }}
+    name: ${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os.runner }}
 
     strategy:
@@ -25,9 +25,6 @@ jobs:
         config:
         - { name: static, flags: -DBUILD_SHARED_LIBS=0 }
         - { name: shared, flags: -DBUILD_SHARED_LIBS=1 }
-        type:
-        - { name: dbg, flags: -DCMAKE_BUILD_TYPE=Debug }
-        - { name: rel, flags: -DCMAKE_BUILD_TYPE=Release }
         compiler:
         - { name: msvc, flags: -DCMAKE_C_COMPILER=cl.exe -DCMAKE_CXX_COMPILER=cl.exe }
         - { name: gnu, flags: -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ }
@@ -47,7 +44,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3
       id: cache-cpm
       with:
         path: '**/cpm_modules'
@@ -62,24 +59,22 @@ jobs:
       if: matrix.os.name == 'linux'
       run: sudo apt-get -y install ninja-build libgl1-mesa-dev libgles2-mesa-dev xorg-dev
 
-    - name: Configure
-      run: cmake -B build -G Ninja -DCMAKE_INSTALL_PREFIX=install ${{ matrix.type.flags }} ${{ matrix.config.flags }} ${{ matrix.compiler.flags }}
-
     - name: Build
-      run: cmake --build build --parallel 4
+      run: |
+        cmake -B build -G "Ninja Multi-Config" ${{ matrix.config.flags }} ${{ matrix.compiler.flags }}
+        cmake --build build --parallel 4 --config Debug
+        cmake --build build --parallel 4 --config Release
 
-    - name: Run CPack (ZIP)
-      if: matrix.os.name == 'windows'
-      run: cpack -G ZIP
-      working-directory: build
-
-    - name: Run CPack (TGZ)
-      if: matrix.os.name == 'linux'
-      run: cpack -G TGZ
-      working-directory: build
+    - name: Pack
+      shell: bash
+      run: |
+        cmake --install build --config Debug --prefix install-debug
+        cmake --install build --config Release --prefix install-release
+        7z a libqu-${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-debug.zip install-debug/*
+        7z a libqu-${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-release.zip install-release/*
 
     - uses: actions/upload-artifact@v3
       with:
-        name: ${{ matrix.os.name }}-${{ matrix.compiler.name }}-${{ matrix.config.name }}-${{ matrix.arch }}-${{ matrix.type.name }}
-        path: build/libqu-*.{zip,tar.gz}
+        name: libqu-binary-artifacts
+        path: libqu-*.zip
 
