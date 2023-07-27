@@ -27,18 +27,50 @@
 // qu_audio_xaudio2.c: XAudio2-based audio module
 //------------------------------------------------------------------------------
 
+static IXAudio2 *g_pXAudio2;
+static IXAudio2MasteringVoice *g_pMasteringVoice;
+
+//------------------------------------------------------------------------------
+
 static bool query(qu_params const *params)
 {
-    return false;
+    return true;
 }
 
 static void initialize(qu_params const *params)
 {
+    HRESULT hResult;
+
+    hResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+    if (FAILED(hResult)) {
+        QU_HALT("Failed to initialize COM.");
+    }
+
+    hResult = XAudio2Create(&g_pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
+
+    if (FAILED(hResult)) {
+        QU_HALT("Failed to create XAudio2 engine instance.");
+    }
+
+    hResult = IXAudio2_CreateMasteringVoice(g_pXAudio2, &g_pMasteringVoice,
+                                            XAUDIO2_DEFAULT_CHANNELS,
+                                            XAUDIO2_DEFAULT_SAMPLERATE,
+                                            0, NULL, NULL, 0);
+
+    if (FAILED(hResult)) {
+        QU_HALT("Failed to create XAudio2 mastering voice.");
+    }
+
     QU_INFO("XAudio2 audio module initialized.\n");
 }
 
 static void terminate(void)
 {
+    IXAudio2MasteringVoice_DestroyVoice(g_pMasteringVoice);
+    IXAudio2_Release(g_pXAudio2);
+    CoUninitialize();
+
     QU_INFO("XAudio2 audio module terminated.\n");
 }
 
