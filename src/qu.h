@@ -209,6 +209,7 @@ enum qu_audio
 {
     QU_AUDIO_NULL,
     QU_AUDIO_OPENAL,
+    QU_AUDIO_XAUDIO2,
 };
 
 typedef struct
@@ -350,6 +351,7 @@ typedef struct
 
 void qu_construct_null_audio(qu_audio_module *audio);
 void qu_construct_openal_audio(qu_audio_module *audio);
+void qu_construct_xaudio2(qu_audio_module *audio);
 
 //------------------------------------------------------------------------------
 // Gateway

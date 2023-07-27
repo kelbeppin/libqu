@@ -799,7 +799,13 @@ static enum qu_graphics get_graphics_type(void)
 
 static enum qu_audio get_audio_type(void)
 {
+    // TODO: sumanue qaidaq ere talueaqtaaqtar. arai env var'uenan?
+
+#ifdef QU_USE_OPENAL
     return QU_AUDIO_OPENAL;
+#else
+    return QU_AUDIO_XAUDIO2;
+#endif
 }
 
 static bool gl_check_extension(char const *name)

@@ -83,7 +83,9 @@ else()
     set(QU_USE_OPENGL_ES2 0)
 endif()
 
-set(QU_USE_OPENAL 1)
+if(QU_OS_LINUX OR QU_OS_EMSCRIPTEN)
+    set(QU_USE_OPENAL 1)
+endif()
 
 #-------------------------------------------------------------------------------
 # Global compile options, flags, etc.

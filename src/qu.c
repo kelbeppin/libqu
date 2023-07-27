@@ -129,6 +129,12 @@ void qu_initialize(qu_params const *user_params)
         qu_construct_openal_audio(&qu.audio);
         break;
 #endif
+
+#ifdef _WIN32
+    case QU_AUDIO_XAUDIO2:
+        qu_construct_xaudio2(&qu.audio);
+        break;
+#endif
     }
 
     if (!qu.graphics.query(&qu.params)) {
