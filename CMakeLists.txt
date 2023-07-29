@@ -273,7 +273,7 @@ install(FILES
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
 # Install OpenAL shared library alongside libqu if it was built here.
-if(TARGET OpenAL)
+if(QU_USE_OPENAL AND TARGET OpenAL)
     get_target_property(OPENAL_TYPE OpenAL TYPE)
 
     if(${OPENAL_TYPE} STREQUAL "SHARED_LIBRARY")
@@ -285,9 +285,13 @@ endif()
 
 # Install static dependencies.
 if(QU_STATIC)
+    if(QU_USE_OPENAL AND TARGET OpenAL)
+        install(TARGETS OpenAL
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
+
     install(
         TARGETS
-            OpenAL
             freetype
             harfbuzz
             ogg
