@@ -44,9 +44,8 @@
 struct Sound
 {
     void *pData;
+    size_t Size;
     WAVEFORMATEX Format;
-    XAUDIO2_BUFFER Buffer;
-    XAUDIO2_BUFFER LoopBuffer;
 };
 
 struct BGM
@@ -187,20 +186,24 @@ static int32_t StartStaticStream(int32_t soundId, bool fLoop)
         return 0;
     }
 
-    // Queue buffer into voice.
+    // Set up XAudio2 buffer and queue it into voice.
     // Sounds in libquack contain a single buffer.
-    // As looping information is contained in XAUDIO2_BUFFER,
-    // we have to maintain two buffer objects.
+
+    XAUDIO2_BUFFER Buffer = { 0 };
+
+    Buffer.pAudioData = pSound->pData;
+    Buffer.AudioBytes = pSound->Size;
+    Buffer.Flags = XAUDIO2_END_OF_STREAM;
 
     if (fLoop) {
-        hResult = IXAudio2SourceVoice_SubmitSourceBuffer(pStream->pSourceVoice,
-                                                         &pSound->LoopBuffer,
-                                                         NULL);
-    } else {
-        hResult = IXAudio2SourceVoice_SubmitSourceBuffer(pStream->pSourceVoice,
-                                                         &pSound->Buffer,
-                                                         NULL);
+        Buffer.LoopBegin = 0;
+        Buffer.LoopLength = 0;
+        Buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
     }
+
+    hResult = IXAudio2SourceVoice_SubmitSourceBuffer(pStream->pSourceVoice,
+                                                     &Buffer,
+                                                     NULL);
 
     if (FAILED(hResult)) {
         QU_ERROR("IXAudio2SourceVoice::SubmitSourceBuffer() failed [0x%04x].\n", hResult);
@@ -349,6 +352,7 @@ static int32_t load_sound(qu_file *pFile)
     struct Sound sound = { 0 };
 
     sound.pData = data;
+    sound.Size = length;
 
     sound.Format.wFormatTag = WAVE_FORMAT_PCM;
     sound.Format.nChannels = pSndReader->num_channels;
@@ -356,17 +360,6 @@ static int32_t load_sound(qu_file *pFile)
     sound.Format.nAvgBytesPerSec = pSndReader->num_channels * pSndReader->sample_rate * 2;
     sound.Format.nBlockAlign = (pSndReader->num_channels * 16) / 8;
     sound.Format.wBitsPerSample = 16;
-
-    sound.Buffer.AudioBytes = length;
-    sound.Buffer.pAudioData = data;
-    sound.Buffer.Flags = XAUDIO2_END_OF_STREAM;
-
-    sound.LoopBuffer.AudioBytes = sound.Buffer.AudioBytes;
-    sound.LoopBuffer.pAudioData = sound.Buffer.pAudioData;
-    sound.LoopBuffer.Flags = sound.Buffer.Flags;
-    sound.LoopBuffer.LoopBegin = 0;
-    sound.LoopBuffer.LoopLength = 0;
-    sound.LoopBuffer.LoopCount = XAUDIO2_LOOP_INFINITE;
 
     qu_close_sound_reader(pSndReader);
 
