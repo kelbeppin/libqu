@@ -32,6 +32,11 @@ static void on_key_pressed(qu_key key)
     default:
         break;
     }
+
+    if (key >= QU_KEY_0 && key <= QU_KEY_9) {
+        float volume = (float) (key - QU_KEY_0) / 9.f;
+        qu_set_master_volume(volume);
+    }
 }
 
 int main(int argc, char *argv[])

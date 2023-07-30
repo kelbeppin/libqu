@@ -309,6 +309,7 @@ static void terminate(void)
 
 static void set_master_volume(float volume)
 {
+    IXAudio2MasteringVoice_SetVolume(g_pMasteringVoice, volume, XAUDIO2_COMMIT_NOW);
 }
 
 //------------------------------------------------------------------------------
