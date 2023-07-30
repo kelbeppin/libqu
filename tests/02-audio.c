@@ -27,6 +27,7 @@ static void on_key_pressed(qu_key key)
         break;
     case QU_KEY_Z:
         qu_stop_stream(stream);
+        stream.id = 0;
         break;
     default:
         break;
