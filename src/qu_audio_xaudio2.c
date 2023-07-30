@@ -63,6 +63,8 @@ struct Stream
     int VoiceState;
 };
 
+static CRITICAL_SECTION g_CriticalSection;
+
 static IXAudio2 *g_pXAudio2;
 static IXAudio2MasteringVoice *g_pMasteringVoice;
 
@@ -236,6 +238,10 @@ static void initialize(qu_params const *params)
         QU_HALT("Failed to initialize COM [0x%08x].", hResult);
     }
 
+    // Initialize mutex.
+
+    InitializeCriticalSection(&g_CriticalSection);
+
     // Create XAudio2 engine.
 
     hResult = XAudio2Create(&g_pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
@@ -294,10 +300,11 @@ static void terminate(void)
     qu_destroy_array(g_pSoundArray);
     qu_destroy_array(g_pBGMArray);
 
-    // Terminate XAudio2 and COM.
+    // Terminate XAudio2 and COM, destroy mutex.
 
     IXAudio2MasteringVoice_DestroyVoice(g_pMasteringVoice);
     IXAudio2_Release(g_pXAudio2);
+    DeleteCriticalSection(&g_CriticalSection);
     CoUninitialize();
 
     // Done.
