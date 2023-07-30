@@ -38,6 +38,9 @@
 #define STREAM_GEN_MASK             0x7FFF
 #define STREAM_GEN_SHIFT            16
 
+#define STREAM_VOICE_STOPPED        0
+#define STREAM_VOICE_STARTED        1
+
 struct Sound
 {
     void *pData;
@@ -57,6 +60,7 @@ struct Stream
     int Gen;
     int Type;
     IXAudio2SourceVoice *pSourceVoice;
+    int VoiceState;
 };
 
 static IXAudio2 *g_pXAudio2;
@@ -116,6 +120,7 @@ static void ReleaseStream(struct Stream *pStream)
     pStream->Gen = (pStream->Gen + 1) & STREAM_GEN_MASK;
     pStream->Type = STREAM_INACTIVE;
     pStream->pSourceVoice = NULL;
+    pStream->VoiceState = STREAM_VOICE_STOPPED;
 }
 
 static struct Stream *FindFreeStream(void)
@@ -204,6 +209,8 @@ static int32_t StartStaticStream(int32_t soundId, bool fLoop)
     // Set correct type of the stream and start playing voice.
 
     pStream->Type = STREAM_STATIC;
+    pStream->VoiceState = STREAM_VOICE_STARTED;
+
     IXAudio2SourceVoice_Start(pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
 
     return pStream ? EncodeStreamId(pStream) : 0;
@@ -400,8 +407,9 @@ static void pause_stream(int32_t streamId)
 {
     struct Stream *pStream = GetStreamById(streamId);
 
-    if (pStream) {
-        // TODO: implement!
+    if (pStream && pStream->VoiceState == STREAM_VOICE_STARTED) {
+        IXAudio2SourceVoice_Stop(pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
+        pStream->VoiceState = STREAM_VOICE_STOPPED;
     }
 }
 
@@ -409,8 +417,9 @@ static void unpause_stream(int32_t streamId)
 {
     struct Stream *pStream = GetStreamById(streamId);
 
-    if (pStream) {
-        // TODO: implement!
+    if (pStream && pStream->VoiceState == STREAM_VOICE_STOPPED) {
+        IXAudio2SourceVoice_Start(pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
+        pStream->VoiceState = STREAM_VOICE_STARTED;
     }
 }
 
@@ -419,7 +428,7 @@ static void stop_stream(int32_t streamId)
     struct Stream *pStream = GetStreamById(streamId);
 
     if (pStream) {
-        // TODO: implement!
+        ReleaseStream(pStream);
     }
 }
 
