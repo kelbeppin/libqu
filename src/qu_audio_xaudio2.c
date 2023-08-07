@@ -41,6 +41,9 @@
 #define STREAM_VOICE_STOPPED        0
 #define STREAM_VOICE_STARTED        1
 
+#define BGM_TOTAL_BUFFERS           4
+#define BGM_BUFFER_LENGTH           8192
+
 struct Sound
 {
     void *pData;
@@ -50,7 +53,9 @@ struct Sound
 
 struct BGM
 {
-    int Unused;
+    qu_file *pFile;
+    qu_sound_reader *pSndReader;
+    struct Stream *pStream;
 };
 
 struct Stream
@@ -58,8 +63,13 @@ struct Stream
     int Index;
     int Gen;
     int Type;
+
     IXAudio2SourceVoice *pSourceVoice;
     int VoiceState;
+
+    HANDLE hThread;
+    bool fShouldRelease;
+    bool fLoop;
 };
 
 static CRITICAL_SECTION g_CriticalSection;
@@ -73,6 +83,101 @@ static struct Stream g_StreamArray[TOTAL_STREAMS];
 
 //------------------------------------------------------------------------------
 
+static void ReleaseStream(struct Stream *pStream);
+
+//------------------------------------------------------------------------------
+// Sound XAudio2 callbacks
+
+static void Sound_OnVoiceProcessingPassStart(IXAudio2VoiceCallback *self, UINT32 samplesRequired)
+{
+}
+
+static void Sound_OnVoiceProcessingPassEnd(IXAudio2VoiceCallback *self)
+{
+}
+
+static void Sound_OnStreamEnd(IXAudio2VoiceCallback *self)
+{
+}
+
+static void Sound_OnBufferStart(IXAudio2VoiceCallback *self, void *pBufferContext)
+{
+}
+
+static void Sound_OnBufferEnd(IXAudio2VoiceCallback *self, void *pBufferContext)
+{
+    struct Stream *pStream = (struct Stream *) pBufferContext;
+
+    if (pStream) {
+        ReleaseStream(pStream);
+    }
+}
+
+static void Sound_OnLoopEnd(IXAudio2VoiceCallback *self, void *pBufferContext)
+{
+}
+
+static void Sound_OnVoiceError(IXAudio2VoiceCallback *self, void* pBufferContext, HRESULT hError)
+{
+}
+
+static IXAudio2VoiceCallback g_SoundVoiceCallback = {
+    .lpVtbl = &(IXAudio2VoiceCallbackVtbl) {
+        .OnVoiceProcessingPassStart = Sound_OnVoiceProcessingPassStart,
+        .OnVoiceProcessingPassEnd = Sound_OnVoiceProcessingPassEnd,
+        .OnStreamEnd = Sound_OnStreamEnd,
+        .OnBufferStart = Sound_OnBufferStart,
+        .OnBufferEnd = Sound_OnBufferEnd,
+        .OnLoopEnd = Sound_OnLoopEnd,
+        .OnVoiceError = Sound_OnVoiceError,
+    },
+};
+
+//------------------------------------------------------------------------------
+// Music XAudio2 callbacks
+
+static void BGM_OnVoiceProcessingPassEnd(IXAudio2VoiceCallback *self)
+{
+}
+
+static void BGM_OnVoiceProcessingPassStart(IXAudio2VoiceCallback *self, UINT32 samplesRequired)
+{
+}
+
+static void BGM_OnStreamEnd(IXAudio2VoiceCallback *self)
+{
+}
+
+static void BGM_OnBufferStart(IXAudio2VoiceCallback *self, void *pBufferContext)
+{
+}
+
+static void BGM_OnBufferEnd(IXAudio2VoiceCallback *self, void *pBufferContext)
+{
+}
+
+static void BGM_OnLoopEnd(IXAudio2VoiceCallback *self, void *pBufferContext)
+{
+}
+
+static void BGM_OnVoiceError(IXAudio2VoiceCallback *self, void* pBufferContext, HRESULT hError)
+{
+}
+
+static IXAudio2VoiceCallback g_BGMVoiceCallback = {
+    .lpVtbl = &(IXAudio2VoiceCallbackVtbl) {
+        .OnVoiceProcessingPassStart = BGM_OnVoiceProcessingPassStart,
+        .OnVoiceProcessingPassEnd = BGM_OnVoiceProcessingPassEnd,
+        .OnStreamEnd = BGM_OnStreamEnd,
+        .OnBufferStart = BGM_OnBufferStart,
+        .OnBufferEnd = BGM_OnBufferEnd,
+        .OnLoopEnd = BGM_OnLoopEnd,
+        .OnVoiceError = BGM_OnVoiceError,
+    },
+};
+
+//------------------------------------------------------------------------------
+
 static void SndDtor(void *pData)
 {
     struct Sound *pSound = (struct Sound *) pData;
@@ -82,6 +187,28 @@ static void SndDtor(void *pData)
 
 static void BGMDtor(void *pData)
 {
+    struct BGM *pMusic = (struct BGM *) pData;
+
+    if (pMusic->pStream) {
+        EnterCriticalSection(&g_CriticalSection);
+        pMusic->pStream->fShouldRelease = true;
+        LeaveCriticalSection(&g_CriticalSection);
+
+        WaitForSingleObject(pMusic->pStream->hThread, INFINITE);
+    }
+
+    qu_close_sound_reader(pMusic->pSndReader);
+    qu_fclose(pMusic->pFile);
+}
+
+static void SetWaveFormat(WAVEFORMATEX *pFormat, qu_sound_reader *pSndReader)
+{
+    pFormat->wFormatTag = WAVE_FORMAT_PCM;
+    pFormat->nChannels = pSndReader->num_channels;
+    pFormat->nSamplesPerSec = pSndReader->sample_rate;
+    pFormat->nAvgBytesPerSec = pSndReader->num_channels * pSndReader->sample_rate * 2;
+    pFormat->nBlockAlign = (pSndReader->num_channels * 16) / 8;
+    pFormat->wBitsPerSample = 16;
 }
 
 static int32_t EncodeStreamId(struct Stream *pStream)
@@ -133,18 +260,6 @@ static struct Stream *FindFreeStream(void)
 
         if (pStream->Type == STREAM_INACTIVE) {
             return pStream;
-        } else if (pStream->Type == STREAM_STATIC) {
-            // As we don't use any callbacks, check if voice is stopped.
-            // If it is, then we can reuse the stream.
-
-            XAUDIO2_VOICE_STATE state;
-            IXAudio2SourceVoice_GetState(pStream->pSourceVoice, &state,
-                                         XAUDIO2_VOICE_NOSAMPLESPLAYED);
-
-            if (state.BuffersQueued == 0) {
-                ReleaseStream(pStream);
-                return pStream;
-            }
         }
     }
 
@@ -179,7 +294,7 @@ static int32_t StartStaticStream(int32_t soundId, bool fLoop)
                                          &pSound->Format,
                                          0,
                                          XAUDIO2_DEFAULT_FREQ_RATIO,
-                                         NULL, NULL, NULL);
+                                         &g_SoundVoiceCallback, NULL, NULL);
 
     if (FAILED(hResult)) {
         QU_ERROR("IXAudio2::CreateSourceVoice() failed [0x%04x].\n", hResult);
@@ -194,6 +309,7 @@ static int32_t StartStaticStream(int32_t soundId, bool fLoop)
     Buffer.pAudioData = pSound->pData;
     Buffer.AudioBytes = pSound->Size;
     Buffer.Flags = XAUDIO2_END_OF_STREAM;
+    Buffer.pContext = pStream;
 
     if (fLoop) {
         Buffer.LoopBegin = 0;
@@ -219,6 +335,189 @@ static int32_t StartStaticStream(int32_t soundId, bool fLoop)
     IXAudio2SourceVoice_Start(pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
 
     return pStream ? EncodeStreamId(pStream) : 0;
+}
+
+static void StopStaticStream(struct Stream *pStream)
+{
+    IXAudio2SourceVoice_Stop(pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
+    ReleaseStream(pStream);
+}
+
+static int FillBuffer(IXAudio2SourceVoice *pSourceVoice,
+                      qu_sound_reader *pSndReader, int16_t *pSampleData, bool fLoop)
+{
+    // Read audio data from a file to memory buffer.
+
+    int64_t samplesRead = qu_sound_read(pSndReader, pSampleData, BGM_BUFFER_LENGTH);
+
+    if (samplesRead == 0) {
+        if (fLoop) {
+            qu_sound_seek(pSndReader, 0);
+            samplesRead = qu_sound_read(pSndReader, pSampleData, BGM_BUFFER_LENGTH);
+
+            if (samplesRead == 0) {
+                return -1;
+            }
+        } else {
+            return -1;
+        }
+    }
+
+    XAUDIO2_BUFFER buffer = { 0 };
+
+    buffer.pAudioData = pSampleData;
+    buffer.AudioBytes = samplesRead * sizeof(int16_t);
+
+    HRESULT hResult = IXAudio2SourceVoice_SubmitSourceBuffer(pSourceVoice, &buffer, NULL);
+
+    if (FAILED(hResult)) {
+        return -1;
+    }
+
+    return 0;
+}
+
+static DWORD WINAPI BGMThread(LPVOID lpParam)
+{
+    struct BGM *pMusic = (struct BGM *) lpParam;
+
+    // Determine audio format.
+    WAVEFORMATEX format = { 0 };
+    SetWaveFormat(&format, pMusic->pSndReader);
+
+    // Create source voice.
+    HRESULT hResult = IXAudio2_CreateSourceVoice(
+        g_pXAudio2,
+        &pMusic->pStream->pSourceVoice,
+        &format,
+        0,
+        XAUDIO2_DEFAULT_FREQ_RATIO,
+        &g_BGMVoiceCallback, NULL, NULL
+    );
+
+    if (FAILED(hResult)) {
+        return 1;
+    }
+
+    // Allocate sample buffers.
+
+    int16_t *sampleData[BGM_TOTAL_BUFFERS];
+
+    for (int i = 0; i < BGM_TOTAL_BUFFERS; i++) {
+        sampleData[i] = malloc(BGM_BUFFER_LENGTH * sizeof(int16_t));
+    }
+
+    // Rewind audio track. Just in case.
+
+    qu_sound_seek(pMusic->pSndReader, 0);
+
+    // Pre-load first buffer and start source voice.
+
+    int nCurrentBuffer = 0;
+    FillBuffer(pMusic->pStream->pSourceVoice, pMusic->pSndReader,
+               sampleData[nCurrentBuffer], pMusic->pStream->fLoop);
+
+    IXAudio2SourceVoice_Start(pMusic->pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
+    pMusic->pStream->VoiceState = STREAM_VOICE_STARTED;
+
+    // Main BGM loop.
+
+    bool fKeepRunning = true;
+
+    while (fKeepRunning) {
+        // Check if the stream should be paused or even stopped and act accordingly.
+
+        EnterCriticalSection(&g_CriticalSection);
+
+        bool fPaused = (pMusic->pStream->VoiceState == STREAM_VOICE_STOPPED);
+        bool fStopped = pMusic->pStream->fShouldRelease;
+
+        LeaveCriticalSection(&g_CriticalSection);
+
+        if (fStopped) {
+            break;
+        }
+        
+        if (fPaused) {
+            Sleep(10);
+            continue;
+        }
+
+        // Check the source voice state.
+        XAUDIO2_VOICE_STATE state = { 0 };
+        IXAudio2SourceVoice_GetState(pMusic->pStream->pSourceVoice, &state,
+                                     XAUDIO2_VOICE_NOSAMPLESPLAYED);
+
+        // Load one buffer at a time.
+        if (state.BuffersQueued < BGM_TOTAL_BUFFERS) {
+            nCurrentBuffer = (nCurrentBuffer + 1) % BGM_TOTAL_BUFFERS;
+            int status = FillBuffer(pMusic->pStream->pSourceVoice,
+                                    pMusic->pSndReader,
+                                    sampleData[nCurrentBuffer],
+                                    pMusic->pStream->fLoop);
+
+            // Exit if we've reached the end of file.
+            if (status == -1) {
+                fKeepRunning = false;
+            }
+        }
+
+        // Don't overload CPU.
+        Sleep(10);
+    }
+
+    // Free memory we allocated for sample buffers.
+    for (int i = 0; i < BGM_TOTAL_BUFFERS; i++) {
+        free(sampleData[i]);
+    }
+
+    // Mark stream as free.
+    ReleaseStream(pMusic->pStream);
+    pMusic->pStream = NULL;
+
+    return 0;
+}
+
+static int32_t StartDynamicStream(int32_t musicId, bool fLoop)
+{
+    struct BGM *pMusic = qu_array_get(g_pBGMArray, musicId);
+
+    if (!pMusic) {
+        return 0;
+    }
+
+    if (pMusic->pStream) {
+        QU_WARNING("Music track can't be played more than once at a time.\n");
+        return EncodeStreamId(pMusic->pStream);
+    }
+
+    pMusic->pStream = FindFreeStream();
+
+    if (pMusic->pStream) {
+        pMusic->pStream->Type = STREAM_DYNAMIC;
+        pMusic->pStream->hThread = CreateThread(
+            NULL,
+            0,
+            BGMThread,
+            pMusic,
+            0,
+            NULL
+        );
+
+        pMusic->pStream->fLoop = fLoop;
+        pMusic->pStream->fShouldRelease = false;
+    }
+
+    return pMusic->pStream ? EncodeStreamId(pMusic->pStream) : 0;
+}
+
+static void StopDynamicStream(struct Stream *pStream)
+{
+    EnterCriticalSection(&g_CriticalSection);
+
+    pStream->fShouldRelease = true;
+
+    LeaveCriticalSection(&g_CriticalSection);
 }
 
 //------------------------------------------------------------------------------
@@ -354,12 +653,7 @@ static int32_t load_sound(qu_file *pFile)
     sound.pData = data;
     sound.Size = length;
 
-    sound.Format.wFormatTag = WAVE_FORMAT_PCM;
-    sound.Format.nChannels = pSndReader->num_channels;
-    sound.Format.nSamplesPerSec = pSndReader->sample_rate;
-    sound.Format.nAvgBytesPerSec = pSndReader->num_channels * pSndReader->sample_rate * 2;
-    sound.Format.nBlockAlign = (pSndReader->num_channels * 16) / 8;
-    sound.Format.wBitsPerSample = 16;
+    SetWaveFormat(&sound.Format, pSndReader);
 
     qu_close_sound_reader(pSndReader);
 
@@ -383,23 +677,37 @@ static int32_t loop_sound(int32_t soundId)
 
 //------------------------------------------------------------------------------
 
-static int32_t open_music(qu_file *file)
+static int32_t open_music(qu_file *pFile)
 {
-    return 1;
+    qu_sound_reader *pSndReader = qu_open_sound_reader(pFile);
+
+    if (!pSndReader) {
+        // TODO: better error reports
+        QU_ERROR("Can't open music: sound reader is NULL.\n");
+        return 0;
+    }
+
+    struct BGM music = { 0 };
+
+    music.pFile = pFile;
+    music.pSndReader = pSndReader;
+
+    return qu_array_add(g_pBGMArray, &music);
 }
 
-static void close_music(int32_t music_id)
+static void close_music(int32_t musicId)
 {
+    qu_array_remove(g_pBGMArray, musicId);
 }
 
-static int32_t play_music(int32_t music_id)
+static int32_t play_music(int32_t musicId)
 {
-    return 1;
+    return StartDynamicStream(musicId, false);
 }
 
-static int32_t loop_music(int32_t music_id)
+static int32_t loop_music(int32_t musicId)
 {
-    return 1;
+    return StartDynamicStream(musicId, true);
 }
 
 //------------------------------------------------------------------------------
@@ -408,20 +716,28 @@ static void pause_stream(int32_t streamId)
 {
     struct Stream *pStream = GetStreamById(streamId);
 
+    EnterCriticalSection(&g_CriticalSection);
+
     if (pStream && pStream->VoiceState == STREAM_VOICE_STARTED) {
         IXAudio2SourceVoice_Stop(pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
         pStream->VoiceState = STREAM_VOICE_STOPPED;
     }
+
+    LeaveCriticalSection(&g_CriticalSection);
 }
 
 static void unpause_stream(int32_t streamId)
 {
     struct Stream *pStream = GetStreamById(streamId);
 
+    EnterCriticalSection(&g_CriticalSection);
+
     if (pStream && pStream->VoiceState == STREAM_VOICE_STOPPED) {
         IXAudio2SourceVoice_Start(pStream->pSourceVoice, 0, XAUDIO2_COMMIT_NOW);
         pStream->VoiceState = STREAM_VOICE_STARTED;
     }
+
+    LeaveCriticalSection(&g_CriticalSection);
 }
 
 static void stop_stream(int32_t streamId)
@@ -429,7 +745,11 @@ static void stop_stream(int32_t streamId)
     struct Stream *pStream = GetStreamById(streamId);
 
     if (pStream) {
-        ReleaseStream(pStream);
+        if (pStream->Type == STREAM_STATIC) {
+            StopStaticStream(pStream);
+        } else if (pStream->Type == STREAM_DYNAMIC) {
+            StopDynamicStream(pStream);
+        }
     }
 }
 

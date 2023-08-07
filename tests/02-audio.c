@@ -3,7 +3,9 @@
 
 static qu_sound fanfare;
 static qu_sound negative;
+static qu_music dungeon;
 static qu_stream stream;
+static qu_stream music_stream;
 static bool paused;
 
 static void on_key_pressed(qu_key key)
@@ -29,6 +31,12 @@ static void on_key_pressed(qu_key key)
         qu_stop_stream(stream);
         stream.id = 0;
         break;
+    case QU_KEY_M:
+        music_stream = qu_loop_music(dungeon);
+        break;
+    case QU_KEY_X:
+        qu_stop_stream(music_stream);
+        break;
     default:
         break;
     }
@@ -49,7 +57,12 @@ int main(int argc, char *argv[])
 
     fanfare = qu_load_sound("assets/fanfare.wav");
     negative = qu_load_sound("assets/negative.wav");
-    
+    dungeon = qu_open_music("assets/dungeon.ogg");
+
+    if (!fanfare.id || !negative.id || !dungeon.id) {
+        return -1;
+    }
+
     qu_on_key_pressed(on_key_pressed);
 
     while (qu_process()) {
