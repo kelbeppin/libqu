@@ -589,11 +589,13 @@ static void initialize(qu_params const *params)
 
 static void terminate(void)
 {
-    // Destroy remaining voices.
+    // Stop all streams.
 
     for (int i = 0; i < TOTAL_STREAMS; i++) {
-        if (g_StreamArray[i].pSourceVoice) {
-            IXAudio2SourceVoice_DestroyVoice(g_StreamArray[i].pSourceVoice);
+        if (g_StreamArray[i].Type == STREAM_STATIC) {
+            if (g_StreamArray[i].pSourceVoice) {
+                IXAudio2SourceVoice_DestroyVoice(g_StreamArray[i].pSourceVoice);
+            }
         }
     }
 
