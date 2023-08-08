@@ -43,6 +43,12 @@
 #endif
 
 //------------------------------------------------------------------------------
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+//------------------------------------------------------------------------------
 // Math
 
 typedef struct
@@ -359,6 +365,12 @@ void qu_construct_xaudio2(qu_audio_module *audio);
 bool qu_gl_check_extension(char const *name);
 void *qu_gl_proc_address(char const *name);
 void qu_notify_display_resize(int width, int height);
+
+//------------------------------------------------------------------------------
+
+#ifdef __cplusplus
+}
+#endif
 
 //------------------------------------------------------------------------------
 
