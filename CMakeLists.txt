@@ -20,8 +20,7 @@ string(REGEX REPLACE ${QU_VERSION_REGEX} "\\1" QU_VERSION_STRING "${QU_VERSION_S
 
 project(libqu
     VERSION ${QU_VERSION_STRING}
-    DESCRIPTION "2D game library written in C99"
-    LANGUAGES C)
+    DESCRIPTION "2D game library for C language")
 
 #-------------------------------------------------------------------------------
 
