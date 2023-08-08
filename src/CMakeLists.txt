@@ -66,7 +66,7 @@ if(MATH_LIBRARY)
 endif()
 
 if(QU_OS_WINDOWS)
-    target_sources(${PROJECT_NAME} PRIVATE qu_audio_xaudio2.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_audio_xaudio2.cpp)
     target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi shcore XInput XAudio2)
 elseif(QU_OS_LINUX)
     target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
