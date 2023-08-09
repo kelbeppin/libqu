@@ -196,46 +196,46 @@ static PFNGLRENDERBUFFERSTORAGEEXTPROC     pf_glRenderbufferStorageEXT;
 static void load_glext(char const *extension)
 {
     if (strcmp(extension, "GL_EXT_framebuffer_object") == 0) {
-        pf_glBindFramebufferEXT = qu_gl_proc_address("glBindFramebufferEXT");
-        pf_glBindRenderbufferEXT = qu_gl_proc_address("glBindRenderbufferEXT");
-        pf_glCheckFramebufferStatusEXT = qu_gl_proc_address("glCheckFramebufferStatusEXT");
-        pf_glDeleteFramebuffersEXT = qu_gl_proc_address("glDeleteFramebuffersEXT");
-        pf_glDeleteRenderbuffersEXT = qu_gl_proc_address("glDeleteRenderbuffersEXT");
-        pf_glGenFramebuffersEXT = qu_gl_proc_address("glGenFramebuffersEXT");
-        pf_glGenRenderbuffersEXT = qu_gl_proc_address("glGenRenderbuffersEXT");
-        pf_glFramebufferRenderbufferEXT = qu_gl_proc_address("glFramebufferRenderbufferEXT");
-        pf_glFramebufferTexture2DEXT = qu_gl_proc_address("glFramebufferTexture2DEXT");
-        pf_glRenderbufferStorageEXT = qu_gl_proc_address("glRenderbufferStorageEXT");
+        pf_glBindFramebufferEXT = qu__core_get_gl_proc_address("glBindFramebufferEXT");
+        pf_glBindRenderbufferEXT = qu__core_get_gl_proc_address("glBindRenderbufferEXT");
+        pf_glCheckFramebufferStatusEXT = qu__core_get_gl_proc_address("glCheckFramebufferStatusEXT");
+        pf_glDeleteFramebuffersEXT = qu__core_get_gl_proc_address("glDeleteFramebuffersEXT");
+        pf_glDeleteRenderbuffersEXT = qu__core_get_gl_proc_address("glDeleteRenderbuffersEXT");
+        pf_glGenFramebuffersEXT = qu__core_get_gl_proc_address("glGenFramebuffersEXT");
+        pf_glGenRenderbuffersEXT = qu__core_get_gl_proc_address("glGenRenderbuffersEXT");
+        pf_glFramebufferRenderbufferEXT = qu__core_get_gl_proc_address("glFramebufferRenderbufferEXT");
+        pf_glFramebufferTexture2DEXT = qu__core_get_gl_proc_address("glFramebufferTexture2DEXT");
+        pf_glRenderbufferStorageEXT = qu__core_get_gl_proc_address("glRenderbufferStorageEXT");
     }
 }
 
 static void load_gl_functions(void)
 {
-    pf_glAttachShader = qu_gl_proc_address("glAttachShader");
-    pf_glBindAttribLocation = qu_gl_proc_address("glBindAttribLocation");
-    pf_glCompileShader = qu_gl_proc_address("glCompileShader");
-    pf_glCreateProgram = qu_gl_proc_address("glCreateProgram");
-    pf_glCreateShader = qu_gl_proc_address("glCreateShader");
-    pf_glDeleteProgram = qu_gl_proc_address("glDeleteProgram");
-    pf_glDeleteShader = qu_gl_proc_address("glDeleteShader");
-    pf_glGetProgramInfoLog = qu_gl_proc_address("glGetProgramInfoLog");
-    pf_glGetProgramiv = qu_gl_proc_address("glGetProgramiv");
-    pf_glGetShaderiv = qu_gl_proc_address("glGetShaderiv");
-    pf_glGetUniformLocation = qu_gl_proc_address("glGetUniformLocation");
-    pf_glGetShaderInfoLog = qu_gl_proc_address("glGetShaderInfoLog");
-    pf_glLinkProgram = qu_gl_proc_address("glLinkProgram");
-    pf_glShaderSource = qu_gl_proc_address("glShaderSource");
-    pf_glUniform4fv = qu_gl_proc_address("glUniform4fv");
-    pf_glUniformMatrix4fv = qu_gl_proc_address("glUniformMatrix4fv");
-    pf_glUseProgram = qu_gl_proc_address("glUseProgram");
+    pf_glAttachShader = qu__core_get_gl_proc_address("glAttachShader");
+    pf_glBindAttribLocation = qu__core_get_gl_proc_address("glBindAttribLocation");
+    pf_glCompileShader = qu__core_get_gl_proc_address("glCompileShader");
+    pf_glCreateProgram = qu__core_get_gl_proc_address("glCreateProgram");
+    pf_glCreateShader = qu__core_get_gl_proc_address("glCreateShader");
+    pf_glDeleteProgram = qu__core_get_gl_proc_address("glDeleteProgram");
+    pf_glDeleteShader = qu__core_get_gl_proc_address("glDeleteShader");
+    pf_glGetProgramInfoLog = qu__core_get_gl_proc_address("glGetProgramInfoLog");
+    pf_glGetProgramiv = qu__core_get_gl_proc_address("glGetProgramiv");
+    pf_glGetShaderiv = qu__core_get_gl_proc_address("glGetShaderiv");
+    pf_glGetUniformLocation = qu__core_get_gl_proc_address("glGetUniformLocation");
+    pf_glGetShaderInfoLog = qu__core_get_gl_proc_address("glGetShaderInfoLog");
+    pf_glLinkProgram = qu__core_get_gl_proc_address("glLinkProgram");
+    pf_glShaderSource = qu__core_get_gl_proc_address("glShaderSource");
+    pf_glUniform4fv = qu__core_get_gl_proc_address("glUniform4fv");
+    pf_glUniformMatrix4fv = qu__core_get_gl_proc_address("glUniformMatrix4fv");
+    pf_glUseProgram = qu__core_get_gl_proc_address("glUseProgram");
 
-    pf_glBindBuffer = qu_gl_proc_address("glBindBuffer");
-    pf_glBufferData = qu_gl_proc_address("glBufferData");
-    pf_glBufferSubData = qu_gl_proc_address("glBufferSubData");
-    pf_glDisableVertexAttribArray = qu_gl_proc_address("glDisableVertexAttribArray");
-    pf_glEnableVertexAttribArray = qu_gl_proc_address("glEnableVertexAttribArray");
-    pf_glGenBuffers = qu_gl_proc_address("glGenBuffers");
-    pf_glVertexAttribPointer = qu_gl_proc_address("glVertexAttribPointer");
+    pf_glBindBuffer = qu__core_get_gl_proc_address("glBindBuffer");
+    pf_glBufferData = qu__core_get_gl_proc_address("glBufferData");
+    pf_glBufferSubData = qu__core_get_gl_proc_address("glBufferSubData");
+    pf_glDisableVertexAttribArray = qu__core_get_gl_proc_address("glDisableVertexAttribArray");
+    pf_glEnableVertexAttribArray = qu__core_get_gl_proc_address("glEnableVertexAttribArray");
+    pf_glGenBuffers = qu__core_get_gl_proc_address("glGenBuffers");
+    pf_glVertexAttribPointer = qu__core_get_gl_proc_address("glVertexAttribPointer");
 
     char *extensions = qu_strdup((char const *) glGetString(GL_EXTENSIONS));
 

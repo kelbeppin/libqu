@@ -137,11 +137,6 @@ void qu_present(void)
 
 //------------------------------------------------------------------------------
 
-void *qu_gl_proc_address(char const *name)
-{
-    return qu__core_gl_proc_address(name);
-}
-
 void qu_notify_display_resize(int width, int height)
 {
     if (qu.status == QU_STATUS_INITIALIZED) {

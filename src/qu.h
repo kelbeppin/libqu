@@ -248,7 +248,7 @@ bool qu__core_process(void);
 void qu__core_present(void);
 struct qu__graphics const *qu__core_get_graphics(void);
 struct qu__audio const *qu__core_get_audio(void);
-void *qu__core_gl_proc_address(char const *name);
+void *qu__core_get_gl_proc_address(char const *name);
 bool const *qu__core_get_keyboard_state(void);
 bool qu__core_is_key_pressed(qu_key key);
 uint8_t qu__core_get_mouse_button_state(void);
@@ -418,7 +418,6 @@ void qu__audio_stop_stream(int32_t stream_id);
 //------------------------------------------------------------------------------
 // Gateway
 
-void *qu_gl_proc_address(char const *name);
 void qu_notify_display_resize(int width, int height);
 
 //------------------------------------------------------------------------------
