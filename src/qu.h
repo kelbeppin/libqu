@@ -233,9 +233,6 @@ struct qu__core
     void (*on_mouse_button_released)(qu_mouse_button_fn fn);
     void (*on_mouse_cursor_moved)(qu_mouse_cursor_fn fn);
     void (*on_mouse_wheel_scrolled)(qu_mouse_wheel_fn fn);
-
-    float (*get_time_mediump)(void);
-    double (*get_time_highp)(void);
 };
 
 extern struct qu__core const qu__core_emscripten;

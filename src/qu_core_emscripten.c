@@ -460,18 +460,6 @@ static void on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 
 //------------------------------------------------------------------------------
 
-static float get_time_mediump(void)
-{
-    return SDL_GetTicks() / 1000.f;
-}
-
-static double get_time_highp(void)
-{
-    return (double) get_time_mediump();
-}
-
-//------------------------------------------------------------------------------
-
 struct qu__core const qu__core_emscripten = {
     .initialize = initialize,
     .terminate = terminate,
@@ -503,6 +491,4 @@ struct qu__core const qu__core_emscripten = {
     .on_mouse_button_released = on_mouse_button_released,
     .on_mouse_cursor_moved = on_mouse_cursor_moved,
     .on_mouse_wheel_scrolled = on_mouse_wheel_scrolled,
-    .get_time_mediump = get_time_mediump,
-    .get_time_highp = get_time_highp,
 };
