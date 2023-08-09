@@ -195,20 +195,6 @@ void qu_sleep(double seconds);
 //------------------------------------------------------------------------------
 // Core
 
-enum qu_graphics
-{
-    QU_GRAPHICS_NULL,
-    QU_GRAPHICS_GL2,
-    QU_GRAPHICS_ES2,
-};
-
-enum qu_audio
-{
-    QU_AUDIO_NULL,
-    QU_AUDIO_OPENAL,
-    QU_AUDIO_XAUDIO2,
-};
-
 struct qu__core
 {
     void (*initialize)(qu_params const *params);
@@ -216,8 +202,8 @@ struct qu__core
     bool (*process)(void);
     void (*present)(void);
 
-    enum qu_graphics (*get_graphics_type)(void);
-    enum qu_audio (*get_audio_type)(void);
+    struct qu__graphics const *(*get_graphics)(void);
+    struct qu__audio const *(*get_audio)(void);
 
     bool (*gl_check_extension)(char const *name);
     void *(*gl_proc_address)(char const *name);
@@ -260,8 +246,8 @@ void qu__core_initialize(qu_params const *params);
 void qu__core_terminate(void);
 bool qu__core_process(void);
 void qu__core_present(void);
-enum qu_graphics qu__core_get_graphics_type(void);
-enum qu_audio qu__core_get_audio_type(void);
+struct qu__graphics const *qu__core_get_graphics(void);
+struct qu__audio const *qu__core_get_audio(void);
 bool qu__core_gl_check_extension(char const *name);
 void *qu__core_gl_proc_address(char const *name);
 bool const *qu__core_get_keyboard_state(void);

@@ -792,19 +792,19 @@ static void present(void)
     SwapBuffers(dpy.dc);
 }
 
-static enum qu_graphics get_graphics_type(void)
+static struct qu__graphics const *get_graphics(void)
 {
-    return QU_GRAPHICS_GL2;
+    return &qu__graphics_gl2;
 }
 
-static enum qu_audio get_audio_type(void)
+static struct qu__audio const *get_audio(void)
 {
     // TODO: sumanue qaidaq ere talueaqtaaqtar. arai env var'uenan?
 
 #ifdef QU_USE_OPENAL
-    return QU_AUDIO_OPENAL;
+    return &qu__audio_openal;
 #else
-    return QU_AUDIO_XAUDIO2;
+    return &qu__audio_xaudio2;
 #endif
 }
 
@@ -1085,8 +1085,8 @@ struct qu__core const qu__core_win32 = {
     .terminate = terminate,
     .process = process,
     .present = present,
-    .get_graphics_type = get_graphics_type,
-    .get_audio_type = get_audio_type,
+    .get_graphics = get_graphics,
+    .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
     .get_keyboard_state = get_keyboard_state,

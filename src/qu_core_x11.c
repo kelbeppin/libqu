@@ -756,14 +756,18 @@ static void present(void)
     glXSwapBuffers(impl.display, impl.surface);
 }
 
-static enum qu_graphics get_graphics_type(void)
+static struct qu__graphics const *get_graphics(void)
 {
-    return impl.legacy_context ? QU_GRAPHICS_GL2 : QU_GRAPHICS_ES2;
+    if (impl.legacy_context) {
+        return &qu__graphics_gl2;
+    }
+
+    return &qu__graphics_es2;
 }
 
-static enum qu_audio get_audio_type(void)
+static struct qu__audio const *get_audio(void)
 {
-    return QU_AUDIO_OPENAL;
+    return &qu__audio_openal;
 }
 
 static bool gl_check_extension(char const *name)
@@ -1084,8 +1088,8 @@ struct qu__core const qu__core_x11 = {
     .terminate = terminate,
     .process = process,
     .present = present,
-    .get_graphics_type = get_graphics_type,
-    .get_audio_type = get_audio_type,
+    .get_graphics = get_graphics,
+    .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
     .get_keyboard_state = get_keyboard_state,

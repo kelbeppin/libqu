@@ -320,14 +320,14 @@ static void present(void)
     SDL_GL_SwapBuffers();
 }
 
-static enum qu_graphics get_graphics_type(void)
+static struct qu__graphics const *get_graphics(void)
 {
-    return QU_GRAPHICS_ES2;
+    return &qu__graphics_es2;
 }
 
-static enum qu_audio get_audio_type(void)
+static struct qu__audio const *get_audio(void)
 {
-    return QU_AUDIO_OPENAL;
+    return &qu__audio_openal;
 }
 
 static bool gl_check_extension(char const *name)
@@ -477,8 +477,8 @@ struct qu__core const qu__core_emscripten = {
     .terminate = terminate,
     .process = process,
     .present = present,
-    .get_graphics_type = get_graphics_type,
-    .get_audio_type = get_audio_type,
+    .get_graphics = get_graphics,
+    .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
     .get_keyboard_state = get_keyboard_state,

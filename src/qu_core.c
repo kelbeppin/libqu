@@ -67,14 +67,14 @@ void qu__core_present(void)
     priv.impl->present();
 }
 
-enum qu_graphics qu__core_get_graphics_type(void)
+struct qu__graphics const *qu__core_get_graphics(void)
 {
-    return priv.impl->get_graphics_type();
+    return priv.impl->get_graphics();
 }
 
-enum qu_audio qu__core_get_audio_type(void)
+struct qu__audio const *qu__core_get_audio(void)
 {
-    return priv.impl->get_audio_type();
+    return priv.impl->get_audio();
 }
 
 bool qu__core_gl_check_extension(char const *name)

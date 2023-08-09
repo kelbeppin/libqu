@@ -39,29 +39,10 @@ void qu__graphics_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
-    priv.impl = &qu__graphics_null;
+    priv.impl = qu__core_get_graphics();
 
-    struct qu__graphics const *ideal_impl = NULL;
-
-	switch (qu__core_get_graphics_type()) {
-    default:
-        break;
-
-#ifdef QU_USE_GL
-    case QU_GRAPHICS_GL2:
-        ideal_impl = &qu__graphics_gl2;
-        break;
-#endif
-
-#ifdef QU_USE_ES2
-    case QU_GRAPHICS_ES2:
-        ideal_impl = &qu__graphics_es2;
-        break;
-#endif
-    }
-
-    if (ideal_impl && ideal_impl->query(params)) {
-        priv.impl = ideal_impl;
+    if (!priv.impl->query(params)) {
+        priv.impl = &qu__graphics_null;
     }
 
     priv.impl->initialize(params);
