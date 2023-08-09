@@ -70,11 +70,6 @@ void qu_platform_terminate(void)
 {
 }
 
-enum qu_core qu_get_core_type(void)
-{
-    return QU_CORE_WIN32;
-}
-
 //------------------------------------------------------------------------------
 // Clock
 

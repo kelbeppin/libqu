@@ -69,15 +69,6 @@ void qu_platform_terminate(void)
 {
 }
 
-enum qu_core qu_get_core_type(void)
-{
-#ifdef __EMSCRIPTEN__
-    return QU_CORE_EMSCRIPTEN;
-#else
-    return QU_CORE_X11;
-#endif
-}
-
 //------------------------------------------------------------------------------
 // Clock
 

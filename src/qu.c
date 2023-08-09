@@ -36,7 +36,6 @@ struct qu
     enum qu_status status;
     qu_params params;
 
-    qu_core_module core;
     qu_graphics_module graphics;
     qu_audio_module audio;
 };
@@ -74,34 +73,9 @@ void qu_initialize(qu_params const *user_params)
     }
 
     qu_platform_initialize();
+    qu__core_initialize(&qu.params);
 
-    switch (qu_get_core_type()) {
-    default:
-        QU_HALT("Everything is broken.");
-        break;
-
-#ifdef _WIN32
-    case QU_CORE_WIN32:
-        qu_construct_win32_core(&qu.core);
-        break;
-#endif
-
-#ifdef __linux__
-    case QU_CORE_X11:
-        qu_construct_x11_core(&qu.core);
-        break;
-#endif
-
-#ifdef __EMSCRIPTEN__
-    case QU_CORE_EMSCRIPTEN:
-        qu_construct_emscripten_core(&qu.core);
-        break;
-#endif
-    }
-
-    qu.core.initialize(&qu.params);
-
-    switch (qu.core.get_graphics_type()) {
+    switch (qu__core_get_graphics_type()) {
     default:
         qu_construct_null_graphics(&qu.graphics);
         break;
@@ -119,7 +93,7 @@ void qu_initialize(qu_params const *user_params)
 #endif
     }
 
-    switch (qu.core.get_audio_type()) {
+    switch (qu__core_get_audio_type()) {
     default:
         qu_construct_null_audio(&qu.audio);
         break;
@@ -160,7 +134,7 @@ void qu_terminate(void)
         qu_terminate_text();
         qu.audio.terminate();
         qu.graphics.terminate();
-        qu.core.terminate();
+        qu__core_terminate();
         qu_platform_terminate();
 
         qu.status = QU_STATUS_TERMINATED;
@@ -169,7 +143,7 @@ void qu_terminate(void)
 
 bool qu_process(void)
 {
-    return qu.core.process();
+    return qu__core_process();
 }
 
 #if defined(__EMSCRIPTEN__)
@@ -208,19 +182,19 @@ void qu_execute(qu_loop_fn loop_fn)
 void qu_present(void)
 {
     qu.graphics.swap();
-    qu.core.present();
+    qu__core_present();
 }
 
 //------------------------------------------------------------------------------
 
 bool qu_gl_check_extension(char const *name)
 {
-    return qu.core.gl_check_extension(name);
+    return qu__core_gl_check_extension(name);
 }
 
 void *qu_gl_proc_address(char const *name)
 {
-    return qu.core.gl_proc_address(name);
+    return qu__core_gl_proc_address(name);
 }
 
 void qu_notify_display_resize(int width, int height)
@@ -235,112 +209,112 @@ void qu_notify_display_resize(int width, int height)
 
 bool const *qu_get_keyboard_state(void)
 {
-    return qu.core.get_keyboard_state();
+    return qu__core_get_keyboard_state();
 }
 
 bool qu_is_key_pressed(qu_key key)
 {
-    return qu.core.is_key_pressed(key);
+    return qu__core_is_key_pressed(key);
 }
 
 uint8_t qu_get_mouse_button_state(void)
 {
-    return qu.core.get_mouse_button_state();
+    return qu__core_get_mouse_button_state();
 }
 
 bool qu_is_mouse_button_pressed(qu_mouse_button button)
 {
-    return qu.core.is_mouse_button_pressed(button);
+    return qu__core_is_mouse_button_pressed(button);
 }
 
 qu_vec2i qu_get_mouse_cursor_position(void)
 {
-    return qu.graphics.conv_cursor(qu.core.get_mouse_cursor_position());
+    return qu.graphics.conv_cursor(qu__core_get_mouse_cursor_position());
 }
 
 qu_vec2i qu_get_mouse_cursor_delta(void)
 {
-    return qu.graphics.conv_cursor_delta(qu.core.get_mouse_cursor_delta());
+    return qu.graphics.conv_cursor_delta(qu__core_get_mouse_cursor_delta());
 }
 
 qu_vec2i qu_get_mouse_wheel_delta(void)
 {
-    return qu.core.get_mouse_wheel_delta();
+    return qu__core_get_mouse_wheel_delta();
 }
 
 bool qu_is_joystick_connected(int joystick)
 {
-    return qu.core.is_joystick_connected(joystick);
+    return qu__core_is_joystick_connected(joystick);
 }
 
 char const *qu_get_joystick_id(int joystick)
 {
-    return qu.core.get_joystick_id(joystick);
+    return qu__core_get_joystick_id(joystick);
 }
 
 int qu_get_joystick_button_count(int joystick)
 {
-    return qu.core.get_joystick_button_count(joystick);
+    return qu__core_get_joystick_button_count(joystick);
 }
 
 int qu_get_joystick_axis_count(int joystick)
 {
-    return qu.core.get_joystick_axis_count(joystick);
+    return qu__core_get_joystick_axis_count(joystick);
 }
 
 char const *qu_get_joystick_button_id(int joystick, int button)
 {
-    return qu.core.get_joystick_button_id(joystick, button);
+    return qu__core_get_joystick_button_id(joystick, button);
 }
 
 char const *qu_get_joystick_axis_id(int joystick, int axis)
 {
-    return qu.core.get_joystick_axis_id(joystick, axis);
+    return qu__core_get_joystick_axis_id(joystick, axis);
 }
 
 bool qu_is_joystick_button_pressed(int joystick, int button)
 {
-    return qu.core.is_joystick_button_pressed(joystick, button);
+    return qu__core_is_joystick_button_pressed(joystick, button);
 }
 
 float qu_get_joystick_axis_value(int joystick, int axis)
 {
-    return qu.core.get_joystick_axis_value(joystick, axis);
+    return qu__core_get_joystick_axis_value(joystick, axis);
 }
 
 void qu_on_key_pressed(qu_key_fn fn)
 {
-    qu.core.on_key_pressed(fn);
+    qu__core_on_key_pressed(fn);
 }
 
 void qu_on_key_repeated(qu_key_fn fn)
 {
-    qu.core.on_key_repeated(fn);
+    qu__core_on_key_repeated(fn);
 }
 
 void qu_on_key_released(qu_key_fn fn)
 {
-    qu.core.on_key_released(fn);
+    qu__core_on_key_released(fn);
 }
 
 void qu_on_mouse_button_pressed(qu_mouse_button_fn fn)
 {
-    qu.core.on_mouse_button_pressed(fn);
+    qu__core_on_mouse_button_pressed(fn);
 }
 
 void qu_on_mouse_button_released(qu_mouse_button_fn fn)
 {
-    qu.core.on_mouse_button_released(fn);
+    qu__core_on_mouse_button_released(fn);
 }
 
 void qu_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
 {
-    qu.core.on_mouse_cursor_moved(fn);
+    qu__core_on_mouse_cursor_moved(fn);
 }
 
 void qu_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 {
-    qu.core.on_mouse_wheel_scrolled(fn);
+    qu__core_on_mouse_wheel_scrolled(fn);
 }
 
 //------------------------------------------------------------------------------

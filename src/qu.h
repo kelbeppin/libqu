@@ -174,21 +174,12 @@ void qu_sound_seek(qu_sound_reader *reader, int64_t sample_offset);
 //------------------------------------------------------------------------------
 // Platform
 
-enum qu_core
-{
-    QU_CORE_NULL,
-    QU_CORE_WIN32,
-    QU_CORE_X11,
-    QU_CORE_EMSCRIPTEN,
-};
-
 typedef struct qu_thread qu_thread;
 typedef struct qu_mutex qu_mutex;
 typedef intptr_t (*qu_thread_func)(void *);
 
 void qu_platform_initialize(void);
 void qu_platform_terminate(void);
-enum qu_core qu_get_core_type(void);
 
 qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg);
 void qu_detach_thread(qu_thread *thread);
@@ -261,9 +252,40 @@ typedef struct
     double (*get_time_highp)(void);
 } qu_core_module;
 
-void qu_construct_win32_core(qu_core_module *core);
-void qu_construct_x11_core(qu_core_module *core);
-void qu_construct_emscripten_core(qu_core_module *core);
+extern qu_core_module const qu__core_emscripten_module;
+extern qu_core_module const qu__core_win32_module;
+extern qu_core_module const qu__core_x11_module;
+
+void qu__core_initialize(qu_params const *params);
+void qu__core_terminate(void);
+bool qu__core_process(void);
+void qu__core_present(void);
+enum qu_graphics qu__core_get_graphics_type(void);
+enum qu_audio qu__core_get_audio_type(void);
+bool qu__core_gl_check_extension(char const *name);
+void *qu__core_gl_proc_address(char const *name);
+bool const *qu__core_get_keyboard_state(void);
+bool qu__core_is_key_pressed(qu_key key);
+uint8_t qu__core_get_mouse_button_state(void);
+bool qu__core_is_mouse_button_pressed(qu_mouse_button button);
+qu_vec2i qu__core_get_mouse_cursor_position(void);
+qu_vec2i qu__core_get_mouse_cursor_delta(void);
+qu_vec2i qu__core_get_mouse_wheel_delta(void);
+bool qu__core_is_joystick_connected(int joystick);
+char const *qu__core_get_joystick_id(int joystick);
+int qu__core_get_joystick_button_count(int joystick);
+int qu__core_get_joystick_axis_count(int joystick);
+char const *qu__core_get_joystick_button_id(int joystick, int button);
+char const *qu__core_get_joystick_axis_id(int joystick, int axis);
+bool qu__core_is_joystick_button_pressed(int joystick, int button);
+float qu__core_get_joystick_axis_value(int joystick, int axis);
+void qu__core_on_key_pressed(qu_key_fn fn);
+void qu__core_on_key_repeated(qu_key_fn fn);
+void qu__core_on_key_released(qu_key_fn fn);
+void qu__core_on_mouse_button_pressed(qu_mouse_button_fn fn);
+void qu__core_on_mouse_button_released(qu_mouse_button_fn fn);
+void qu__core_on_mouse_cursor_moved(qu_mouse_cursor_fn fn);
+void qu__core_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn);
 
 //------------------------------------------------------------------------------
 // Graphics

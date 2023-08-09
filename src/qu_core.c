@@ -25,3 +25,174 @@
 //------------------------------------------------------------------------------
 // qu_core.c: Core module
 //------------------------------------------------------------------------------
+
+struct qu__core_priv
+{
+	qu_core_module const *impl;
+};
+
+static struct qu__core_priv priv;
+
+//------------------------------------------------------------------------------
+
+void qu__core_initialize(qu_params const *params)
+{
+	memset(&priv, 0, sizeof(priv));
+
+#if defined(_WIN32)
+	priv.impl = &qu__core_win32_module;
+#elif defined(__EMSCRIPTEN__)
+	priv.impl = &qu__core_emscripten_module;
+#elif defined(__unix__)
+	priv.impl = &qu__core_x11_module;
+#else
+	QU_HALT("Everything is broken.");
+#endif
+
+	priv.impl->initialize(params);
+}
+
+void qu__core_terminate(void)
+{
+	priv.impl->terminate();
+}
+
+bool qu__core_process(void)
+{
+    return priv.impl->process();
+}
+
+void qu__core_present(void)
+{
+    priv.impl->present();
+}
+
+enum qu_graphics qu__core_get_graphics_type(void)
+{
+    return priv.impl->get_graphics_type();
+}
+
+enum qu_audio qu__core_get_audio_type(void)
+{
+    return priv.impl->get_audio_type();
+}
+
+bool qu__core_gl_check_extension(char const *name)
+{
+    return priv.impl->gl_check_extension(name);
+}
+
+void *qu__core_gl_proc_address(char const *name)
+{
+    return priv.impl->gl_proc_address(name);
+}
+
+bool const *qu__core_get_keyboard_state(void)
+{
+    return priv.impl->get_keyboard_state();
+}
+
+bool qu__core_is_key_pressed(qu_key key)
+{
+    return priv.impl->is_key_pressed(key);
+}
+
+uint8_t qu__core_get_mouse_button_state(void)
+{
+    return priv.impl->get_mouse_button_state();
+}
+
+bool qu__core_is_mouse_button_pressed(qu_mouse_button button)
+{
+    return priv.impl->is_mouse_button_pressed(button);
+}
+
+qu_vec2i qu__core_get_mouse_cursor_position(void)
+{
+    return priv.impl->get_mouse_cursor_position();
+}
+
+qu_vec2i qu__core_get_mouse_cursor_delta(void)
+{
+    return priv.impl->get_mouse_cursor_delta();
+}
+
+qu_vec2i qu__core_get_mouse_wheel_delta(void)
+{
+    return priv.impl->get_mouse_wheel_delta();
+}
+
+bool qu__core_is_joystick_connected(int joystick)
+{
+    return priv.impl->is_joystick_connected(joystick);
+}
+
+char const *qu__core_get_joystick_id(int joystick)
+{
+    return priv.impl->get_joystick_id(joystick);
+}
+
+int qu__core_get_joystick_button_count(int joystick)
+{
+    return priv.impl->get_joystick_button_count(joystick);
+}
+
+int qu__core_get_joystick_axis_count(int joystick)
+{
+    return priv.impl->get_joystick_axis_count(joystick);
+}
+
+char const *qu__core_get_joystick_button_id(int joystick, int button)
+{
+    return priv.impl->get_joystick_button_id(joystick, button);
+}
+
+char const *qu__core_get_joystick_axis_id(int joystick, int axis)
+{
+    return priv.impl->get_joystick_axis_id(joystick, axis);
+}
+
+bool qu__core_is_joystick_button_pressed(int joystick, int button)
+{
+    return priv.impl->is_joystick_button_pressed(joystick, button);
+}
+
+float qu__core_get_joystick_axis_value(int joystick, int axis)
+{
+    return priv.impl->get_joystick_axis_value(joystick, axis);
+}
+
+void qu__core_on_key_pressed(qu_key_fn fn)
+{
+    priv.impl->on_key_pressed(fn);
+}
+
+void qu__core_on_key_repeated(qu_key_fn fn)
+{
+    priv.impl->on_key_repeated(fn);
+}
+
+void qu__core_on_key_released(qu_key_fn fn)
+{
+    priv.impl->on_key_released(fn);
+}
+
+void qu__core_on_mouse_button_pressed(qu_mouse_button_fn fn)
+{
+    priv.impl->on_mouse_button_pressed(fn);
+}
+
+void qu__core_on_mouse_button_released(qu_mouse_button_fn fn)
+{
+    priv.impl->on_mouse_button_released(fn);
+}
+
+void qu__core_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
+{
+    priv.impl->on_mouse_cursor_moved(fn);
+}
+
+void qu__core_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
+{
+    priv.impl->on_mouse_wheel_scrolled(fn);
+}
