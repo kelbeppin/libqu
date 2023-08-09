@@ -137,11 +137,6 @@ void qu_present(void)
 
 //------------------------------------------------------------------------------
 
-bool qu_gl_check_extension(char const *name)
-{
-    return qu__core_gl_check_extension(name);
-}
-
 void *qu_gl_proc_address(char const *name)
 {
     return qu__core_gl_proc_address(name);

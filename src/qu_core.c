@@ -77,11 +77,6 @@ struct qu__audio const *qu__core_get_audio(void)
     return priv.impl->get_audio();
 }
 
-bool qu__core_gl_check_extension(char const *name)
-{
-    return priv.impl->gl_check_extension(name);
-}
-
 void *qu__core_gl_proc_address(char const *name)
 {
     return priv.impl->gl_proc_address(name);
