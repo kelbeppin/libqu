@@ -96,23 +96,20 @@ static void stop_stream(int32_t stream_id)
 
 //------------------------------------------------------------------------------
 
-void qu_construct_null_audio(qu_audio_module *audio)
-{
-    *audio = (qu_audio_module) {
-        .query = query,
-        .initialize = initialize,
-        .terminate = terminate,
-        .set_master_volume = set_master_volume,
-        .load_sound = load_sound,
-        .delete_sound = delete_sound,
-        .play_sound = play_sound,
-        .loop_sound = loop_sound,
-        .open_music = open_music,
-        .close_music = close_music,
-        .play_music = play_music,
-        .loop_music = loop_music,
-        .pause_stream = pause_stream,
-        .unpause_stream = unpause_stream,
-        .stop_stream = stop_stream,
-    };
-}
+qu_audio_module const qu__audio_null_module = {
+    .query = query,
+    .initialize = initialize,
+    .terminate = terminate,
+    .set_master_volume = set_master_volume,
+    .load_sound = load_sound,
+    .delete_sound = delete_sound,
+    .play_sound = play_sound,
+    .loop_sound = loop_sound,
+    .open_music = open_music,
+    .close_music = close_music,
+    .play_music = play_music,
+    .loop_music = loop_music,
+    .pause_stream = pause_stream,
+    .unpause_stream = unpause_stream,
+    .stop_stream = stop_stream,
+};

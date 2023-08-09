@@ -700,30 +700,27 @@ static void stop_stream(int32_t stream_id)
 
 //------------------------------------------------------------------------------
 
-void qu_construct_openal_audio(qu_audio_module *audio)
-{
-    *audio = (qu_audio_module) {
-        .query = query,
-        .initialize = initialize,
-        .terminate = terminate,
-        .set_master_volume = set_master_volume,
-        .load_sound = load_sound,
-        .delete_sound = delete_sound,
-        .play_sound = play_sound,
-        .loop_sound = loop_sound,
+qu_audio_module const qu__audio_openal_module = {
+    .query = query,
+    .initialize = initialize,
+    .terminate = terminate,
+    .set_master_volume = set_master_volume,
+    .load_sound = load_sound,
+    .delete_sound = delete_sound,
+    .play_sound = play_sound,
+    .loop_sound = loop_sound,
 #ifdef __EMSCRIPTEN__
-        .open_music = open_music_none,
-        .close_music = close_music_none,
-        .play_music = play_music_none,
-        .loop_music = loop_music_none,
+    .open_music = open_music_none,
+    .close_music = close_music_none,
+    .play_music = play_music_none,
+    .loop_music = loop_music_none,
 #else
-        .open_music = open_music,
-        .close_music = close_music,
-        .play_music = play_music,
-        .loop_music = loop_music,
+    .open_music = open_music,
+    .close_music = close_music,
+    .play_music = play_music,
+    .loop_music = loop_music,
 #endif
-        .pause_stream = pause_stream,
-        .unpause_stream = unpause_stream,
-        .stop_stream = stop_stream,
-    };
-}
+    .pause_stream = pause_stream,
+    .unpause_stream = unpause_stream,
+    .stop_stream = stop_stream,
+};

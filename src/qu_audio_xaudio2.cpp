@@ -744,25 +744,20 @@ static void stop_stream(int32_t streamId)
 
 //------------------------------------------------------------------------------
 
-void qu_construct_xaudio2(qu_audio_module *audio)
-{
-    audio->query = query;
-    audio->initialize = initialize;
-    audio->terminate = terminate;
-
-    audio->set_master_volume = set_master_volume;
-
-    audio->load_sound = load_sound;
-    audio->delete_sound = delete_sound;
-    audio->play_sound = play_sound;
-    audio->loop_sound = loop_sound;
-
-    audio->open_music = open_music;
-    audio->close_music = close_music;
-    audio->play_music = play_music;
-    audio->loop_music = loop_music;
-
-    audio->pause_stream = pause_stream;
-    audio->unpause_stream = unpause_stream;
-    audio->stop_stream = stop_stream;
-}
+qu_audio_module const qu__audio_xaudio2_module = {
+    query,
+    initialize,
+    terminate,
+    set_master_volume,
+    load_sound,
+    delete_sound,
+    play_sound,
+    loop_sound,
+    open_music,
+    close_music,
+    play_music,
+    loop_music,
+    pause_stream,
+    unpause_stream,
+    stop_stream,
+};

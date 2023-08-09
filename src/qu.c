@@ -35,8 +35,6 @@ struct qu
 {
     enum qu_status status;
     qu_params params;
-
-    qu_audio_module audio;
 };
 
 static struct qu qu;
@@ -73,32 +71,8 @@ void qu_initialize(qu_params const *user_params)
 
     qu_platform_initialize();
     qu__core_initialize(&qu.params);
-
-    switch (qu__core_get_audio_type()) {
-    default:
-        qu_construct_null_audio(&qu.audio);
-        break;
-
-#ifdef QU_USE_OPENAL
-    case QU_AUDIO_OPENAL:
-        qu_construct_openal_audio(&qu.audio);
-        break;
-#endif
-
-#ifdef _WIN32
-    case QU_AUDIO_XAUDIO2:
-        qu_construct_xaudio2(&qu.audio);
-        break;
-#endif
-    }
-
-    if (!qu.audio.query(&qu.params)) {
-        QU_ERROR("Failed to initialize audio module, falling back to dummy.\n");
-        qu_construct_null_audio(&qu.audio);
-    }
-
     qu__graphics_initialize(&qu.params);
-    qu.audio.initialize(&qu.params);
+    qu__audio_initialize(&qu.params);
     qu_initialize_text();
 
     qu.status = QU_STATUS_INITIALIZED;
@@ -108,7 +82,7 @@ void qu_terminate(void)
 {
     if (qu.status == QU_STATUS_INITIALIZED) {
         qu_terminate_text();
-        qu.audio.terminate();
+        qu__audio_terminate();
         qu__graphics_terminate();
         qu__core_terminate();
         qu_platform_terminate();
@@ -425,7 +399,7 @@ void qu_draw_surface(qu_surface surface, float x, float y, float w, float h)
 
 void qu_set_master_volume(float volume)
 {
-    qu.audio.set_master_volume(volume);
+    qu__audio_set_master_volume(volume);
 }
 
 qu_sound qu_load_sound(char const *path)
@@ -433,7 +407,7 @@ qu_sound qu_load_sound(char const *path)
     qu_file *file = qu_fopen(path);
 
     if (file) {
-        int32_t id = qu.audio.load_sound(file);
+        int32_t id = qu__audio_load_sound(file);
         qu_fclose(file);
 
         return (qu_sound) { id };
@@ -444,17 +418,17 @@ qu_sound qu_load_sound(char const *path)
 
 void qu_delete_sound(qu_sound sound)
 {
-    qu.audio.delete_sound(sound.id);
+    qu__audio_delete_sound(sound.id);
 }
 
 qu_stream qu_play_sound(qu_sound sound)
 {
-    return (qu_stream) { qu.audio.play_sound(sound.id) };
+    return (qu_stream) { qu__audio_play_sound(sound.id) };
 }
 
 qu_stream qu_loop_sound(qu_sound sound)
 {
-    return (qu_stream) { qu.audio.loop_sound(sound.id) };
+    return (qu_stream) { qu__audio_loop_sound(sound.id) };
 }
 
 qu_music qu_open_music(char const *path)
@@ -462,7 +436,7 @@ qu_music qu_open_music(char const *path)
     qu_file *file = qu_fopen(path);
 
     if (file) {
-        int32_t id = qu.audio.open_music(file);
+        int32_t id = qu__audio_open_music(file);
         
         if (id == 0) {
             qu_fclose(file);
@@ -476,30 +450,30 @@ qu_music qu_open_music(char const *path)
 
 void qu_close_music(qu_music music)
 {
-    qu.audio.close_music(music.id);
+    qu__audio_close_music(music.id);
 }
 
 qu_stream qu_play_music(qu_music music)
 {
-    return (qu_stream) { qu.audio.play_music(music.id) };
+    return (qu_stream) { qu__audio_play_music(music.id) };
 }
 
 qu_stream qu_loop_music(qu_music music)
 {
-    return (qu_stream) { qu.audio.loop_music(music.id) };
+    return (qu_stream) { qu__audio_loop_music(music.id) };
 }
 
 void qu_pause_stream(qu_stream stream)
 {
-    qu.audio.pause_stream(stream.id);
+    qu__audio_pause_stream(stream.id);
 }
 
 void qu_unpause_stream(qu_stream stream)
 {
-    qu.audio.unpause_stream(stream.id);
+    qu__audio_unpause_stream(stream.id);
 }
 
 void qu_stop_stream(qu_stream stream)
 {
-    qu.audio.stop_stream(stream.id);
+    qu__audio_stop_stream(stream.id);
 }
