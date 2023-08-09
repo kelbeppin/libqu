@@ -341,14 +341,48 @@ typedef struct
     void (*draw_surface)(int32_t id, float x, float y, float w, float h);
 } qu_graphics_module;
 
-void qu_construct_null_graphics(qu_graphics_module *graphics);
-void qu_construct_gl2_graphics(qu_graphics_module *graphics);
-void qu_construct_es2_graphics(qu_graphics_module *graphics);
+extern qu_graphics_module const qu__graphics_null_module;
+extern qu_graphics_module const qu__graphics_gl2_module;
+extern qu_graphics_module const qu__graphics_es2_module;
+
+void qu__graphics_initialize(qu_params const *params);
+void qu__graphics_terminate(void);
+void qu__graphics_refresh(void);
+void qu__graphics_swap(void);
+void qu__graphics_notify_display_resize(int width, int height);
+qu_vec2i qu__graphics_conv_cursor(qu_vec2i position);
+qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i position);
+void qu__graphics_set_view(float x, float y, float w, float h, float rotation);
+void qu__graphics_reset_view(void);
+void qu__graphics_push_matrix(void);
+void qu__graphics_pop_matrix(void);
+void qu__graphics_translate(float x, float y);
+void qu__graphics_scale(float x, float y);
+void qu__graphics_rotate(float degrees);
+void qu__graphics_clear(qu_color color);
+void qu__graphics_draw_point(float x, float y, qu_color color);
+void qu__graphics_draw_line(float ax, float ay, float bx, float by, qu_color color);
+void qu__graphics_draw_triangle(float ax, float ay, float bx, float by, float cx, float cy, qu_color outline, qu_color fill);
+void qu__graphics_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_color fill);
+void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, qu_color fill);
+int32_t qu__graphics_create_texture(int w, int h, int channels);
+void qu__graphics_update_texture(int32_t texture_id, int x, int y, int w, int h, uint8_t const *pixels);
+int32_t qu__graphics_load_texture(qu_file *file);
+void qu__graphics_delete_texture(int32_t texture_id);
+void qu__graphics_set_texture_smooth(int32_t texture_id, bool smooth);
+void qu__graphics_draw_texture(int32_t texture_id, float x, float y, float w, float h);
+void qu__graphics_draw_subtexture(int32_t texture_id, float x, float y, float w, float h, float rx, float ry, float rw, float rh);
+void qu__graphics_draw_text(int32_t texture_id, qu_color color, float const *data, int count);
+int32_t qu__graphics_create_surface(int width, int height);
+void qu__graphics_delete_surface(int32_t id);
+void qu__graphics_set_surface(int32_t id);
+void qu__graphics_reset_surface(void);
+void qu__graphics_draw_surface(int32_t id, float x, float y, float w, float h);
 
 //------------------------------------------------------------------------------
 // Text
 
-void qu_initialize_text(qu_graphics_module *graphics);
+void qu_initialize_text(void);
 void qu_terminate_text(void);
 
 //------------------------------------------------------------------------------

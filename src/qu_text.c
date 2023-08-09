@@ -72,7 +72,6 @@ struct font
 static struct
 {
     bool initialized;
-    qu_graphics_module *graphics;   // pointer to renderer
     FT_Library freetype;            // FreeType object
     struct font *fonts;             // dynamic array of font objects
     int font_count;                 // number of items in font array
@@ -200,11 +199,11 @@ static bool grow_atlas(struct atlas *atlas)
         }
     }
 
-    impl.graphics->delete_texture(atlas->texture_id);
+    qu__graphics_delete_texture(atlas->texture_id);
 
-    atlas->texture_id = impl.graphics->create_texture(atlas->width, atlas->height, 2);
-    impl.graphics->set_texture_smooth(atlas->texture_id, true);
-    impl.graphics->update_texture(atlas->texture_id, 0, 0, -1, -1, atlas->bitmap);
+    atlas->texture_id = qu__graphics_create_texture(atlas->width, atlas->height, 2);
+    qu__graphics_set_texture_smooth(atlas->texture_id, true);
+    qu__graphics_update_texture(atlas->texture_id, 0, 0, -1, -1, atlas->bitmap);
 
     return true;
 }
@@ -290,7 +289,7 @@ static int cache_glyph(int font_index, unsigned long codepoint, float x_advance,
     }
 
     // Update on-VRAM texture portion.
-    impl.graphics->update_texture(atlas->texture_id,
+    qu__graphics_update_texture(atlas->texture_id,
         atlas->cursor_x, atlas->cursor_y,
         bitmap_w, bitmap_h, bitmap_with_alpha);
 
@@ -353,11 +352,9 @@ static float *maintain_vertex_buffer(int required_size)
 /**
  * Initialize text module.
  */
-void qu_initialize_text(qu_graphics_module *graphics)
+void qu_initialize_text(void)
 {
     memset(&impl, 0, sizeof(impl));
-
-    impl.graphics = graphics;
 
     FT_Error error = FT_Init_FreeType(&impl.freetype);
 
@@ -441,8 +438,8 @@ static int32_t load_font(qu_file *file, float pt)
         height *= 2;
     }
 
-    fontp->atlas.texture_id = impl.graphics->create_texture(width, height, 2);
-    impl.graphics->set_texture_smooth(fontp->atlas.texture_id, true);
+    fontp->atlas.texture_id = qu__graphics_create_texture(width, height, 2);
+    qu__graphics_set_texture_smooth(fontp->atlas.texture_id, true);
     fontp->atlas.bitmap = calloc(width * height * 2, sizeof(unsigned char));
 
     if (fontp->atlas.texture_id == -1 || !fontp->atlas.bitmap) {
@@ -524,7 +521,7 @@ void qu_delete_font(qu_font font)
 
     free(fontp->glyphs);
     free(fontp->atlas.bitmap);
-    impl.graphics->delete_texture(fontp->atlas.texture_id);
+    qu__graphics_delete_texture(fontp->atlas.texture_id);
 
     hb_font_destroy(fontp->font);
     fontp->font = NULL;
@@ -621,7 +618,7 @@ void qu_draw_text(qu_font font, float x, float y, qu_color color, char const *te
 
     hb_buffer_destroy(buffer);
 
-    impl.graphics->draw_text(fontp->atlas.texture_id, color, impl.vertex_buffer, 6 * quad_count);
+    qu__graphics_draw_text(fontp->atlas.texture_id, color, impl.vertex_buffer, 6 * quad_count);
 }
 
 void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const *fmt, ...)
