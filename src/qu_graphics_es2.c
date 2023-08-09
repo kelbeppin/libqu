@@ -89,7 +89,7 @@ static bool query(qu_params const *params)
 //------------------------------------------------------------------------------
 // Constructor
 
-qu_graphics_module const qu__graphics_es2_module = {
+struct qu__graphics const qu__graphics_es2 = {
     .query = query,
     .initialize = gl2_initialize,
     .terminate = gl2_terminate,

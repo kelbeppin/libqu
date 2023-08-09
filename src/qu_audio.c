@@ -28,7 +28,7 @@
 
 struct qu__audio_priv
 {
-	qu_audio_module const *impl;
+	struct qu__audio const *impl;
 };
 
 static struct qu__audio_priv priv;
@@ -39,9 +39,9 @@ void qu__audio_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
-    priv.impl = &qu__audio_null_module;
+    priv.impl = &qu__audio_null;
 
-    qu_audio_module *ideal_impl = NULL;
+    struct qu__audio const *ideal_impl = NULL;
 
     switch (qu__core_get_audio_type()) {
     default:
@@ -49,13 +49,13 @@ void qu__audio_initialize(qu_params const *params)
 
 #ifdef QU_USE_OPENAL
     case QU_AUDIO_OPENAL:
-        ideal_impl = &qu__audio_openal_module;
+        ideal_impl = &qu__audio_openal;
         break;
 #endif
 
 #ifdef _WIN32
     case QU_AUDIO_XAUDIO2:
-        ideal_impl = &qu__audio_xaudio2_module;
+        ideal_impl = &qu__audio_xaudio2;
         break;
 #endif
     }

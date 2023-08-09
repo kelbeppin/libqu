@@ -28,7 +28,7 @@
 
 struct qu__graphics_priv
 {
-	qu_graphics_module const *impl;
+	struct qu__graphics const *impl;
 };
 
 static struct qu__graphics_priv priv;
@@ -39,9 +39,9 @@ void qu__graphics_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
-    priv.impl = &qu__graphics_null_module;
+    priv.impl = &qu__graphics_null;
 
-    qu_graphics_module *ideal_impl = NULL;
+    struct qu__graphics const *ideal_impl = NULL;
 
 	switch (qu__core_get_graphics_type()) {
     default:
@@ -49,13 +49,13 @@ void qu__graphics_initialize(qu_params const *params)
 
 #ifdef QU_USE_GL
     case QU_GRAPHICS_GL2:
-        ideal_impl = &qu__graphics_gl2_module;
+        ideal_impl = &qu__graphics_gl2;
         break;
 #endif
 
 #ifdef QU_USE_ES2
     case QU_GRAPHICS_ES2:
-        ideal_impl = &qu__graphics_es2_module;
+        ideal_impl = &qu__graphics_es2;
         break;
 #endif
     }

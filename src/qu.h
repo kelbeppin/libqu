@@ -209,7 +209,7 @@ enum qu_audio
     QU_AUDIO_XAUDIO2,
 };
 
-typedef struct
+struct qu__core
 {
     void (*initialize)(qu_params const *params);
     void (*terminate)(void);
@@ -250,11 +250,11 @@ typedef struct
 
     float (*get_time_mediump)(void);
     double (*get_time_highp)(void);
-} qu_core_module;
+};
 
-extern qu_core_module const qu__core_emscripten_module;
-extern qu_core_module const qu__core_win32_module;
-extern qu_core_module const qu__core_x11_module;
+extern struct qu__core const qu__core_emscripten;
+extern struct qu__core const qu__core_win32;
+extern struct qu__core const qu__core_x11;
 
 void qu__core_initialize(qu_params const *params);
 void qu__core_terminate(void);
@@ -290,7 +290,7 @@ void qu__core_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn);
 //------------------------------------------------------------------------------
 // Graphics
 
-typedef struct
+struct qu__graphics
 {
     bool (*query)(qu_params const *params);
     void (*initialize)(qu_params const *params);
@@ -339,11 +339,11 @@ typedef struct
     void (*set_surface)(int32_t id);
     void (*reset_surface)(void);
     void (*draw_surface)(int32_t id, float x, float y, float w, float h);
-} qu_graphics_module;
+};
 
-extern qu_graphics_module const qu__graphics_null_module;
-extern qu_graphics_module const qu__graphics_gl2_module;
-extern qu_graphics_module const qu__graphics_es2_module;
+extern struct qu__graphics const qu__graphics_null;
+extern struct qu__graphics const qu__graphics_gl2;
+extern struct qu__graphics const qu__graphics_es2;
 
 void qu__graphics_initialize(qu_params const *params);
 void qu__graphics_terminate(void);
@@ -388,7 +388,7 @@ void qu_terminate_text(void);
 //------------------------------------------------------------------------------
 // Audio
 
-typedef struct
+struct qu__audio
 {
     bool (*query)(qu_params const *params);
     void (*initialize)(qu_params const *params);
@@ -409,11 +409,11 @@ typedef struct
     void (*pause_stream)(int32_t stream_id);
     void (*unpause_stream)(int32_t stream_id);
     void (*stop_stream)(int32_t stream_id);
-} qu_audio_module;
+};
 
-extern qu_audio_module const qu__audio_null_module;
-extern qu_audio_module const qu__audio_openal_module;
-extern qu_audio_module const qu__audio_xaudio2_module;
+extern struct qu__audio const qu__audio_null;
+extern struct qu__audio const qu__audio_openal;
+extern struct qu__audio const qu__audio_xaudio2;
 
 void qu__audio_initialize(qu_params const *params);
 void qu__audio_terminate(void);

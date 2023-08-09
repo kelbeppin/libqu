@@ -96,7 +96,7 @@ static void stop_stream(int32_t stream_id)
 
 //------------------------------------------------------------------------------
 
-qu_audio_module const qu__audio_null_module = {
+struct qu__audio const qu__audio_null = {
     .query = query,
     .initialize = initialize,
     .terminate = terminate,

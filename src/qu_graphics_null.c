@@ -136,7 +136,7 @@ static void draw_text(int32_t texture_id, qu_color color, float const *data, int
 
 //------------------------------------------------------------------------------
 
-qu_graphics_module const qu__graphics_null_module = {
+struct qu__graphics const qu__graphics_null = {
     .query = query,
     .initialize = initialize,
     .terminate = terminate,

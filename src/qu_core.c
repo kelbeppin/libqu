@@ -28,7 +28,7 @@
 
 struct qu__core_priv
 {
-	qu_core_module const *impl;
+	struct qu__core const *impl;
 };
 
 static struct qu__core_priv priv;
@@ -40,11 +40,11 @@ void qu__core_initialize(qu_params const *params)
 	memset(&priv, 0, sizeof(priv));
 
 #if defined(_WIN32)
-	priv.impl = &qu__core_win32_module;
+	priv.impl = &qu__core_win32;
 #elif defined(__EMSCRIPTEN__)
-	priv.impl = &qu__core_emscripten_module;
+	priv.impl = &qu__core_emscripten;
 #elif defined(__unix__)
-	priv.impl = &qu__core_x11_module;
+	priv.impl = &qu__core_x11;
 #else
 	QU_HALT("Everything is broken.");
 #endif

@@ -1079,7 +1079,7 @@ static void on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 
 //------------------------------------------------------------------------------
 
-qu_core_module const qu__core_x11_module = {
+struct qu__core const qu__core_x11 = {
     .initialize = initialize,
     .terminate = terminate,
     .process = process,

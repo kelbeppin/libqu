@@ -472,7 +472,7 @@ static double get_time_highp(void)
 
 //------------------------------------------------------------------------------
 
-qu_core_module const qu__core_emscripten_module = {
+struct qu__core const qu__core_emscripten = {
     .initialize = initialize,
     .terminate = terminate,
     .process = process,
