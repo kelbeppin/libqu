@@ -136,15 +136,6 @@ void qu_present(void)
 }
 
 //------------------------------------------------------------------------------
-
-void qu_notify_display_resize(int width, int height)
-{
-    if (qu.status == QU_STATUS_INITIALIZED) {
-        qu__graphics_notify_display_resize(width, height);
-    }
-}
-
-//------------------------------------------------------------------------------
 // Core
 
 bool const *qu_get_keyboard_state(void)

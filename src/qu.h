@@ -282,7 +282,7 @@ struct qu__graphics
     void (*terminate)(void);
     void (*refresh)(void);
     void (*swap)(void);
-    void (*notify_display_resize)(int width, int height);
+    void (*on_display_resize)(int width, int height);
     qu_vec2i (*conv_cursor)(qu_vec2i position);
     qu_vec2i (*conv_cursor_delta)(qu_vec2i position);
 
@@ -334,7 +334,7 @@ void qu__graphics_initialize(qu_params const *params);
 void qu__graphics_terminate(void);
 void qu__graphics_refresh(void);
 void qu__graphics_swap(void);
-void qu__graphics_notify_display_resize(int width, int height);
+void qu__graphics_on_display_resize(int width, int height);
 qu_vec2i qu__graphics_conv_cursor(qu_vec2i position);
 qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i position);
 void qu__graphics_set_view(float x, float y, float w, float h, float rotation);
@@ -414,11 +414,6 @@ int32_t qu__audio_loop_music(int32_t music_id);
 void qu__audio_pause_stream(int32_t stream_id);
 void qu__audio_unpause_stream(int32_t stream_id);
 void qu__audio_stop_stream(int32_t stream_id);
-
-//------------------------------------------------------------------------------
-// Gateway
-
-void qu_notify_display_resize(int width, int height);
 
 //------------------------------------------------------------------------------
 

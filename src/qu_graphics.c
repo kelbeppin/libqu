@@ -63,9 +63,14 @@ void qu__graphics_swap(void)
     priv.impl->swap();
 }
 
-void qu__graphics_notify_display_resize(int width, int height)
+void qu__graphics_on_display_resize(int width, int height)
 {
-    priv.impl->notify_display_resize(width, height);
+    // This may be called too early; temporary crash fix.
+    if (!priv.impl) {
+        return;
+    }
+
+    priv.impl->on_display_resize(width, height);
 }
 
 qu_vec2i qu__graphics_conv_cursor(qu_vec2i position)

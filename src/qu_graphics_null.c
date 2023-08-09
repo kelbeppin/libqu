@@ -48,7 +48,7 @@ static void swap(void)
 {
 }
 
-static void notify_display_resize(int width, int height)
+static void on_display_resize(int width, int height)
 {
 }
 
@@ -142,7 +142,7 @@ struct qu__graphics const qu__graphics_null = {
     .terminate = terminate,
     .refresh = refresh,
     .swap = swap,
-    .notify_display_resize = notify_display_resize,
+    .on_display_resize = on_display_resize,
     .push_matrix = push_matrix,
     .pop_matrix = pop_matrix,
     .translate = translate,

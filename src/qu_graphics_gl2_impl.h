@@ -1572,7 +1572,7 @@ static void gl2_swap(void)
     });
 }
 
-static void gl2_notify_display_resize(int width, int height)
+static void gl2_on_display_resize(int width, int height)
 {
     gl2__append_command(&(gl2__cmd) {
         .type = GL2__CMD_RESIZE,

@@ -690,7 +690,7 @@ static bool process(void)
             if (event.xconfigure.width != impl.width || event.xconfigure.height != impl.height) {
                 impl.width = event.xconfigure.width;
                 impl.height = event.xconfigure.height;
-                qu_notify_display_resize(impl.width, impl.height);
+                qu__graphics_on_display_resize(impl.width, impl.height);
             }
 
             break;

@@ -553,7 +553,7 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         PostQuitMessage(0);
         return 0;
     case WM_SIZE:
-        qu_notify_display_resize(LOWORD(lp), HIWORD(lp));
+        qu__graphics_on_display_resize(LOWORD(lp), HIWORD(lp));
         return 0;
     case WM_ACTIVATE:
         // if (LOWORD(wp) == WA_ACTIVE && HIWORD(wp) == 0) {
