@@ -86,7 +86,20 @@ static void joystick_linux__process(void)
 
         // -1 is returned if event queue is empty.
         while (read(priv.device[i].fd, &event, sizeof(event)) != -1) {
-            handle_linux_joystick_event(i, &event);
+            // Event type can be JS_EVENT_BUTTON or JS_EVENT_AXIS.
+            // Either of these events can be ORd together with JS_EVENT_INIT
+            // if event is sent for the first time in order to give you
+            // initial values for buttons and axes.
+
+            if (event->type & JS_EVENT_BUTTON) {
+                priv.device[i].button[event.number] = event.value;
+
+                if (!(event->type & JS_EVENT_INIT)) {
+                    // TODO: ???
+                }
+            } else if (event->type & JS_EVENT_AXIS) {
+                priv.device[i].axis[event.number] = event.value / 32767.f;
+            }
         }
 
         // errno is set to EAGAIN if joystick is still connected.
@@ -117,11 +130,11 @@ static bool joystick_linux__is_connected(int id)
 
     float current_time = qu_get_time_mediump();
 
-    if (impl.joystick_next_poll_time > current_time) {
+    if (priv.next_poll_time > current_time) {
         return false;
     }
 
-    impl.joystick_next_poll_time = current_time + 1.f;
+    priv.next_poll_time = current_time + 1.f;
 
     char path[64];
     snprintf(path, sizeof(path) - 1, "/dev/input/js%d", joystick);
