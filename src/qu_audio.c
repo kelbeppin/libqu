@@ -53,62 +53,87 @@ void qu__audio_terminate(void)
 	priv.impl->terminate();
 }
 
-void qu__audio_set_master_volume(float volume)
+//------------------------------------------------------------------------------
+// API entries
+
+void qu_set_master_volume(float volume)
 {
     priv.impl->set_master_volume(volume);
 }
 
-int32_t qu__audio_load_sound(qu_file *file)
+qu_sound qu_load_sound(char const *path)
 {
-    return priv.impl->load_sound(file);
+    qu_file *file = qu_fopen(path);
+
+    if (!file) {
+        return (qu_sound) { 0 };
+    }
+
+    int32_t id = priv.impl->load_sound(file);
+
+    qu_fclose(file);
+
+    return (qu_sound) { id };
 }
 
-void qu__audio_delete_sound(int32_t sound_id)
+void qu_delete_sound(qu_sound sound)
 {
-    priv.impl->delete_sound(sound_id);
+    priv.impl->delete_sound(sound.id);
 }
 
-int32_t qu__audio_play_sound(int32_t sound_id)
+qu_stream qu_play_sound(qu_sound sound)
 {
-    return priv.impl->play_sound(sound_id);
+    return (qu_stream) { priv.impl->play_sound(sound.id) };
 }
 
-int32_t qu__audio_loop_sound(int32_t sound_id)
+qu_stream qu_loop_sound(qu_sound sound)
 {
-    return priv.impl->loop_sound(sound_id);
+    return (qu_stream) { priv.impl->loop_sound(sound.id) };
 }
 
-int32_t qu__audio_open_music(qu_file *file)
+qu_music qu_open_music(char const *path)
 {
-    return priv.impl->open_music(file);
+    qu_file *file = qu_fopen(path);
+
+    if (!file) {
+        return (qu_music) { 0 };
+    }
+
+    int32_t id = priv.impl->open_music(file);
+        
+    if (!id) {
+        qu_fclose(file);
+    }
+
+    return (qu_music) { id };
 }
 
-void qu__audio_close_music(int32_t music_id)
+void qu_close_music(qu_music music)
 {
-    priv.impl->close_music(music_id);
+    priv.impl->close_music(music.id);
 }
 
-int32_t qu__audio_play_music(int32_t music_id)
+qu_stream qu_play_music(qu_music music)
 {
-    return priv.impl->play_music(music_id);
+    return (qu_stream) { priv.impl->play_music(music.id) };
 }
 
-int32_t qu__audio_loop_music(int32_t music_id)
+qu_stream qu_loop_music(qu_music music)
 {
-    return priv.impl->loop_music(music_id);
+    return (qu_stream) { priv.impl->loop_music(music.id) };
 }
 
-void qu__audio_pause_stream(int32_t stream_id)
+void qu_pause_stream(qu_stream stream)
 {
-    priv.impl->pause_stream(stream_id);
+    priv.impl->pause_stream(stream.id);
 }
 
-void qu__audio_unpause_stream(int32_t stream_id)
+void qu_unpause_stream(qu_stream stream)
 {
-    priv.impl->unpause_stream(stream_id);
+    priv.impl->unpause_stream(stream.id);
 }
 
-void qu__audio_stop_stream(int32_t stream_id)
+void qu_stop_stream(qu_stream stream)
 {
-    priv.impl->stop_stream(stream_id);
+    priv.impl->stop_stream(stream.id);
 }
