@@ -203,6 +203,11 @@ void qu_on_mouse_button_released(qu_mouse_button_fn fn)
     qu__core_set_mouse_button_release_fn(fn);
 }
 
+void qu_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
+{
+    qu__core_set_mouse_cursor_motion_fn(fn);
+}
+
 bool qu_is_joystick_connected(int joystick)
 {
     return qu__core_is_joystick_connected(joystick);
@@ -241,11 +246,6 @@ bool qu_is_joystick_button_pressed(int joystick, int button)
 float qu_get_joystick_axis_value(int joystick, int axis)
 {
     return qu__core_get_joystick_axis_value(joystick, axis);
-}
-
-void qu_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
-{
-    qu__core_on_mouse_cursor_moved(fn);
 }
 
 void qu_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)

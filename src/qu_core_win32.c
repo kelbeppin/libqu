@@ -71,8 +71,6 @@ static struct
 static struct
 {
     qu_vec2i mouse_wheel_delta;
-    qu_vec2i mouse_cursor_position;
-    qu_vec2i mouse_cursor_delta;
     
     struct {
         bool attached;
@@ -461,14 +459,6 @@ static qu_mouse_button mb_conv(UINT msg, WPARAM wp)
     return QU_MOUSE_BUTTON_INVALID;
 }
 
-static void handle_mouse_cursor_motion(int x, int y)
-{
-    input.mouse_cursor_delta.x = x - input.mouse_cursor_position.x;
-    input.mouse_cursor_delta.y = y - input.mouse_cursor_position.y;
-    input.mouse_cursor_position.x = x;
-    input.mouse_cursor_position.y = y;
-}
-
 static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg) {
@@ -524,7 +514,7 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         qu__core_on_mouse_button_released(mb_conv(msg, wp));
         return 0;
     case WM_MOUSEMOVE:
-        handle_mouse_cursor_motion(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
+        qu__core_on_mouse_cursor_moved(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
         return 0;
     case WM_MOUSEWHEEL:
         input.mouse_wheel_delta.y += GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA;
@@ -661,9 +651,6 @@ static void terminate(void)
 
 static bool process(void)
 {
-    input.mouse_cursor_delta.x = 0;
-    input.mouse_cursor_delta.y = 0;
-
     input.mouse_wheel_delta.x = 0;
     input.mouse_wheel_delta.y = 0;
 
@@ -682,14 +669,6 @@ static bool process(void)
         if (callbacks.on_mouse_wheel_scrolled) {
             callbacks.on_mouse_wheel_scrolled(
                 input.mouse_wheel_delta.x, input.mouse_wheel_delta.y
-            );
-        }
-    }
-
-    if (input.mouse_cursor_delta.x || input.mouse_cursor_delta.y) {
-        if (callbacks.on_mouse_cursor_moved) {
-            callbacks.on_mouse_cursor_moved(
-                input.mouse_cursor_delta.x, input.mouse_cursor_delta.y
             );
         }
     }
@@ -768,16 +747,6 @@ static void *gl_proc_address(char const *name)
 }
 
 //------------------------------------------------------------------------------
-
-static qu_vec2i get_mouse_cursor_position(void)
-{
-    return input.mouse_cursor_position;
-}
-
-static qu_vec2i get_mouse_cursor_delta(void)
-{
-    return input.mouse_cursor_delta;
-}
 
 static qu_vec2i get_mouse_wheel_delta(void)
 {
@@ -948,11 +917,6 @@ static float get_joystick_axis_value(int id, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
-{
-    callbacks.on_mouse_cursor_moved = fn;
-}
-
 static void on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 {
     callbacks.on_mouse_wheel_scrolled = fn;
@@ -969,8 +933,6 @@ struct qu__core const qu__core_win32 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_mouse_cursor_position = get_mouse_cursor_position,
-    .get_mouse_cursor_delta = get_mouse_cursor_delta,
     .get_mouse_wheel_delta = get_mouse_wheel_delta,
     .is_joystick_connected = is_joystick_connected,
     .get_joystick_id = get_joystick_id,
@@ -980,6 +942,5 @@ struct qu__core const qu__core_win32 = {
     .get_joystick_axis_value = get_joystick_axis_value,
     .get_joystick_button_id = get_joystick_button_id,
     .get_joystick_axis_id = get_joystick_axis_id,
-    .on_mouse_cursor_moved = on_mouse_cursor_moved,
     .on_mouse_wheel_scrolled = on_mouse_wheel_scrolled,
 };

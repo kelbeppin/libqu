@@ -32,12 +32,15 @@ struct qu__core_priv
 
     qu_keyboard_state keyboard;
     uint32_t mouse_buttons;
+    qu_vec2i mouse_cursor_position;
+    qu_vec2i mouse_cursor_delta;
 
     qu_key_fn key_press_fn;
     qu_key_fn key_repeat_fn;
     qu_key_fn key_release_fn;
     qu_mouse_button_fn mouse_button_press_fn;
     qu_mouse_button_fn mouse_button_release_fn;
+    qu_mouse_cursor_fn mouse_cursor_motion_fn;
 };
 
 static struct qu__core_priv priv;
@@ -69,9 +72,23 @@ void qu__core_terminate(void)
 bool qu__core_process(void)
 {
     memset(&priv.keyboard, 0, sizeof(priv.keyboard));
+
     priv.mouse_buttons = 0;
 
-    return priv.impl->process();
+    priv.mouse_cursor_delta.x = 0;
+    priv.mouse_cursor_delta.y = 0;
+
+    if (!priv.impl->process()) {
+        return false;
+    }
+
+    if (priv.mouse_cursor_delta.x || priv.mouse_cursor_delta.y) {
+        if (priv.mouse_cursor_motion_fn) {
+            priv.mouse_cursor_motion_fn(priv.mouse_cursor_delta.x, priv.mouse_cursor_delta.y);
+        }
+    }
+
+    return true;
 }
 
 void qu__core_present(void)
@@ -123,12 +140,12 @@ bool qu__core_is_mouse_button_pressed(qu_mouse_button button)
 
 qu_vec2i qu__core_get_mouse_cursor_position(void)
 {
-    return priv.impl->get_mouse_cursor_position();
+    return priv.mouse_cursor_position;
 }
 
 qu_vec2i qu__core_get_mouse_cursor_delta(void)
 {
-    return priv.impl->get_mouse_cursor_delta();
+    return priv.mouse_cursor_delta;
 }
 
 qu_vec2i qu__core_get_mouse_wheel_delta(void)
@@ -201,9 +218,9 @@ void qu__core_set_mouse_button_release_fn(qu_mouse_button_fn fn)
     priv.mouse_button_release_fn = fn;
 }
 
-void qu__core_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
+void qu__core_set_mouse_cursor_motion_fn(qu_mouse_cursor_fn fn)
 {
-    priv.impl->on_mouse_cursor_moved(fn);
+    priv.mouse_cursor_motion_fn = fn;
 }
 
 void qu__core_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
@@ -266,4 +283,16 @@ void qu__core_on_mouse_button_released(qu_mouse_button button)
             priv.mouse_button_release_fn(button);
         }
     }
+}
+
+void qu__core_on_mouse_cursor_moved(int x, int y)
+{
+    int x_old = priv.mouse_cursor_position.x;
+    int y_old = priv.mouse_cursor_position.y;
+
+    priv.mouse_cursor_position.x = x;
+    priv.mouse_cursor_position.y = y;
+
+    priv.mouse_cursor_delta.x = x - x_old;
+    priv.mouse_cursor_delta.y = x - y_old;
 }

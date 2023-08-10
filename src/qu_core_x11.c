@@ -110,8 +110,6 @@ static struct
 
     struct {
         qu_vec2i wheel_delta;
-        qu_vec2i cursor_position;
-        qu_vec2i cursor_delta;
     } mouse;
 
     float joystick_next_poll_time;
@@ -135,7 +133,6 @@ static struct
     // Event handlers
 
     qu_mouse_wheel_fn on_mouse_wheel_scrolled;
-    qu_mouse_cursor_fn on_mouse_cursor_moved;
 } impl;
 
 //------------------------------------------------------------------------------
@@ -574,9 +571,6 @@ static bool process(void)
         }
     }
 
-    impl.mouse.cursor_delta.x = 0;
-    impl.mouse.cursor_delta.y = 0;
-
     impl.mouse.wheel_delta.x = 0;
     impl.mouse.wheel_delta.y = 0;
 
@@ -591,10 +585,7 @@ static bool process(void)
             qu__core_on_key_released(key_conv(XLookupKeysym(&event.xkey, ShiftMapIndex)));
             break;
         case MotionNotify:
-            impl.mouse.cursor_delta.x = event.xmotion.x - impl.mouse.cursor_position.x;
-            impl.mouse.cursor_delta.y = event.xmotion.y - impl.mouse.cursor_position.y;
-            impl.mouse.cursor_position.x = event.xmotion.x;
-            impl.mouse.cursor_position.y = event.xmotion.y;
+            qu__core_on_mouse_cursor_moved(event.xmotion.x, event.xmotion.y);
             break;
         case ButtonPress:
             if (event.xbutton.button == Button4) {
@@ -630,14 +621,6 @@ static bool process(void)
         if (impl.on_mouse_wheel_scrolled) {
             impl.on_mouse_wheel_scrolled(
                 impl.mouse.wheel_delta.x, impl.mouse.wheel_delta.y
-            );
-        }
-    }
-
-    if (impl.mouse.cursor_delta.x || impl.mouse.cursor_delta.y) {
-        if (impl.on_mouse_cursor_moved) {
-            impl.on_mouse_cursor_moved(
-                impl.mouse.cursor_delta.x, impl.mouse.cursor_delta.y
             );
         }
     }
@@ -720,16 +703,6 @@ static void *gl_proc_address(char const *name)
 }
 
 //------------------------------------------------------------------------------
-
-static qu_vec2i get_mouse_cursor_position(void)
-{
-    return impl.mouse.cursor_position;
-}
-
-static qu_vec2i get_mouse_cursor_delta(void)
-{
-    return impl.mouse.cursor_delta;
-}
 
 static qu_vec2i get_mouse_wheel_delta(void)
 {
@@ -950,11 +923,6 @@ static float get_joystick_axis_value(int joystick, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
-{
-    impl.on_mouse_cursor_moved = fn;
-}
-
 static void on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 {
     impl.on_mouse_wheel_scrolled = fn;
@@ -971,8 +939,6 @@ struct qu__core const qu__core_x11 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_mouse_cursor_position = get_mouse_cursor_position,
-    .get_mouse_cursor_delta = get_mouse_cursor_delta,
     .get_mouse_wheel_delta = get_mouse_wheel_delta,
     .is_joystick_connected = is_joystick_connected,
     .get_joystick_id = get_joystick_id,
@@ -982,6 +948,5 @@ struct qu__core const qu__core_x11 = {
     .get_joystick_axis_id = get_joystick_axis_id,
     .is_joystick_button_pressed = is_joystick_button_pressed,
     .get_joystick_axis_value = get_joystick_axis_value,
-    .on_mouse_cursor_moved = on_mouse_cursor_moved,
     .on_mouse_wheel_scrolled = on_mouse_wheel_scrolled,
 };
