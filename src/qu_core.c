@@ -173,121 +173,124 @@ void *qu__core_get_gl_proc_address(char const *name)
     return priv.impl->gl_proc_address(name);
 }
 
-qu_keyboard_state const *qu__core_get_keyboard_state(void)
+//------------------------------------------------------------------------------
+// API entries
+
+qu_keyboard_state const *qu_get_keyboard_state(void)
 {
     return &priv.keyboard;
 }
 
-qu_key_state qu__core_get_key_state(qu_key key)
+qu_key_state qu_get_key_state(qu_key key)
 {
     return priv.keyboard.keys[key];
 }
 
-bool qu__core_is_key_pressed(qu_key key)
+bool qu_is_key_pressed(qu_key key)
 {
     return (priv.keyboard.keys[key] == QU_KEY_PRESSED);
 }
 
-uint8_t qu__core_get_mouse_button_state(void)
+void qu_on_key_pressed(qu_key_fn fn)
+{
+    priv.key_press_fn = fn;
+}
+
+void qu_on_key_repeated(qu_key_fn fn)
+{
+    priv.key_repeat_fn = fn;
+}
+
+void qu_on_key_released(qu_key_fn fn)
+{
+    priv.key_release_fn = fn;
+}
+
+uint8_t qu_get_mouse_button_state(void)
 {
     return priv.mouse_buttons & 0xFF; // <-- remove mask later
 }
 
-bool qu__core_is_mouse_button_pressed(qu_mouse_button button)
+bool qu_is_mouse_button_pressed(qu_mouse_button button)
 {
     unsigned int mask = (1 << button);
 
     return (priv.mouse_buttons & mask) == mask;
 }
 
-qu_vec2i qu__core_get_mouse_cursor_position(void)
+qu_vec2i qu_get_mouse_cursor_position(void)
 {
-    return priv.mouse_cursor_position;
+    return qu__graphics_conv_cursor(priv.mouse_cursor_position);
 }
 
-qu_vec2i qu__core_get_mouse_cursor_delta(void)
+qu_vec2i qu_get_mouse_cursor_delta(void)
 {
-    return priv.mouse_cursor_delta;
+    return qu__graphics_conv_cursor_delta(priv.mouse_cursor_delta);
 }
 
-qu_vec2i qu__core_get_mouse_wheel_delta(void)
+qu_vec2i qu_get_mouse_wheel_delta(void)
 {
     return priv.mouse_wheel_delta;
 }
 
-bool qu__core_is_joystick_connected(int joystick)
-{
-    return priv.joystick->is_connected(joystick);
-}
-
-char const *qu__core_get_joystick_name(int joystick)
-{
-    return priv.joystick->get_name(joystick);
-}
-
-int qu__core_get_joystick_button_count(int joystick)
-{
-    return priv.joystick->get_button_count(joystick);
-}
-
-int qu__core_get_joystick_axis_count(int joystick)
-{
-    return priv.joystick->get_axis_count(joystick);
-}
-
-char const *qu__core_get_joystick_button_name(int joystick, int button)
-{
-    return priv.joystick->get_button_name(joystick, button);
-}
-
-char const *qu__core_get_joystick_axis_name(int joystick, int axis)
-{
-    return priv.joystick->get_axis_name(joystick, axis);
-}
-
-bool qu__core_is_joystick_button_pressed(int joystick, int button)
-{
-    return priv.joystick->is_button_pressed(joystick, button);
-}
-
-float qu__core_get_joystick_axis_value(int joystick, int axis)
-{
-    return priv.joystick->get_axis_value(joystick, axis);
-}
-
-void qu__core_set_key_press_fn(qu_key_fn fn)
-{
-    priv.key_press_fn = fn;
-}
-
-void qu__core_set_key_repeat_fn(qu_key_fn fn)
-{
-    priv.key_repeat_fn = fn;
-}
-
-void qu__core_set_key_release_fn(qu_key_fn fn)
-{
-    priv.key_release_fn = fn;
-}
-
-void qu__core_set_mouse_button_press_fn(qu_mouse_button_fn fn)
+void qu_on_mouse_button_pressed(qu_mouse_button_fn fn)
 {
     priv.mouse_button_press_fn = fn;
 }
 
-void qu__core_set_mouse_button_release_fn(qu_mouse_button_fn fn)
+void qu_on_mouse_button_released(qu_mouse_button_fn fn)
 {
     priv.mouse_button_release_fn = fn;
 }
 
-void qu__core_set_mouse_cursor_motion_fn(qu_mouse_cursor_fn fn)
+void qu_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
 {
     priv.mouse_cursor_motion_fn = fn;
 }
 
-void qu__core_set_mouse_wheel_scroll_fn(qu_mouse_wheel_fn fn)
+void qu_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 {
     priv.mouse_wheel_scroll_fn = fn;
+}
+
+bool qu_is_joystick_connected(int joystick)
+{
+    return priv.joystick->is_connected(joystick);
+}
+
+char const *qu_get_joystick_id(int joystick)
+{
+    return priv.joystick->get_name(joystick);
+}
+
+int qu_get_joystick_button_count(int joystick)
+{
+    return priv.joystick->get_button_count(joystick);
+}
+
+int qu_get_joystick_axis_count(int joystick)
+{
+    return priv.joystick->get_axis_count(joystick);
+}
+
+char const *qu_get_joystick_button_id(int joystick, int button)
+{
+    return priv.joystick->get_button_name(joystick, button);
+}
+
+char const *qu_get_joystick_axis_id(int joystick, int axis)
+{
+    return priv.joystick->get_axis_name(joystick, axis);
+}
+
+bool qu_is_joystick_button_pressed(int joystick, int button)
+{
+    return priv.joystick->is_button_pressed(joystick, button);
+}
+
+float qu_get_joystick_axis_value(int joystick, int axis)
+{
+    return priv.joystick->get_axis_value(joystick, axis);
 }
 
 void qu__core_on_key_pressed(qu_key key)
