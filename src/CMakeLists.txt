@@ -1,42 +1,23 @@
 
 #-------------------------------------------------------------------------------
 
-if(QU_OS_WINDOWS)
-    set(QU_PLATFORM_SRC "qu_platform_win32.c")
-else()
-    set(QU_PLATFORM_SRC "qu_platform_posix.c")
-endif()
-
-if(QU_OS_WINDOWS)
-    set(QU_CORE_SRC "qu_core_win32.c")
-elseif(QU_OS_LINUX)
-    set(QU_CORE_SRC "qu_core_x11.c")
-elseif(QU_OS_EMSCRIPTEN)
-    set(QU_CORE_SRC "qu_core_emscripten.c")
-endif()
-
 add_library(${PROJECT_NAME}
-    "qu.c"
-    "qu.h"
-    "qu_array.c"
-    "qu_audio.c"
-    "qu_audio_null.c"
-    "qu_core.c"
-    "qu_fs.c"
-    "qu_graphics.c"
-    "qu_graphics_null.c"
-    "qu_image_loader.c"
-    "qu_joystick_null.c"
-    "qu_log.c"
-    "qu_math.c"
-    "qu_sound_reader.c"
-    "qu_text.c"
-    "qu_util.c"
-    ${QU_CORE_SRC}
-    ${QU_PLATFORM_SRC}
-    $<$<BOOL:${QU_USE_OPENAL}>:qu_audio_openal.c>
-    $<$<BOOL:${QU_USE_OPENGL}>:qu_graphics_gl2.c>
-    $<$<BOOL:${QU_USE_OPENGL_ES2}>:qu_graphics_es2.c>)
+    qu.c
+    qu.h
+    qu_array.c
+    qu_audio.c
+    qu_audio_null.c
+    qu_core.c
+    qu_fs.c
+    qu_graphics.c
+    qu_graphics_null.c
+    qu_image_loader.c
+    qu_joystick_null.c
+    qu_log.c
+    qu_math.c
+    qu_sound_reader.c
+    qu_text.c
+    qu_util.c)
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
@@ -45,41 +26,14 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE
         "${PROJECT_SOURCE_DIR}/third-party")
 
-target_compile_definitions(${PROJECT_NAME}
-    PRIVATE
-        QU_BUILD
-        $<$<BOOL:${BUILD_SHARED_LIBS}>:QU_SHARED>
-        $<$<BOOL:${QU_USE_OPENAL}>:QU_USE_OPENAL>
-        $<$<BOOL:${QU_USE_OPENGL}>:QU_USE_GL>
-        $<$<BOOL:${QU_USE_OPENGL_ES2}>:QU_USE_ES2>)
+target_compile_definitions(${PROJECT_NAME} PRIVATE QU_BUILD)
 
 target_link_libraries(${PROJECT_NAME}
-    PUBLIC
-        $<$<BOOL:${MATH_LIBRARY}>:${MATH_LIBRARY}>
     PRIVATE
         Threads::Threads
         Freetype::Freetype
         harfbuzz::harfbuzz
-        Vorbis::vorbisfile
-        $<$<BOOL:${QU_USE_OPENAL}>:OpenAL::OpenAL>
-        $<$<BOOL:${QU_USE_OPENGL}>:OpenGL::GL>
-        $<$<BOOL:${QU_USE_OPENGL_ES2}>:${OPENGL_GLESv2_LIBRARY}>)
-
-if(MATH_LIBRARY)
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${MATH_LIBRARY})
-endif()
-
-if(QU_OS_WINDOWS)
-    target_sources(${PROJECT_NAME} PRIVATE qu_audio_xaudio2.cpp qu_joystick_win32.cpp)
-    target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi shcore XInput XAudio2)
-elseif(QU_OS_LINUX)
-    target_sources(${PROJECT_NAME} PRIVATE qu_joystick_linux.c)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GLX ${X11_LIBRARIES})
-elseif(QU_OS_EMSCRIPTEN)
-    target_compile_options(${PROJECT_NAME} PUBLIC -sUSE_SDL)
-    target_link_options(${PROJECT_NAME} PUBLIC -sINITIAL_MEMORY=536870912 -sPTHREAD_POOL_SIZE=4)
-endif()
+        Vorbis::vorbisfile)
 
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
@@ -88,8 +42,66 @@ set_target_properties(${PROJECT_NAME}
         C_STANDARD_REQUIRED ON
         C_EXTENSIONS ON
         C_VISIBILITY_PRESET hidden
+        CXX_STANDARD 11
+        CXX_EXTENSIONS OFF
         VERSION ${PROJECT_VERSION}
         SOVERSION ${PROJECT_VERSION_MAJOR})
+
+#-------------------------------------------------------------------------------
+
+if(QU_OS_WINDOWS)
+    target_sources(${PROJECT_NAME} PRIVATE
+        qu_audio_xaudio2.cpp
+        qu_core_win32.c
+        qu_joystick_win32.cpp
+        qu_platform_win32.c)
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi shcore XInput XAudio2)
+endif()
+
+if(QU_OS_LINUX)
+    target_sources(${PROJECT_NAME} PRIVATE
+        qu_core_x11.c
+        qu_joystick_linux.c
+        qu_platform_posix.c)
+
+    target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GLX ${X11_LIBRARIES})
+endif()
+
+if(QU_OS_EMSCRIPTEN)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c qu_platform_posix.c)
+    target_compile_options(${PROJECT_NAME} PUBLIC -sUSE_SDL)
+    target_link_options(${PROJECT_NAME} PUBLIC -sINITIAL_MEMORY=536870912 -sPTHREAD_POOL_SIZE=4)
+endif()
+
+#-------------------------------------------------------------------------------
+
+if(BUILD_SHARED_LIBS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_SHARED)
+endif()
+
+if(MATH_LIBRARY)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${MATH_LIBRARY})
+endif()
+
+if(QU_USE_OPENAL)
+    target_sources(${PROJECT_NAME} PRIVATE qu_audio_openal.c)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_OPENAL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL::OpenAL)
+endif()
+
+if(QU_USE_OPENGL)
+    target_sources(${PROJECT_NAME} PRIVATE qu_graphics_gl2.c)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_GL)
+    target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL)
+endif()
+
+if(QU_USE_OPENGL_ES2)
+    target_sources(${PROJECT_NAME} PRIVATE qu_graphics_es2.c)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_ES2)
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_GLESv2_LIBRARY})
+endif()
 
 #-------------------------------------------------------------------------------
 
@@ -108,7 +120,9 @@ if(QU_COMPILER_MSVC)
     if(QU_USE_ASAN)
         target_compile_options(${PROJECT_NAME} PRIVATE /fsanitize=address)
     endif()
-elseif(QU_COMPILER_CLANG OR QU_COMPILER_GNU)
+endif()
+
+if(QU_COMPILER_CLANG OR QU_COMPILER_GNU)
     target_compile_options(${PROJECT_NAME}
         PRIVATE
             -Wall
