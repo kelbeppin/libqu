@@ -359,6 +359,24 @@ typedef enum qu_key
 } qu_key;
 
 /**
+ * \brief State of a single key.
+ */
+typedef enum qu_key_state
+{
+    QU_KEY_IDLE,        //< Not pressed
+    QU_KEY_PRESSED,     //< Being hold down
+    QU_KEY_RELEASED,    //< Released just now (during last frame)
+} qu_key_state;
+
+/**
+ * \brief Struct that holds keyboard state.
+ */
+typedef struct qu_keyboard_state
+{
+    qu_key_state keys[QU_TOTAL_KEYS];
+} qu_keyboard_state;
+
+/**
  * \brief Keyboard event callback.
  */
 typedef void (*qu_key_fn)(qu_key key);
@@ -366,10 +384,14 @@ typedef void (*qu_key_fn)(qu_key key);
 /**
  * \brief Get current keyboard state.
  * 
- * \return Array of QU_TOTAL_KEYS boolean values.
-           An element corresponding to a key is true it's pressed.
+ * \return Pointer to a struct that holds keyboard state.
  */
-QU_API bool const * QU_CALL qu_get_keyboard_state(void);
+QU_API qu_keyboard_state const * QU_CALL qu_get_keyboard_state(void);
+
+/**
+ * \brief Get current state of a particular key.
+ */
+QU_API qu_key_state QU_CALL qu_get_key_state(qu_key key);
 
 /**
  * \brief Check if a key is pressed.

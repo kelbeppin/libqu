@@ -29,6 +29,8 @@
 struct qu__core_priv
 {
 	struct qu__core const *impl;
+
+    qu_keyboard_state keyboard;
 };
 
 static struct qu__core_priv priv;
@@ -82,9 +84,30 @@ void *qu__core_get_gl_proc_address(char const *name)
     return priv.impl->gl_proc_address(name);
 }
 
-bool const *qu__core_get_keyboard_state(void)
+qu_keyboard_state const *qu__core_get_keyboard_state(void)
 {
-    return priv.impl->get_keyboard_state();
+    // Temporary.
+
+    static qu_keyboard_state state = { 0 };
+
+    bool const *b = priv.impl->get_keyboard_state();
+
+    for (int i = 0; i < QU_TOTAL_KEYS; i++) {
+        state.keys[i] = b[i] ? QU_KEY_PRESSED : QU_KEY_RELEASED;
+    }
+
+    return &state;
+}
+
+qu_key_state qu__core_get_key_state(qu_key key)
+{
+    // Temporary.
+
+    if (priv.impl->is_key_pressed(key)) {
+        return QU_KEY_PRESSED;
+    }
+
+    return QU_KEY_IDLE;
 }
 
 bool qu__core_is_key_pressed(qu_key key)

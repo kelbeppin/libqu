@@ -138,9 +138,14 @@ void qu_present(void)
 //------------------------------------------------------------------------------
 // Core
 
-bool const *qu_get_keyboard_state(void)
+qu_keyboard_state const *qu_get_keyboard_state(void)
 {
     return qu__core_get_keyboard_state();
+}
+
+qu_key_state qu_get_key_state(qu_key key)
+{
+    return qu__core_get_key_state(key);
 }
 
 bool qu_is_key_pressed(qu_key key)
