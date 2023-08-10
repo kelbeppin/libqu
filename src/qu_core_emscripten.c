@@ -259,48 +259,6 @@ static void *gl_proc_address(char const *name)
 
 //------------------------------------------------------------------------------
 
-static bool is_joystick_connected(int joystick)
-{
-    return false;
-}
-
-static char const *get_joystick_id(int joystick)
-{
-    return NULL;
-}
-
-static int get_joystick_button_count(int joystick)
-{
-    return 0;
-}
-
-static int get_joystick_axis_count(int joystick)
-{
-    return 0;
-}
-
-static char const *get_joystick_button_id(int joystick, int button)
-{
-    return NULL;
-}
-
-static char const *get_joystick_axis_id(int joystick, int axis)
-{
-    return NULL;
-}
-
-static bool is_joystick_button_pressed(int joystick, int button)
-{
-    return false;
-}
-
-static float get_joystick_axis_value(int joystick, int axis)
-{
-    return 0.f;
-}
-
-//------------------------------------------------------------------------------
-
 struct qu__core const qu__core_emscripten = {
     .initialize = initialize,
     .terminate = terminate,
@@ -310,12 +268,4 @@ struct qu__core const qu__core_emscripten = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .is_joystick_connected = is_joystick_connected,
-    .get_joystick_id = get_joystick_id,
-    .get_joystick_button_count = get_joystick_button_count,
-    .get_joystick_axis_count = get_joystick_axis_count,
-    .is_joystick_button_pressed = is_joystick_button_pressed,
-    .get_joystick_axis_value = get_joystick_axis_value,
-    .get_joystick_button_id = get_joystick_button_id,
-    .get_joystick_axis_id = get_joystick_axis_id,
 };

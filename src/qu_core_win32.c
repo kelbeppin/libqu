@@ -23,7 +23,6 @@
 #include <windowsx.h>
 #include <dwmapi.h>
 #include <shellscalingapi.h>
-#include <xinput.h>
 #include <GL/gl.h>
 #include <GL/wglext.h>
 
@@ -67,15 +66,6 @@ static struct
     WCHAR       wide_title[256];
 #endif
 } dpy;
-
-static struct
-{
-    struct {
-        bool attached;
-        float next_poll_time;
-        XINPUT_STATE state;
-    } joystick[4];
-} input;
 
 //------------------------------------------------------------------------------
 
@@ -654,23 +644,6 @@ static bool process(void)
         DispatchMessage(&msg);
     }
 
-    for (int i = 0; i < 4; i++) {
-        if (!input.joystick[i].attached) {
-            continue;
-        }
-
-        DWORD status = XInputGetState(i, &input.joystick[i].state);
-
-        if (status != ERROR_SUCCESS) {
-            if (status != ERROR_DEVICE_NOT_CONNECTED) {
-                // TODO: report error
-            }
-
-            input.joystick[i].attached = false;
-            input.joystick[i].next_poll_time = 0.f;
-        }
-;   }
-
     return true;
 }
 
@@ -729,168 +702,6 @@ static void *gl_proc_address(char const *name)
 
 //------------------------------------------------------------------------------
 
-static bool is_joystick_connected(int joystick)
-{
-    if (joystick < 0 || joystick >= 4) {
-        return false;
-    }
-
-    if (input.joystick[joystick].attached) {
-        return true;
-    }
-
-    float current_time = qu_get_time_mediump();
-
-    if (input.joystick[joystick].next_poll_time > current_time) {
-        return false;
-    }
-
-    input.joystick[joystick].next_poll_time = current_time + 1.f;
-
-    ZeroMemory(&input.joystick[joystick].state, sizeof(XINPUT_STATE));
-    DWORD status = XInputGetState(joystick, &input.joystick[joystick].state);
-
-    if (status == ERROR_SUCCESS) {
-        input.joystick[joystick].attached = true;
-    }
-
-    return input.joystick[joystick].attached;
-}
-
-static char const *get_joystick_id(int joystick)
-{
-    if (joystick < 0 || joystick >= 4 || !input.joystick[joystick].attached) {
-        return NULL;
-    }
-
-    return "UNKNOWN";
-}
-
-static int get_joystick_button_count(int joystick)
-{
-    if (joystick < 0 || joystick >= 4 || !input.joystick[joystick].attached) {
-        return 0;
-    }
-
-    return 10;
-}
-
-static int get_joystick_axis_count(int joystick)
-{
-    if (joystick < 0 || joystick >= 4 || !input.joystick[joystick].attached) {
-        return 0;
-    }
-
-    return 8;
-}
-
-static char const *get_joystick_button_id(int joystick, int button)
-{
-    if (joystick < 0 || joystick >= 4 || !input.joystick[joystick].attached) {
-        return NULL;
-    }
-
-    if (button < 0 || button >= 10) {
-        return NULL;
-    }
-
-    char const *names[10] = {
-        "START", "BACK", "LTHUMB", "RTHUMB",
-        "LSHOULDER", "RSHOULDER",
-        "A", "B", "X", "Y",
-    };
-
-    return names[button];
-}
-
-static char const *get_joystick_axis_id(int joystick, int axis)
-{
-    if (joystick < 0 || joystick >= 4 || !input.joystick[joystick].attached) {
-        return NULL;
-    }
-
-    if (axis < 0 || axis >= 8) {
-        return NULL;
-    }
-
-    char const *names[8] = {
-        "DPADX", "DPADY",
-        "LTHUMBX", "LTHUMBY",
-        "RTHUMBX", "RTHUMBY",
-        "LTRIGGER", "RTRIGGER",
-    };
-
-    return names[axis];
-}
-
-static bool is_joystick_button_pressed(int id, int button)
-{
-    if (id < 0 || id >= 4 || !input.joystick[id].attached) {
-        return false;
-    }
-
-    if (button < 0 || button >= 10) {
-        return false;
-    }
-
-    int mask[10] = {
-        XINPUT_GAMEPAD_START,
-        XINPUT_GAMEPAD_BACK,
-        XINPUT_GAMEPAD_LEFT_THUMB,
-        XINPUT_GAMEPAD_RIGHT_THUMB,
-        XINPUT_GAMEPAD_LEFT_SHOULDER,
-        XINPUT_GAMEPAD_RIGHT_SHOULDER,
-        XINPUT_GAMEPAD_A,
-        XINPUT_GAMEPAD_B,
-        XINPUT_GAMEPAD_X,
-        XINPUT_GAMEPAD_Y,
-    };
-
-    return input.joystick[id].state.Gamepad.wButtons & mask[button];
-}
-
-static float get_joystick_axis_value(int id, int axis)
-{
-    if (id < 0 || id >= 4 || !input.joystick[id].attached) {
-        return 0.f;
-    }
-
-    switch (axis) {
-    case 0:
-        if (input.joystick[id].state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) {
-            return -1.f;
-        } else if (input.joystick[id].state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) {
-            return +1.f;
-        }
-        break;
-    case 1:
-        if (input.joystick[id].state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) {
-            return -1.f;
-        } else if (input.joystick[id].state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) {
-            return +1.f;
-        }
-        break;
-    case 2:
-        return input.joystick[id].state.Gamepad.sThumbLX / 32767.f;
-    case 3:
-        return input.joystick[id].state.Gamepad.sThumbLY / 32767.f;
-    case 4:
-        return input.joystick[id].state.Gamepad.sThumbRX / 32767.f;
-    case 5:
-        return input.joystick[id].state.Gamepad.sThumbRY / 32767.f;
-    case 6:
-        return input.joystick[id].state.Gamepad.bLeftTrigger / 255.f;
-    case 7:
-        return input.joystick[id].state.Gamepad.bRightTrigger / 255.f;
-    default:
-        break;
-    }
-
-    return 0.f;
-}
-
-//------------------------------------------------------------------------------
-
 struct qu__core const qu__core_win32 = {
     .initialize = initialize,
     .terminate = terminate,
@@ -900,12 +711,4 @@ struct qu__core const qu__core_win32 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .is_joystick_connected = is_joystick_connected,
-    .get_joystick_id = get_joystick_id,
-    .get_joystick_button_count = get_joystick_button_count,
-    .get_joystick_axis_count = get_joystick_axis_count,
-    .is_joystick_button_pressed = is_joystick_button_pressed,
-    .get_joystick_axis_value = get_joystick_axis_value,
-    .get_joystick_button_id = get_joystick_button_id,
-    .get_joystick_axis_id = get_joystick_axis_id,
 };

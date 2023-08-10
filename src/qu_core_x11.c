@@ -36,27 +36,8 @@
 #include <X11/XKBlib.h>
 #include <GL/glx.h>
 
-#if defined(__linux__)
-#   include <linux/joystick.h>
-#   include <fcntl.h>
-#   include <unistd.h>
-#endif
-
 //------------------------------------------------------------------------------
 // qu_core_x11.c: Xlib-based core module
-//------------------------------------------------------------------------------
-
-#define MAX_JOYSTICKS               4
-#define MAX_JOYSTICK_ID             64
-
-#if defined(__linux__)
-#   define MAX_JOYSTICK_BUTTONS    (KEY_MAX - BTN_MISC + 1)
-#   define MAX_JOYSTICK_AXES       (ABS_MAX + 1)
-#else
-#   define MAX_JOYSTICK_BUTTONS    16
-#   define MAX_JOYSTICK_AXES       16
-#endif
-
 //------------------------------------------------------------------------------
 
 enum
@@ -105,26 +86,6 @@ static struct
 
     int width;
     int height;
-
-    // Input state
-
-    float joystick_next_poll_time;
-
-    struct {
-        char id[MAX_JOYSTICK_ID];
-
-        int button_count;
-        int axis_count;
-
-        bool button[MAX_JOYSTICK_BUTTONS];
-        float axis[MAX_JOYSTICK_AXES];
-
-#if defined(__linux__)
-        int fd;
-        uint16_t button_map[MAX_JOYSTICK_BUTTONS];
-        uint8_t axis_map[MAX_JOYSTICK_AXES];
-#endif
-    } joystick[MAX_JOYSTICKS];
 } impl;
 
 //------------------------------------------------------------------------------
@@ -257,28 +218,6 @@ static qu_mouse_button mouse_button_conv(unsigned int button)
     default:                return QU_MOUSE_BUTTON_INVALID;
     }
 }
-
-#if defined(__linux__)
-
-static void handle_linux_joystick_event(int joystick, struct js_event *event)
-{
-    // Event type can be JS_EVENT_BUTTON or JS_EVENT_AXIS.
-    // Either of these events can be ORd together with JS_EVENT_INIT
-    // if event is sent for the first time in order to give you
-    // initial values for buttons and axes.
-
-    if (event->type & JS_EVENT_BUTTON) {
-        impl.joystick[joystick].button[event->number] = event->value;
-
-        if (!(event->type & JS_EVENT_INIT)) {
-            // TODO: ???
-        }
-    } else if (event->type & JS_EVENT_AXIS) {
-        impl.joystick[joystick].axis[event->number] = event->value / 32767.f;
-    }
-}
-
-#endif
 
 //------------------------------------------------------------------------------
 
@@ -524,16 +463,6 @@ static void initialize(qu_params const *params)
     impl.width = xwa.width;
     impl.height = xwa.height;
 
-    // (8.2) Joystick
-
-#if defined(__linux__)
-
-    for (int i = 0; i < MAX_JOYSTICKS; i++) {
-        impl.joystick[i].fd = -1;
-    }
-
-#endif
-
     // (9) Done.
 
     QU_INFO("Xlib-based core module initialized.\n");
@@ -606,38 +535,6 @@ static bool process(void)
         }
     }
 
-#if defined(__linux__)
-
-    // Read joystick events.
-    for (int i = 0; i < MAX_JOYSTICKS; i++) {
-        if (impl.joystick[i].fd == -1) {
-            continue;
-        }
-
-        struct js_event event;
-
-        // -1 is returned if event queue is empty.
-        while (read(impl.joystick[i].fd, &event, sizeof(event)) != -1) {
-            handle_linux_joystick_event(i, &event);
-        }
-
-        // errno is set to EAGAIN if joystick is still connected.
-        // If it's not, then joystick has been disconnected.
-        if (errno != EAGAIN) {
-            close(impl.joystick[i].fd);
-
-            QU_INFO("Joystick '%s' disconnected.\n", impl.joystick[i].id);
-
-            memset(&impl.joystick[i], 0, sizeof(impl.joystick[i]));
-
-            impl.joystick[i].fd = -1;
-            impl.joystick[i].button_count = 0;
-            impl.joystick[i].axis_count = 0;
-        }
-    }
-
-#endif // defined(__linux__)
-
     return true;
 }
 
@@ -685,218 +582,6 @@ static void *gl_proc_address(char const *name)
 
 //------------------------------------------------------------------------------
 
-#if defined(__linux__)
-
-static bool is_joystick_connected(int joystick)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return false;
-    }
-
-    if (impl.joystick[joystick].fd != -1) {
-        return true;
-    }
-
-    float current_time = qu_get_time_mediump();
-
-    if (impl.joystick_next_poll_time > current_time) {
-        return false;
-    }
-
-    impl.joystick_next_poll_time = current_time + 1.f;
-
-    char path[64];
-    snprintf(path, sizeof(path) - 1, "/dev/input/js%d", joystick);
-
-    int fd = open(path, O_RDONLY | O_NONBLOCK);
-
-    if (fd == -1) {
-        return false;
-    }
-
-    ioctl(fd, JSIOCGNAME(MAX_JOYSTICK_ID), impl.joystick[joystick].id);
-    ioctl(fd, JSIOCGBUTTONS, &impl.joystick[joystick].button_count);
-    ioctl(fd, JSIOCGAXES, &impl.joystick[joystick].axis_count);
-    ioctl(fd, JSIOCGBTNMAP, impl.joystick[joystick].button_map);
-    ioctl(fd, JSIOCGAXMAP, impl.joystick[joystick].axis_map);
-
-    impl.joystick[joystick].fd = fd;
-
-    QU_INFO("Joystick '%s' connected.\n", impl.joystick[joystick].id);
-    QU_INFO("# of buttons: %d.\n", impl.joystick[joystick].button_count);
-    QU_INFO("# of axes: %d.\n", impl.joystick[joystick].axis_count);
-
-    return true;
-}
-
-static char const *get_joystick_button_id(int joystick, int button)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return NULL;
-    }
-
-    if (button < 0 || button >= MAX_JOYSTICK_BUTTONS) {
-        return NULL;
-    }
-
-    uint16_t index = impl.joystick[joystick].button_map[button];
-
-    switch (index) {
-    case BTN_TRIGGER:       return "TRIGGER";
-    case BTN_THUMB:         return "THUMB";
-    case BTN_THUMB2:        return "THUMB2";
-    case BTN_TOP:           return "TOP";
-    case BTN_TOP2:          return "TOP2";
-    case BTN_PINKIE:        return "PINKIE";
-    case BTN_BASE:          return "BASE";
-    case BTN_BASE2:         return "BASE2";
-    case BTN_BASE3:         return "BASE3";
-    case BTN_BASE4:         return "BASE4";
-    case BTN_BASE5:         return "BASE5";
-    case BTN_BASE6:         return "BASE6";
-    case BTN_DEAD:          return "DEAD";
-    case BTN_A:             return "A"; // also SOUTH
-    case BTN_B:             return "B"; // also EAST
-    case BTN_C:             return "C";
-    case BTN_X:             return "X"; // also NORTH
-    case BTN_Y:             return "Y"; // also WEST
-    case BTN_Z:             return "Z";
-    case BTN_TL:            return "TL";
-    case BTN_TR:            return "TR";
-    case BTN_TL2:           return "TL2";
-    case BTN_TR2:           return "TR2";
-    case BTN_SELECT:        return "SELECT";
-    case BTN_START:         return "START";
-    case BTN_MODE:          return "MODE";
-    case BTN_THUMBL:        return "THUMBL";
-    case BTN_THUMBR:        return "THUMBR";
-    default:
-        break;
-    }
-
-    return NULL;
-}
-
-static char const *get_joystick_axis_id(int joystick, int axis)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return NULL;
-    }
-
-    if (axis < 0 || axis >= MAX_JOYSTICK_AXES) {
-        return NULL;
-    }
-
-    uint16_t index = impl.joystick[joystick].axis_map[axis];
-
-    switch (index) {
-    case ABS_X:             return "X";
-    case ABS_Y:             return "Y";
-    case ABS_Z:             return "Z";
-    case ABS_RX:            return "RX";
-    case ABS_RY:            return "RY";
-    case ABS_RZ:            return "RZ";
-    case ABS_THROTTLE:      return "THROTTLE";
-    case ABS_RUDDER:        return "RUDDER";
-    case ABS_WHEEL:         return "WHEEL";
-    case ABS_GAS:           return "GAS";
-    case ABS_BRAKE:         return "BRAKE";
-    case ABS_HAT0X:         return "HAT0X";
-    case ABS_HAT0Y:         return "HAT0Y";
-    case ABS_HAT1X:         return "HAT1X";
-    case ABS_HAT1Y:         return "HAT1Y";
-    case ABS_HAT2X:         return "HAT2X";
-    case ABS_HAT2Y:         return "HAT2Y";
-    case ABS_HAT3X:         return "HAT3X";
-    case ABS_HAT3Y:         return "HAT3Y";
-    case ABS_PRESSURE:      return "PRESSURE";
-    case ABS_DISTANCE:      return "DISTANCE";
-    case ABS_TILT_X:        return "TILT_X";
-    case ABS_TILT_Y:        return "TILT_Y";
-    case ABS_TOOL_WIDTH:    return "TOOL_WIDTH";
-    case ABS_VOLUME:        return "VOLUME";
-    case ABS_MISC:          return "MISC";
-    default:
-        break;
-    }
-
-    return NULL;
-}
-
-#else
-
-static bool is_joystick_connected(int joystick)
-{
-    return false;
-}
-
-static char const *get_joystick_button_id(int joystick, int button)
-{
-    return NULL;
-}
-
-static char const *get_joystick_axis_id(int joystick, int axis)
-{
-    return NULL;
-}
-
-#endif
-
-static char const *get_joystick_id(int joystick)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return NULL;
-    }
-
-    return impl.joystick[joystick].id;
-}
-
-static int get_joystick_button_count(int joystick)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return 0;
-    }
-
-    return impl.joystick[joystick].button_count;
-}
-
-static int get_joystick_axis_count(int joystick)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return 0;
-    }
-
-    return impl.joystick[joystick].axis_count;
-}
-
-static bool is_joystick_button_pressed(int joystick, int button)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return false;
-    }
-
-    if (button < 0 || button >= MAX_JOYSTICK_BUTTONS) {
-        return false;
-    }
-
-    return impl.joystick[joystick].button[button];
-}
-
-static float get_joystick_axis_value(int joystick, int axis)
-{
-    if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
-        return 0.f;
-    }
-
-    if (axis < 0 || axis >= MAX_JOYSTICK_AXES) {
-        return 0.f;
-    }
-
-    return impl.joystick[joystick].axis[axis];
-}
-
-//------------------------------------------------------------------------------
-
 struct qu__core const qu__core_x11 = {
     .initialize = initialize,
     .terminate = terminate,
@@ -906,12 +591,4 @@ struct qu__core const qu__core_x11 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .is_joystick_connected = is_joystick_connected,
-    .get_joystick_id = get_joystick_id,
-    .get_joystick_button_count = get_joystick_button_count,
-    .get_joystick_axis_count = get_joystick_axis_count,
-    .get_joystick_button_id = get_joystick_button_id,
-    .get_joystick_axis_id = get_joystick_axis_id,
-    .is_joystick_button_pressed = is_joystick_button_pressed,
-    .get_joystick_axis_value = get_joystick_axis_value,
 };
