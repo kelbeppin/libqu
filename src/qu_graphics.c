@@ -26,6 +26,19 @@
 // qu_graphics.c: Graphics module
 //------------------------------------------------------------------------------
 
+static struct qu__graphics const *supported_graphics_impl_list[] = {
+
+#ifdef QU_USE_GL
+    &qu__graphics_gl2,
+#endif
+
+#ifdef QU_USE_ES2
+    &qu__graphics_es2,
+#endif
+
+    &qu__graphics_null,
+};
+
 struct qu__graphics_priv
 {
 	struct qu__graphics const *impl;
@@ -39,10 +52,19 @@ void qu__graphics_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
-    priv.impl = qu__core_get_graphics();
+    int graphics_impl_count = QU__ARRAY_SIZE(supported_graphics_impl_list);
 
-    if (!priv.impl->query(params)) {
-        priv.impl = &qu__graphics_null;
+    if (graphics_impl_count == 0) {
+        QU_HALT("graphics_impl_count == 0");
+    }
+
+    for (int i = 0; i < graphics_impl_count; i++) {
+        priv.impl = supported_graphics_impl_list[i];
+
+        if (priv.impl->query(params)) {
+            QU_DEBUG("Selected graphics implementation #%d.\n", i);
+            break;
+        }
     }
 
     priv.impl->initialize(params);

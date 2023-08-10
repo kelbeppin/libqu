@@ -198,6 +198,14 @@ void qu_sleep(double seconds);
 //------------------------------------------------------------------------------
 // Core
 
+enum qu__renderer
+{
+    QU__RENDERER_NULL,
+    QU__RENDERER_GL_COMPAT,
+    QU__RENDERER_GL_CORE,
+    QU__RENDERER_ES2,
+};
+
 struct qu__core
 {
     void (*initialize)(qu_params const *params);
@@ -205,7 +213,7 @@ struct qu__core
     bool (*process)(void);
     void (*present)(void);
 
-    struct qu__graphics const *(*get_graphics)(void);
+    enum qu__renderer (*get_renderer)(void);
 
     bool (*gl_check_extension)(char const *name);
     void *(*gl_proc_address)(char const *name);
@@ -247,7 +255,7 @@ void qu__core_initialize(qu_params const *params);
 void qu__core_terminate(void);
 bool qu__core_process(void);
 void qu__core_present(void);
-struct qu__graphics const *qu__core_get_graphics(void);
+enum qu__renderer qu__core_get_renderer(void);
 void *qu__core_get_gl_proc_address(char const *name);
 void qu__core_on_key_pressed(qu_key key);
 void qu__core_on_key_released(qu_key key);

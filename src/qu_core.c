@@ -158,9 +158,9 @@ void qu__core_present(void)
     priv.impl->present();
 }
 
-struct qu__graphics const *qu__core_get_graphics(void)
+enum qu__renderer qu__core_get_renderer(void)
 {
-    return priv.impl->get_graphics();
+    return priv.impl->get_renderer();
 }
 
 void *qu__core_get_gl_proc_address(char const *name)

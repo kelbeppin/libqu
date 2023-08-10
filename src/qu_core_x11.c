@@ -543,13 +543,13 @@ static void present(void)
     glXSwapBuffers(impl.display, impl.surface);
 }
 
-static struct qu__graphics const *get_graphics(void)
+static enum qu__renderer get_renderer(void)
 {
     if (impl.legacy_context) {
-        return &qu__graphics_gl2;
+        return QU__RENDERER_GL_COMPAT;
     }
 
-    return &qu__graphics_es2;
+    return QU__RENDERER_ES2;
 }
 
 static bool gl_check_extension(char const *name)
@@ -582,7 +582,7 @@ struct qu__core const qu__core_x11 = {
     .terminate = terminate,
     .process = process,
     .present = present,
-    .get_graphics = get_graphics,
+    .get_renderer = get_renderer,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
 };

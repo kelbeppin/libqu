@@ -280,6 +280,10 @@ static bool check_glext(char const *extension)
 
 static bool query(qu_params const *params)
 {
+    if (qu__core_get_renderer() != QU__RENDERER_GL_COMPAT) {
+        return false;
+    }
+
     load_gl_functions();
 
     if (!check_glext("GL_EXT_framebuffer_object")) {

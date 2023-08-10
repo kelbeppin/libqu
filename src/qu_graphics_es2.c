@@ -83,6 +83,10 @@
 
 static bool query(qu_params const *params)
 {
+    if (qu__core_get_renderer() != QU__RENDERER_ES2) {
+        return false;
+    }
+
     return true;
 }
 

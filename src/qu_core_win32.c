@@ -652,9 +652,9 @@ static void present(void)
     SwapBuffers(dpy.dc);
 }
 
-static struct qu__graphics const *get_graphics(void)
+static enum qu__renderer get_renderer(void)
 {
-    return &qu__graphics_gl2;
+    return QU__RENDERER_GL_COMPAT;
 }
 
 static bool gl_check_extension(char const *name)
@@ -696,7 +696,7 @@ struct qu__core const qu__core_win32 = {
     .terminate = terminate,
     .process = process,
     .present = present,
-    .get_graphics = get_graphics,
+    .get_renderer = get_renderer,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
 };
