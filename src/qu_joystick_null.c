@@ -34,6 +34,10 @@ static void joystick_null__terminate(void)
 {
 }
 
+static void joystick_null__process(void)
+{
+}
+
 static bool joystick_null__is_connected(int id)
 {
 	return false;
@@ -79,6 +83,7 @@ static float joystick_null__get_axis_value(int id, int axis)
 struct qu__joystick const qu__joystick_null = {
 	.initialize = joystick_null__initialize,
 	.terminate = joystick_null__terminate,
+	.process = joystick_null__process,
 	.is_connected = joystick_null__is_connected,
 	.get_name = joystick_null__get_name,
 	.get_button_count = joystick_null__get_button_count,

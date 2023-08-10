@@ -226,6 +226,7 @@ struct qu__joystick
 {
     void (*initialize)(qu_params const *params);
     void (*terminate)(void);
+    void (*process)(void);
     bool (*is_connected)(int id);
     char const *(*get_name)(int id);
     int (*get_button_count)(int id);

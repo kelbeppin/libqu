@@ -74,6 +74,37 @@ static void joystick_linux__terminate(void)
 {
 }
 
+static void joystick_linux__process(void)
+{
+    // Read joystick events.
+    for (int i = 0; i < MAX_JOYSTICKS; i++) {
+        if (priv.device[i].fd == -1) {
+            continue;
+        }
+
+        struct js_event event;
+
+        // -1 is returned if event queue is empty.
+        while (read(priv.device[i].fd, &event, sizeof(event)) != -1) {
+            handle_linux_joystick_event(i, &event);
+        }
+
+        // errno is set to EAGAIN if joystick is still connected.
+        // If it's not, then joystick has been disconnected.
+        if (errno != EAGAIN) {
+            close(priv.device[i].fd);
+
+            QU_INFO("Joystick '%s' disconnected.\n", priv.device[i].id);
+
+            memset(&priv.device[i], 0, sizeof(priv.device[i]));
+
+            priv.device[i].fd = -1;
+            priv.device[i].button_count = 0;
+            priv.device[i].axis_count = 0;
+        }
+    }
+}
+
 static bool joystick_linux__is_connected(int id)
 {
 	if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
@@ -268,6 +299,7 @@ static float joystick_linux__get_axis_value(int id, int axis)
 struct qu__joystick const qu__joystick_linux = {
 	.initialize = joystick_linux__initialize,
 	.terminate = joystick_linux__terminate,
+    .process = joystick_linux__process,
 	.is_connected = joystick_linux__is_connected,
 	.get_name = joystick_linux__get_name,
 	.get_button_count = joystick_linux__get_button_count,

@@ -58,6 +58,26 @@ static void joystick_win32__terminate(void)
 {
 }
 
+static void joystick_win32__process(void)
+{
+    for (int i = 0; i < 4; i++) {
+        if (!priv.xinput[i].attached) {
+            continue;
+        }
+
+        DWORD status = XInputGetState(i, &priv.xinput[i].state);
+
+        if (status != ERROR_SUCCESS) {
+            if (status != ERROR_DEVICE_NOT_CONNECTED) {
+                // TODO: report error
+            }
+
+            priv.xinput[i].attached = false;
+            priv.xinput[i].next_poll_time = 0.f;
+        }
+    }
+}
+
 static bool joystick_win32__is_connected(int id)
 {
 	if (id < 0 || id >= TOTAL_XINPUT_DEVICES) {
@@ -234,6 +254,7 @@ static float joystick_win32__get_axis_value(int id, int axis)
 struct qu__joystick const qu__joystick_win32 = {
 	joystick_win32__initialize,
 	joystick_win32__terminate,
+    joystick_win32__process,
 	joystick_win32__is_connected,
 	joystick_win32__get_name,
 	joystick_win32__get_button_count,

@@ -109,6 +109,8 @@ bool qu__core_process(void)
         }
     }
 
+    priv.joystick->process();
+
     return true;
 }
 
