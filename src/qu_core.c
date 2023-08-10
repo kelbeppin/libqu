@@ -173,6 +173,81 @@ void *qu__core_get_gl_proc_address(char const *name)
     return priv.impl->gl_proc_address(name);
 }
 
+void qu__core_on_key_pressed(qu_key key)
+{
+    switch (priv.keyboard.keys[key]) {
+    case QU_KEY_IDLE:
+        priv.keyboard.keys[key] = QU_KEY_PRESSED;
+
+        if (priv.key_press_fn) {
+            priv.key_press_fn(key);
+        }
+        break;
+    case QU_KEY_PRESSED:
+        if (priv.key_repeat_fn) {
+            priv.key_repeat_fn(key);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void qu__core_on_key_released(qu_key key)
+{
+    if (priv.keyboard.keys[key] == QU_KEY_PRESSED) {
+        priv.keyboard.keys[key] = QU_KEY_RELEASED;
+
+        if (priv.key_release_fn) {
+            priv.key_release_fn(key);
+        }
+    }
+}
+
+void qu__core_on_mouse_button_pressed(qu_mouse_button button)
+{
+    unsigned int mask = (1 << button);
+
+    if ((priv.mouse_buttons & mask) == 0) {
+        priv.mouse_buttons |= mask;
+
+        if (priv.mouse_button_press_fn) {
+            priv.mouse_button_press_fn(button);
+        }
+    }
+}
+
+void qu__core_on_mouse_button_released(qu_mouse_button button)
+{
+    unsigned int mask = (1 << button);
+
+    if ((priv.mouse_buttons & mask) == mask) {
+        priv.mouse_buttons &= ~mask;
+
+        if (priv.mouse_button_release_fn) {
+            priv.mouse_button_release_fn(button);
+        }
+    }
+}
+
+void qu__core_on_mouse_cursor_moved(int x, int y)
+{
+    int x_old = priv.mouse_cursor_position.x;
+    int y_old = priv.mouse_cursor_position.y;
+
+    priv.mouse_cursor_position.x = x;
+    priv.mouse_cursor_position.y = y;
+
+    priv.mouse_cursor_delta.x = x - x_old;
+    priv.mouse_cursor_delta.y = x - y_old;
+}
+
+void qu__core_on_mouse_wheel_scrolled(int dx, int dy)
+{
+    priv.mouse_wheel_delta.x += dx;
+    priv.mouse_wheel_delta.y += dy;
+}
+
 //------------------------------------------------------------------------------
 // API entries
 
@@ -291,79 +366,4 @@ bool qu_is_joystick_button_pressed(int joystick, int button)
 float qu_get_joystick_axis_value(int joystick, int axis)
 {
     return priv.joystick->get_axis_value(joystick, axis);
-}
-
-void qu__core_on_key_pressed(qu_key key)
-{
-    switch (priv.keyboard.keys[key]) {
-    case QU_KEY_IDLE:
-        priv.keyboard.keys[key] = QU_KEY_PRESSED;
-
-        if (priv.key_press_fn) {
-            priv.key_press_fn(key);
-        }
-        break;
-    case QU_KEY_PRESSED:
-        if (priv.key_repeat_fn) {
-            priv.key_repeat_fn(key);
-        }
-        break;
-    default:
-        break;
-    }
-}
-
-void qu__core_on_key_released(qu_key key)
-{
-    if (priv.keyboard.keys[key] == QU_KEY_PRESSED) {
-        priv.keyboard.keys[key] = QU_KEY_RELEASED;
-
-        if (priv.key_release_fn) {
-            priv.key_release_fn(key);
-        }
-    }
-}
-
-void qu__core_on_mouse_button_pressed(qu_mouse_button button)
-{
-    unsigned int mask = (1 << button);
-
-    if ((priv.mouse_buttons & mask) == 0) {
-        priv.mouse_buttons |= mask;
-
-        if (priv.mouse_button_press_fn) {
-            priv.mouse_button_press_fn(button);
-        }
-    }
-}
-
-void qu__core_on_mouse_button_released(qu_mouse_button button)
-{
-    unsigned int mask = (1 << button);
-
-    if ((priv.mouse_buttons & mask) == mask) {
-        priv.mouse_buttons &= ~mask;
-
-        if (priv.mouse_button_release_fn) {
-            priv.mouse_button_release_fn(button);
-        }
-    }
-}
-
-void qu__core_on_mouse_cursor_moved(int x, int y)
-{
-    int x_old = priv.mouse_cursor_position.x;
-    int y_old = priv.mouse_cursor_position.y;
-
-    priv.mouse_cursor_position.x = x;
-    priv.mouse_cursor_position.y = y;
-
-    priv.mouse_cursor_delta.x = x - x_old;
-    priv.mouse_cursor_delta.y = x - y_old;
-}
-
-void qu__core_on_mouse_wheel_scrolled(int dx, int dy)
-{
-    priv.mouse_wheel_delta.x += dx;
-    priv.mouse_wheel_delta.y += dy;
 }
