@@ -208,9 +208,6 @@ struct qu__core
     bool (*gl_check_extension)(char const *name);
     void *(*gl_proc_address)(char const *name);
 
-    bool const *(*get_keyboard_state)(void);
-    bool (*is_key_pressed)(qu_key key);
-
     uint8_t (*get_mouse_button_state)(void);
     bool (*is_mouse_button_pressed)(qu_mouse_button button);
     qu_vec2i (*get_mouse_cursor_position)(void);
@@ -226,9 +223,6 @@ struct qu__core
     bool (*is_joystick_button_pressed)(int joystick, int button);
     float (*get_joystick_axis_value)(int joystick, int axis);
 
-    void (*on_key_pressed)(qu_key_fn fn);
-    void (*on_key_repeated)(qu_key_fn fn);
-    void (*on_key_released)(qu_key_fn fn);
     void (*on_mouse_button_pressed)(qu_mouse_button_fn fn);
     void (*on_mouse_button_released)(qu_mouse_button_fn fn);
     void (*on_mouse_cursor_moved)(qu_mouse_cursor_fn fn);
@@ -262,13 +256,15 @@ char const *qu__core_get_joystick_button_id(int joystick, int button);
 char const *qu__core_get_joystick_axis_id(int joystick, int axis);
 bool qu__core_is_joystick_button_pressed(int joystick, int button);
 float qu__core_get_joystick_axis_value(int joystick, int axis);
-void qu__core_on_key_pressed(qu_key_fn fn);
-void qu__core_on_key_repeated(qu_key_fn fn);
-void qu__core_on_key_released(qu_key_fn fn);
+void qu__core_set_key_press_fn(qu_key_fn fn);
+void qu__core_set_key_repeat_fn(qu_key_fn fn);
+void qu__core_set_key_release_fn(qu_key_fn fn);
 void qu__core_on_mouse_button_pressed(qu_mouse_button_fn fn);
 void qu__core_on_mouse_button_released(qu_mouse_button_fn fn);
 void qu__core_on_mouse_cursor_moved(qu_mouse_cursor_fn fn);
 void qu__core_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn);
+void qu__core_on_key_pressed(qu_key key);
+void qu__core_on_key_released(qu_key key);
 
 //------------------------------------------------------------------------------
 // Graphics

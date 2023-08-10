@@ -32,7 +32,6 @@ static struct
     SDL_Surface *display;
 
     struct {
-        bool keyboard[256];
         uint8_t mouse;
         int x_mouse, y_mouse;
         int dx_mouse, dy_mouse;
@@ -40,9 +39,6 @@ static struct
     } input;
 
     struct {
-        qu_key_fn on_key_pressed;
-        qu_key_fn on_key_repeated;
-        qu_key_fn on_key_released;
         qu_mouse_button_fn on_mouse_button_pressed;
         qu_mouse_button_fn on_mouse_button_released;
         qu_mouse_wheel_fn on_mouse_wheel_scrolled;
@@ -229,36 +225,12 @@ static bool process(void)
         switch (event.type) {
             case SDL_QUIT:
                 return false;
-            case SDL_KEYDOWN: {
-                qu_key key = key_conv(&event.key.keysym);
-
-                if (key != QU_KEY_INVALID) {
-                    if (impl.input.keyboard[key]) {
-                        if (impl.callbacks.on_key_repeated) {
-                            impl.callbacks.on_key_repeated(key);
-                        }
-                    } else {
-                        impl.input.keyboard[key] = true;
-
-                        if (impl.callbacks.on_key_pressed) {
-                            impl.callbacks.on_key_pressed(key);
-                        }
-                    }
-                }
+            case SDL_KEYDOWN:
+                qu__core_on_key_pressed(key_conv(&event.key.keysym));
                 break;
-            }
-            case SDL_KEYUP: {
-                qu_key key = key_conv(&event.key.keysym);
-
-                if (key != QU_KEY_INVALID) {
-                    impl.input.keyboard[key] = false;
-
-                    if (impl.callbacks.on_key_released) {
-                        impl.callbacks.on_key_released(key);
-                    }
-                }
+            case SDL_KEYUP:
+                qu__core_on_key_released(key_conv(&event.key.keysym));
                 break;
-            }
             case SDL_MOUSEBUTTONDOWN: {
                 qu_mouse_button button = mb_conv(event.button.button);
 
@@ -342,18 +314,6 @@ static void *gl_proc_address(char const *name)
 
 //------------------------------------------------------------------------------
 
-static bool const *get_keyboard_state(void)
-{
-    return impl.input.keyboard;
-}
-
-static bool is_key_pressed(qu_key key)
-{
-    return impl.input.keyboard[key];
-}
-
-//------------------------------------------------------------------------------
-
 static uint8_t get_mouse_button_state(void)
 {
     return impl.input.mouse;
@@ -423,21 +383,6 @@ static float get_joystick_axis_value(int joystick, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_key_pressed(qu_key_fn fn)
-{
-    impl.callbacks.on_key_pressed = fn;
-}
-
-static void on_key_repeated(qu_key_fn fn)
-{
-    impl.callbacks.on_key_repeated = fn;
-}
-
-static void on_key_released(qu_key_fn fn)
-{
-    impl.callbacks.on_key_released = fn;
-}
-
 static void on_mouse_button_pressed(qu_mouse_button_fn fn)
 {
     impl.callbacks.on_mouse_button_pressed = fn;
@@ -469,8 +414,6 @@ struct qu__core const qu__core_emscripten = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_keyboard_state = get_keyboard_state,
-    .is_key_pressed = is_key_pressed,
     .get_mouse_button_state = get_mouse_button_state,
     .is_mouse_button_pressed = is_mouse_button_pressed,
     .get_mouse_cursor_position = get_mouse_cursor_position,
@@ -484,9 +427,6 @@ struct qu__core const qu__core_emscripten = {
     .get_joystick_axis_value = get_joystick_axis_value,
     .get_joystick_button_id = get_joystick_button_id,
     .get_joystick_axis_id = get_joystick_axis_id,
-    .on_key_pressed = on_key_pressed,
-    .on_key_repeated = on_key_repeated,
-    .on_key_released = on_key_released,
     .on_mouse_button_pressed = on_mouse_button_pressed,
     .on_mouse_button_released = on_mouse_button_released,
     .on_mouse_cursor_moved = on_mouse_cursor_moved,

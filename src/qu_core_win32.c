@@ -70,7 +70,6 @@ static struct
 
 static struct
 {
-    bool keyboard[QU_TOTAL_KEYS];
     uint8_t mouse_buttons;
     qu_vec2i mouse_wheel_delta;
     qu_vec2i mouse_cursor_position;
@@ -85,9 +84,6 @@ static struct
 
 static struct
 {
-    qu_key_fn on_key_pressed;
-    qu_key_fn on_key_repeated;
-    qu_key_fn on_key_released;
     qu_mouse_button_fn on_mouse_button_pressed;
     qu_mouse_button_fn on_mouse_button_released;
     qu_mouse_wheel_fn on_mouse_wheel_scrolled;
@@ -468,42 +464,6 @@ static qu_mouse_button mb_conv(UINT msg, WPARAM wp)
     return QU_MOUSE_BUTTON_INVALID;
 }
 
-static void handle_key_press(WPARAM wp, LPARAM lp)
-{
-    qu_key key = key_conv(wp, lp);
-
-    if (key == QU_KEY_INVALID) {
-        return;
-    }
-
-    if (input.keyboard[key]) {
-        if (callbacks.on_key_repeated) {
-            callbacks.on_key_repeated(key);
-        }
-    } else {
-        input.keyboard[key] = true;
-
-        if (callbacks.on_key_pressed) {
-            callbacks.on_key_pressed(key);
-        }
-    }
-}
-
-static void handle_key_release(WPARAM wp, LPARAM lp)
-{
-    qu_key key = key_conv(wp, lp);
-
-    if (key == QU_KEY_INVALID) {
-        return;
-    }
-
-    input.keyboard[key] = false;
-
-    if (callbacks.on_key_released) {
-        callbacks.on_key_released(key);
-    }
-}
-
 static void handle_mouse_button_press(UINT msg, WPARAM wp)
 {
     qu_mouse_button button = mb_conv(msg, wp);
@@ -578,11 +538,11 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
-        handle_key_press(wp, lp);
+        qu__core_on_key_pressed(key_conv(wp, lp));
         return 0;
     case WM_KEYUP:
     case WM_SYSKEYUP:
-        handle_key_release(wp, lp);
+        qu__core_on_key_released(key_conv(wp, lp));
         return 0;
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
@@ -842,18 +802,6 @@ static void *gl_proc_address(char const *name)
 
 //------------------------------------------------------------------------------
 
-static bool const *get_keyboard_state(void)
-{
-    return input.keyboard;
-}
-
-static bool is_key_pressed(qu_key key)
-{
-    return input.keyboard[key];
-}
-
-//------------------------------------------------------------------------------
-
 static uint8_t get_mouse_button_state(void)
 {
     return input.mouse_buttons;
@@ -1043,21 +991,6 @@ static float get_joystick_axis_value(int id, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_key_pressed(qu_key_fn fn)
-{
-    callbacks.on_key_pressed = fn;
-}
-
-static void on_key_repeated(qu_key_fn fn)
-{
-    callbacks.on_key_repeated = fn;
-}
-
-static void on_key_released(qu_key_fn fn)
-{
-    callbacks.on_key_released = fn;
-}
-
 static void on_mouse_button_pressed(qu_mouse_button_fn fn)
 {
     callbacks.on_mouse_button_pressed = fn;
@@ -1089,8 +1022,6 @@ struct qu__core const qu__core_win32 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_keyboard_state = get_keyboard_state,
-    .is_key_pressed = is_key_pressed,
     .get_mouse_button_state = get_mouse_button_state,
     .is_mouse_button_pressed = is_mouse_button_pressed,
     .get_mouse_cursor_position = get_mouse_cursor_position,
@@ -1104,9 +1035,6 @@ struct qu__core const qu__core_win32 = {
     .get_joystick_axis_value = get_joystick_axis_value,
     .get_joystick_button_id = get_joystick_button_id,
     .get_joystick_axis_id = get_joystick_axis_id,
-    .on_key_pressed = on_key_pressed,
-    .on_key_repeated = on_key_repeated,
-    .on_key_released = on_key_released,
     .on_mouse_button_pressed = on_mouse_button_pressed,
     .on_mouse_button_released = on_mouse_button_released,
     .on_mouse_cursor_moved = on_mouse_cursor_moved,

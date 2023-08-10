@@ -31,6 +31,10 @@ struct qu__core_priv
 	struct qu__core const *impl;
 
     qu_keyboard_state keyboard;
+
+    qu_key_fn key_press_fn;
+    qu_key_fn key_repeat_fn;
+    qu_key_fn key_release_fn;
 };
 
 static struct qu__core_priv priv;
@@ -61,6 +65,8 @@ void qu__core_terminate(void)
 
 bool qu__core_process(void)
 {
+    memset(&priv.keyboard, 0, sizeof(priv.keyboard));
+
     return priv.impl->process();
 }
 
@@ -86,33 +92,17 @@ void *qu__core_get_gl_proc_address(char const *name)
 
 qu_keyboard_state const *qu__core_get_keyboard_state(void)
 {
-    // Temporary.
-
-    static qu_keyboard_state state = { 0 };
-
-    bool const *b = priv.impl->get_keyboard_state();
-
-    for (int i = 0; i < QU_TOTAL_KEYS; i++) {
-        state.keys[i] = b[i] ? QU_KEY_PRESSED : QU_KEY_RELEASED;
-    }
-
-    return &state;
+    return &priv.keyboard;
 }
 
 qu_key_state qu__core_get_key_state(qu_key key)
 {
-    // Temporary.
-
-    if (priv.impl->is_key_pressed(key)) {
-        return QU_KEY_PRESSED;
-    }
-
-    return QU_KEY_IDLE;
+    return priv.keyboard.keys[key];
 }
 
 bool qu__core_is_key_pressed(qu_key key)
 {
-    return priv.impl->is_key_pressed(key);
+    return (priv.keyboard.keys[key] == QU_KEY_PRESSED);
 }
 
 uint8_t qu__core_get_mouse_button_state(void)
@@ -180,19 +170,19 @@ float qu__core_get_joystick_axis_value(int joystick, int axis)
     return priv.impl->get_joystick_axis_value(joystick, axis);
 }
 
-void qu__core_on_key_pressed(qu_key_fn fn)
+void qu__core_set_key_press_fn(qu_key_fn fn)
 {
-    priv.impl->on_key_pressed(fn);
+    priv.key_press_fn = fn;
 }
 
-void qu__core_on_key_repeated(qu_key_fn fn)
+void qu__core_set_key_repeat_fn(qu_key_fn fn)
 {
-    priv.impl->on_key_repeated(fn);
+    priv.key_repeat_fn = fn;
 }
 
-void qu__core_on_key_released(qu_key_fn fn)
+void qu__core_set_key_release_fn(qu_key_fn fn)
 {
-    priv.impl->on_key_released(fn);
+    priv.key_release_fn = fn;
 }
 
 void qu__core_on_mouse_button_pressed(qu_mouse_button_fn fn)
@@ -213,4 +203,35 @@ void qu__core_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
 void qu__core_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 {
     priv.impl->on_mouse_wheel_scrolled(fn);
+}
+
+void qu__core_on_key_pressed(qu_key key)
+{
+    switch (priv.keyboard.keys[key]) {
+    case QU_KEY_IDLE:
+        priv.keyboard.keys[key] = QU_KEY_PRESSED;
+
+        if (priv.key_press_fn) {
+            priv.key_press_fn(key);
+        }
+        break;
+    case QU_KEY_PRESSED:
+        if (priv.key_repeat_fn) {
+            priv.key_repeat_fn(key);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void qu__core_on_key_released(qu_key key)
+{
+    if (priv.keyboard.keys[key] == QU_KEY_PRESSED) {
+        priv.keyboard.keys[key] = QU_KEY_RELEASED;
+
+        if (priv.key_release_fn) {
+            priv.key_release_fn(key);
+        }
+    }
 }

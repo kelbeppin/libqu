@@ -108,8 +108,6 @@ static struct
 
     // Input state
 
-    bool keyboard_state[QU_TOTAL_KEYS];
-
     struct {
         uint8_t buttons;
         qu_vec2i wheel_delta;
@@ -137,9 +135,6 @@ static struct
 
     // Event handlers
 
-    qu_key_fn on_key_pressed;
-    qu_key_fn on_key_repeated;
-    qu_key_fn on_key_released;
     qu_mouse_button_fn on_mouse_button_pressed;
     qu_mouse_button_fn on_mouse_button_released;
     qu_mouse_wheel_fn on_mouse_wheel_scrolled;
@@ -274,42 +269,6 @@ static qu_mouse_button mouse_button_conv(unsigned int button)
     case Button2:           return QU_MOUSE_BUTTON_MIDDLE;
     case Button3:           return QU_MOUSE_BUTTON_RIGHT;
     default:                return QU_MOUSE_BUTTON_INVALID;
-    }
-}
-
-static void handle_key_press(XKeyEvent *xkey)
-{
-    qu_key key = key_conv(XLookupKeysym(xkey, ShiftMapIndex));
-
-    if (key == QU_KEY_INVALID) {
-        return;
-    }
-
-    if (impl.keyboard_state[key]) {
-        if (impl.on_key_repeated) {
-            impl.on_key_repeated(key);
-        }
-    } else {
-        impl.keyboard_state[key] = true;
-
-        if (impl.on_key_pressed) {
-            impl.on_key_pressed(key);
-        }
-    }
-}
-
-static void handle_key_release(XKeyEvent *xkey)
-{
-    qu_key key = key_conv(XLookupKeysym(xkey, ShiftMapIndex));
-
-    if (key == QU_KEY_INVALID) {
-        return;
-    }
-
-    impl.keyboard_state[key] = false;
-
-    if (impl.on_key_released) {
-        impl.on_key_released(key);
     }
 }
 
@@ -659,10 +618,10 @@ static bool process(void)
         case Expose:
             break;
         case KeyPress:
-            handle_key_press(&event.xkey);
+            qu__core_on_key_pressed(key_conv(XLookupKeysym(&event.xkey, ShiftMapIndex)));
             break;
         case KeyRelease:
-            handle_key_release(&event.xkey);
+            qu__core_on_key_released(key_conv(XLookupKeysym(&event.xkey, ShiftMapIndex)));
             break;
         case MotionNotify:
             impl.mouse.cursor_delta.x = event.xmotion.x - impl.mouse.cursor_position.x;
@@ -791,18 +750,6 @@ static bool gl_check_extension(char const *name)
 static void *gl_proc_address(char const *name)
 {
     return glXGetProcAddress((GLubyte const *) name);
-}
-
-//------------------------------------------------------------------------------
-
-static bool const *get_keyboard_state(void)
-{
-    return impl.keyboard_state;
-}
-
-static bool is_key_pressed(qu_key key)
-{
-    return impl.keyboard_state[key];
 }
 
 //------------------------------------------------------------------------------
@@ -1046,21 +993,6 @@ static float get_joystick_axis_value(int joystick, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_key_pressed(qu_key_fn fn)
-{
-    impl.on_key_pressed = fn;
-}
-
-static void on_key_repeated(qu_key_fn fn)
-{
-    impl.on_key_repeated = fn;
-}
-
-static void on_key_released(qu_key_fn fn)
-{
-    impl.on_key_released = fn;
-}
-
 static void on_mouse_button_pressed(qu_mouse_button_fn fn)
 {
     impl.on_mouse_button_pressed = fn;
@@ -1092,8 +1024,6 @@ struct qu__core const qu__core_x11 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_keyboard_state = get_keyboard_state,
-    .is_key_pressed = is_key_pressed,
     .get_mouse_button_state = get_mouse_button_state,
     .is_mouse_button_pressed = is_mouse_button_pressed,
     .get_mouse_cursor_position = get_mouse_cursor_position,
@@ -1107,9 +1037,6 @@ struct qu__core const qu__core_x11 = {
     .get_joystick_axis_id = get_joystick_axis_id,
     .is_joystick_button_pressed = is_joystick_button_pressed,
     .get_joystick_axis_value = get_joystick_axis_value,
-    .on_key_pressed = on_key_pressed,
-    .on_key_repeated = on_key_repeated,
-    .on_key_released = on_key_released,
     .on_mouse_button_pressed = on_mouse_button_pressed,
     .on_mouse_button_released = on_mouse_button_released,
     .on_mouse_cursor_moved = on_mouse_cursor_moved,
