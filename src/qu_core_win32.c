@@ -70,20 +70,12 @@ static struct
 
 static struct
 {
-    qu_vec2i mouse_wheel_delta;
-    
     struct {
         bool attached;
         float next_poll_time;
         XINPUT_STATE state;
     } joystick[4];
 } input;
-
-static struct
-{
-    qu_mouse_wheel_fn on_mouse_wheel_scrolled;
-    qu_mouse_cursor_fn on_mouse_cursor_moved;
-} callbacks;
 
 //------------------------------------------------------------------------------
 
@@ -517,10 +509,10 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         qu__core_on_mouse_cursor_moved(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
         return 0;
     case WM_MOUSEWHEEL:
-        input.mouse_wheel_delta.y += GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA;
+        qu__core_on_mouse_wheel_scrolled(0, GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA);
         return 0;
     case WM_MOUSEHWHEEL:
-        input.mouse_wheel_delta.x += GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA;
+        qu__core_on_mouse_wheel_scrolled(GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA, 0);
         return 0;
     case WM_SETCURSOR:
         if (LOWORD(lp) == HTCLIENT) {
@@ -651,9 +643,6 @@ static void terminate(void)
 
 static bool process(void)
 {
-    input.mouse_wheel_delta.x = 0;
-    input.mouse_wheel_delta.y = 0;
-
     MSG msg;
 
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -663,14 +652,6 @@ static bool process(void)
 
         TranslateMessage(&msg);
         DispatchMessage(&msg);
-    }
-
-    if (input.mouse_wheel_delta.x || input.mouse_wheel_delta.y) {
-        if (callbacks.on_mouse_wheel_scrolled) {
-            callbacks.on_mouse_wheel_scrolled(
-                input.mouse_wheel_delta.x, input.mouse_wheel_delta.y
-            );
-        }
     }
 
     for (int i = 0; i < 4; i++) {
@@ -744,13 +725,6 @@ static bool gl_check_extension(char const *name)
 static void *gl_proc_address(char const *name)
 {
     return (void *) wglGetProcAddress(name);
-}
-
-//------------------------------------------------------------------------------
-
-static qu_vec2i get_mouse_wheel_delta(void)
-{
-    return input.mouse_wheel_delta;
 }
 
 //------------------------------------------------------------------------------
@@ -917,13 +891,6 @@ static float get_joystick_axis_value(int id, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
-{
-    callbacks.on_mouse_wheel_scrolled = fn;
-}
-
-//------------------------------------------------------------------------------
-
 struct qu__core const qu__core_win32 = {
     .initialize = initialize,
     .terminate = terminate,
@@ -933,7 +900,6 @@ struct qu__core const qu__core_win32 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_mouse_wheel_delta = get_mouse_wheel_delta,
     .is_joystick_connected = is_joystick_connected,
     .get_joystick_id = get_joystick_id,
     .get_joystick_button_count = get_joystick_button_count,
@@ -942,5 +908,4 @@ struct qu__core const qu__core_win32 = {
     .get_joystick_axis_value = get_joystick_axis_value,
     .get_joystick_button_id = get_joystick_button_id,
     .get_joystick_axis_id = get_joystick_axis_id,
-    .on_mouse_wheel_scrolled = on_mouse_wheel_scrolled,
 };

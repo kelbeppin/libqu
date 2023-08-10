@@ -108,10 +108,6 @@ static struct
 
     // Input state
 
-    struct {
-        qu_vec2i wheel_delta;
-    } mouse;
-
     float joystick_next_poll_time;
 
     struct {
@@ -129,10 +125,6 @@ static struct
         uint8_t axis_map[MAX_JOYSTICK_AXES];
 #endif
     } joystick[MAX_JOYSTICKS];
-
-    // Event handlers
-
-    qu_mouse_wheel_fn on_mouse_wheel_scrolled;
 } impl;
 
 //------------------------------------------------------------------------------
@@ -571,9 +563,6 @@ static bool process(void)
         }
     }
 
-    impl.mouse.wheel_delta.x = 0;
-    impl.mouse.wheel_delta.y = 0;
-
     while (XCheckWindowEvent(impl.display, impl.window, impl.event_mask, &event)) {
         switch (event.type) {
         case Expose:
@@ -589,13 +578,13 @@ static bool process(void)
             break;
         case ButtonPress:
             if (event.xbutton.button == Button4) {
-                impl.mouse.wheel_delta.y++;
+                qu__core_on_mouse_wheel_scrolled(0, 1);
             } else if (event.xbutton.button == Button5) {
-                impl.mouse.wheel_delta.y--;
+                qu__core_on_mouse_wheel_scrolled(0, -1);
             } else if (event.xbutton.button == 6) {
-                impl.mouse.wheel_delta.x--;
+                qu__core_on_mouse_wheel_scrolled(-1, 0);
             } else if (event.xbutton.button == 7) {
-                impl.mouse.wheel_delta.x++;
+                qu__core_on_mouse_wheel_scrolled(1, 0);
             } else {
                 qu__core_on_mouse_button_pressed(mouse_button_conv(event.xbutton.button));
             }
@@ -614,14 +603,6 @@ static bool process(void)
         default:
             QU_DEBUG("Unhandled event: 0x%04x\n", event.type);
             break;
-        }
-    }
-
-    if (impl.mouse.wheel_delta.x || impl.mouse.wheel_delta.y) {
-        if (impl.on_mouse_wheel_scrolled) {
-            impl.on_mouse_wheel_scrolled(
-                impl.mouse.wheel_delta.x, impl.mouse.wheel_delta.y
-            );
         }
     }
 
@@ -700,13 +681,6 @@ static bool gl_check_extension(char const *name)
 static void *gl_proc_address(char const *name)
 {
     return glXGetProcAddress((GLubyte const *) name);
-}
-
-//------------------------------------------------------------------------------
-
-static qu_vec2i get_mouse_wheel_delta(void)
-{
-    return impl.mouse.wheel_delta;
 }
 
 //------------------------------------------------------------------------------
@@ -923,13 +897,6 @@ static float get_joystick_axis_value(int joystick, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
-{
-    impl.on_mouse_wheel_scrolled = fn;
-}
-
-//------------------------------------------------------------------------------
-
 struct qu__core const qu__core_x11 = {
     .initialize = initialize,
     .terminate = terminate,
@@ -939,7 +906,6 @@ struct qu__core const qu__core_x11 = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_mouse_wheel_delta = get_mouse_wheel_delta,
     .is_joystick_connected = is_joystick_connected,
     .get_joystick_id = get_joystick_id,
     .get_joystick_button_count = get_joystick_button_count,
@@ -948,5 +914,4 @@ struct qu__core const qu__core_x11 = {
     .get_joystick_axis_id = get_joystick_axis_id,
     .is_joystick_button_pressed = is_joystick_button_pressed,
     .get_joystick_axis_value = get_joystick_axis_value,
-    .on_mouse_wheel_scrolled = on_mouse_wheel_scrolled,
 };

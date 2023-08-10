@@ -34,6 +34,7 @@ struct qu__core_priv
     uint32_t mouse_buttons;
     qu_vec2i mouse_cursor_position;
     qu_vec2i mouse_cursor_delta;
+    qu_vec2i mouse_wheel_delta;
 
     qu_key_fn key_press_fn;
     qu_key_fn key_repeat_fn;
@@ -41,6 +42,7 @@ struct qu__core_priv
     qu_mouse_button_fn mouse_button_press_fn;
     qu_mouse_button_fn mouse_button_release_fn;
     qu_mouse_cursor_fn mouse_cursor_motion_fn;
+    qu_mouse_wheel_fn mouse_wheel_scroll_fn;
 };
 
 static struct qu__core_priv priv;
@@ -78,6 +80,9 @@ bool qu__core_process(void)
     priv.mouse_cursor_delta.x = 0;
     priv.mouse_cursor_delta.y = 0;
 
+    priv.mouse_wheel_delta.x = 0;
+    priv.mouse_wheel_delta.y = 0;
+
     if (!priv.impl->process()) {
         return false;
     }
@@ -85,6 +90,12 @@ bool qu__core_process(void)
     if (priv.mouse_cursor_delta.x || priv.mouse_cursor_delta.y) {
         if (priv.mouse_cursor_motion_fn) {
             priv.mouse_cursor_motion_fn(priv.mouse_cursor_delta.x, priv.mouse_cursor_delta.y);
+        }
+    }
+
+    if (priv.mouse_wheel_delta.x || priv.mouse_wheel_delta.y) {
+        if (priv.mouse_wheel_scroll_fn) {
+            priv.mouse_wheel_scroll_fn(priv.mouse_wheel_delta.x, priv.mouse_wheel_delta.y);
         }
     }
 
@@ -150,7 +161,7 @@ qu_vec2i qu__core_get_mouse_cursor_delta(void)
 
 qu_vec2i qu__core_get_mouse_wheel_delta(void)
 {
-    return priv.impl->get_mouse_wheel_delta();
+    return priv.mouse_wheel_delta;
 }
 
 bool qu__core_is_joystick_connected(int joystick)
@@ -223,9 +234,9 @@ void qu__core_set_mouse_cursor_motion_fn(qu_mouse_cursor_fn fn)
     priv.mouse_cursor_motion_fn = fn;
 }
 
-void qu__core_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
+void qu__core_set_mouse_wheel_scroll_fn(qu_mouse_wheel_fn fn)
 {
-    priv.impl->on_mouse_wheel_scrolled(fn);
+    priv.mouse_wheel_scroll_fn = fn;
 }
 
 void qu__core_on_key_pressed(qu_key key)
@@ -295,4 +306,10 @@ void qu__core_on_mouse_cursor_moved(int x, int y)
 
     priv.mouse_cursor_delta.x = x - x_old;
     priv.mouse_cursor_delta.y = x - y_old;
+}
+
+void qu__core_on_mouse_wheel_scrolled(int dx, int dy)
+{
+    priv.mouse_wheel_delta.x += dx;
+    priv.mouse_wheel_delta.y += dy;
 }

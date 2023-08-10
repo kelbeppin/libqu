@@ -30,14 +30,6 @@
 static struct
 {
     SDL_Surface *display;
-
-    struct {
-        int dx_wheel, dy_wheel;
-    } input;
-
-    struct {
-        qu_mouse_wheel_fn on_mouse_wheel_scrolled;
-    } callbacks;
 } impl;
 
 //------------------------------------------------------------------------------
@@ -208,9 +200,6 @@ static void terminate(void)
 
 static bool process(void)
 {
-    impl.input.dx_wheel = 0;
-    impl.input.dy_wheel = 0;
-
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
@@ -232,17 +221,9 @@ static bool process(void)
             case SDL_MOUSEMOTION:
                 qu__core_on_mouse_cursor_moved(event.motion.x, event.motion.y);
                 break;
-            case SDL_MOUSEWHEEL: {
-                impl.input.dx_wheel = event.wheel.x;
-                impl.input.dy_wheel = event.wheel.y;
-
-                if (impl.callbacks.on_mouse_wheel_scrolled) {
-                    impl.callbacks.on_mouse_wheel_scrolled(
-                        impl.input.dx_wheel, impl.input.dy_wheel
-                    );
-                }
+            case SDL_MOUSEWHEEL:
+                qu__core_on_mouse_wheel_scrolled(event.wheel.x, event.wheel.y);
                 break;
-            }
             default:
                 break;
         }
@@ -274,13 +255,6 @@ static bool gl_check_extension(char const *name)
 static void *gl_proc_address(char const *name)
 {
     return NULL;
-}
-
-//------------------------------------------------------------------------------
-
-static qu_vec2i get_mouse_wheel_delta(void)
-{
-    return (qu_vec2i) { impl.input.dx_wheel, impl.input.dy_wheel };
 }
 
 //------------------------------------------------------------------------------
@@ -327,13 +301,6 @@ static float get_joystick_axis_value(int joystick, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
-{
-    impl.callbacks.on_mouse_wheel_scrolled = fn;
-}
-
-//------------------------------------------------------------------------------
-
 struct qu__core const qu__core_emscripten = {
     .initialize = initialize,
     .terminate = terminate,
@@ -343,7 +310,6 @@ struct qu__core const qu__core_emscripten = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_mouse_wheel_delta = get_mouse_wheel_delta,
     .is_joystick_connected = is_joystick_connected,
     .get_joystick_id = get_joystick_id,
     .get_joystick_button_count = get_joystick_button_count,
@@ -352,5 +318,4 @@ struct qu__core const qu__core_emscripten = {
     .get_joystick_axis_value = get_joystick_axis_value,
     .get_joystick_button_id = get_joystick_button_id,
     .get_joystick_axis_id = get_joystick_axis_id,
-    .on_mouse_wheel_scrolled = on_mouse_wheel_scrolled,
 };
