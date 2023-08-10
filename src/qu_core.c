@@ -31,10 +31,13 @@ struct qu__core_priv
 	struct qu__core const *impl;
 
     qu_keyboard_state keyboard;
+    uint32_t mouse_buttons;
 
     qu_key_fn key_press_fn;
     qu_key_fn key_repeat_fn;
     qu_key_fn key_release_fn;
+    qu_mouse_button_fn mouse_button_press_fn;
+    qu_mouse_button_fn mouse_button_release_fn;
 };
 
 static struct qu__core_priv priv;
@@ -66,6 +69,7 @@ void qu__core_terminate(void)
 bool qu__core_process(void)
 {
     memset(&priv.keyboard, 0, sizeof(priv.keyboard));
+    priv.mouse_buttons = 0;
 
     return priv.impl->process();
 }
@@ -107,12 +111,14 @@ bool qu__core_is_key_pressed(qu_key key)
 
 uint8_t qu__core_get_mouse_button_state(void)
 {
-    return priv.impl->get_mouse_button_state();
+    return priv.mouse_buttons & 0xFF; // <-- remove mask later
 }
 
 bool qu__core_is_mouse_button_pressed(qu_mouse_button button)
 {
-    return priv.impl->is_mouse_button_pressed(button);
+    unsigned int mask = (1 << button);
+
+    return (priv.mouse_buttons & mask) == mask;
 }
 
 qu_vec2i qu__core_get_mouse_cursor_position(void)
@@ -185,14 +191,14 @@ void qu__core_set_key_release_fn(qu_key_fn fn)
     priv.key_release_fn = fn;
 }
 
-void qu__core_on_mouse_button_pressed(qu_mouse_button_fn fn)
+void qu__core_set_mouse_button_press_fn(qu_mouse_button_fn fn)
 {
-    priv.impl->on_mouse_button_pressed(fn);
+    priv.mouse_button_press_fn = fn;
 }
 
-void qu__core_on_mouse_button_released(qu_mouse_button_fn fn)
+void qu__core_set_mouse_button_release_fn(qu_mouse_button_fn fn)
 {
-    priv.impl->on_mouse_button_released(fn);
+    priv.mouse_button_release_fn = fn;
 }
 
 void qu__core_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
@@ -232,6 +238,32 @@ void qu__core_on_key_released(qu_key key)
 
         if (priv.key_release_fn) {
             priv.key_release_fn(key);
+        }
+    }
+}
+
+void qu__core_on_mouse_button_pressed(qu_mouse_button button)
+{
+    unsigned int mask = (1 << button);
+
+    if ((priv.mouse_buttons & mask) == 0) {
+        priv.mouse_buttons |= mask;
+
+        if (priv.mouse_button_press_fn) {
+            priv.mouse_button_press_fn(button);
+        }
+    }
+}
+
+void qu__core_on_mouse_button_released(qu_mouse_button button)
+{
+    unsigned int mask = (1 << button);
+
+    if ((priv.mouse_buttons & mask) == mask) {
+        priv.mouse_buttons &= ~mask;
+
+        if (priv.mouse_button_release_fn) {
+            priv.mouse_button_release_fn(button);
         }
     }
 }

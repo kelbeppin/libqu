@@ -32,15 +32,12 @@ static struct
     SDL_Surface *display;
 
     struct {
-        uint8_t mouse;
         int x_mouse, y_mouse;
         int dx_mouse, dy_mouse;
         int dx_wheel, dy_wheel;
     } input;
 
     struct {
-        qu_mouse_button_fn on_mouse_button_pressed;
-        qu_mouse_button_fn on_mouse_button_released;
         qu_mouse_wheel_fn on_mouse_wheel_scrolled;
         qu_mouse_cursor_fn on_mouse_cursor_moved;
     } callbacks;
@@ -231,30 +228,12 @@ static bool process(void)
             case SDL_KEYUP:
                 qu__core_on_key_released(key_conv(&event.key.keysym));
                 break;
-            case SDL_MOUSEBUTTONDOWN: {
-                qu_mouse_button button = mb_conv(event.button.button);
-
-                if (button != QU_MOUSE_BUTTON_INVALID) {
-                    impl.input.mouse |= (1 << button);
-
-                    if (impl.callbacks.on_mouse_button_pressed) {
-                        impl.callbacks.on_mouse_button_pressed(button);
-                    }
-                }
+            case SDL_MOUSEBUTTONDOWN:
+                qu__core_on_mouse_button_pressed(mb_conv(event.button.button));
                 break;
-            }
-            case SDL_MOUSEBUTTONUP: {
-                qu_mouse_button button = mb_conv(event.button.button);
-
-                if (button != QU_MOUSE_BUTTON_INVALID) {
-                    impl.input.mouse &= ~(1 << button);
-
-                    if (impl.callbacks.on_mouse_button_released) {
-                        impl.callbacks.on_mouse_button_released(button);
-                    }
-                }
+            case SDL_MOUSEBUTTONUP:
+                qu__core_on_mouse_button_released(mb_conv(event.button.button));
                 break;
-            }
             case SDL_MOUSEMOTION: {
                 impl.input.x_mouse = event.motion.x;
                 impl.input.y_mouse = event.motion.y;
@@ -313,16 +292,6 @@ static void *gl_proc_address(char const *name)
 }
 
 //------------------------------------------------------------------------------
-
-static uint8_t get_mouse_button_state(void)
-{
-    return impl.input.mouse;
-}
-
-static bool is_mouse_button_pressed(qu_mouse_button button)
-{
-    return impl.input.mouse & (1 << button);
-}
 
 static qu_vec2i get_mouse_cursor_position(void)
 {
@@ -383,16 +352,6 @@ static float get_joystick_axis_value(int joystick, int axis)
 
 //------------------------------------------------------------------------------
 
-static void on_mouse_button_pressed(qu_mouse_button_fn fn)
-{
-    impl.callbacks.on_mouse_button_pressed = fn;
-}
-
-static void on_mouse_button_released(qu_mouse_button_fn fn)
-{
-    impl.callbacks.on_mouse_button_released = fn;
-}
-
 static void on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
 {
     impl.callbacks.on_mouse_cursor_moved = fn;
@@ -414,8 +373,6 @@ struct qu__core const qu__core_emscripten = {
     .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
-    .get_mouse_button_state = get_mouse_button_state,
-    .is_mouse_button_pressed = is_mouse_button_pressed,
     .get_mouse_cursor_position = get_mouse_cursor_position,
     .get_mouse_cursor_delta = get_mouse_cursor_delta,
     .get_mouse_wheel_delta = get_mouse_wheel_delta,
@@ -427,8 +384,6 @@ struct qu__core const qu__core_emscripten = {
     .get_joystick_axis_value = get_joystick_axis_value,
     .get_joystick_button_id = get_joystick_button_id,
     .get_joystick_axis_id = get_joystick_axis_id,
-    .on_mouse_button_pressed = on_mouse_button_pressed,
-    .on_mouse_button_released = on_mouse_button_released,
     .on_mouse_cursor_moved = on_mouse_cursor_moved,
     .on_mouse_wheel_scrolled = on_mouse_wheel_scrolled,
 };
