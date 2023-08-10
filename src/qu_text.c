@@ -199,10 +199,10 @@ static bool grow_atlas(struct atlas *atlas)
         }
     }
 
-    qu__graphics_delete_texture(atlas->texture_id);
+    qu_delete_texture((qu_texture) { atlas->texture_id });
 
     atlas->texture_id = qu__graphics_create_texture(atlas->width, atlas->height, 2);
-    qu__graphics_set_texture_smooth(atlas->texture_id, true);
+    qu_set_texture_smooth((qu_texture) { atlas->texture_id }, true);
     qu__graphics_update_texture(atlas->texture_id, 0, 0, -1, -1, atlas->bitmap);
 
     return true;
@@ -439,7 +439,7 @@ static int32_t load_font(qu_file *file, float pt)
     }
 
     fontp->atlas.texture_id = qu__graphics_create_texture(width, height, 2);
-    qu__graphics_set_texture_smooth(fontp->atlas.texture_id, true);
+    qu_set_texture_smooth((qu_texture) { fontp->atlas.texture_id }, true);
     fontp->atlas.bitmap = calloc(width * height * 2, sizeof(unsigned char));
 
     if (fontp->atlas.texture_id == -1 || !fontp->atlas.bitmap) {
@@ -521,7 +521,7 @@ void qu_delete_font(qu_font font)
 
     free(fontp->glyphs);
     free(fontp->atlas.bitmap);
-    qu__graphics_delete_texture(fontp->atlas.texture_id);
+    qu_delete_texture((qu_texture) { fontp->atlas.texture_id });
 
     hb_font_destroy(fontp->font);
     fontp->font = NULL;
