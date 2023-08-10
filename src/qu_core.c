@@ -26,6 +26,35 @@
 // qu_core.c: Core module
 //------------------------------------------------------------------------------
 
+static struct qu__core const *supported_core_impl_list[] = {
+
+#ifdef QU_WIN32
+    &qu__core_win32,
+#endif
+
+#ifdef QU_LINUX
+    &qu__core_x11,
+#endif
+
+#ifdef QU_EMSCRIPTEN
+    &qu__core_emscripten,
+#endif
+
+};
+
+static struct qu__joystick const *supported_joystick_impl_list[] = {
+
+#ifdef QU_WIN32
+    &qu__joystick_win32,
+#endif
+
+#ifdef QU_LINUX
+    &qu__joystick_linux,
+#endif
+
+    &qu__joystick_null,
+};
+
 struct qu__core_priv
 {
 	struct qu__core const *impl;
@@ -54,22 +83,32 @@ void qu__core_initialize(qu_params const *params)
 {
 	memset(&priv, 0, sizeof(priv));
 
-#if defined(_WIN32)
-	priv.impl = &qu__core_win32;
-    priv.joystick = &qu__joystick_win32;
-#elif defined(__EMSCRIPTEN__)
-	priv.impl = &qu__core_emscripten;
-    priv.joystick = &qu__joystick_null;
-#elif defined(__unix__)
-	priv.impl = &qu__core_x11;
-#if defined(__linux__)
-    priv.joystick = &qu__joystick_linux;
-#else
-    priv.joystick = &qu__joystick_null;
-#endif
-#else
-	QU_HALT("Everything is broken.");
-#endif
+    int core_impl_count = QU__ARRAY_SIZE(supported_core_impl_list);
+    int joystick_impl_count = QU__ARRAY_SIZE(supported_joystick_impl_list);
+
+    if (core_impl_count == 0) {
+        QU_HALT("core_impl_count == 0");
+    }
+
+    if (joystick_impl_count == 0) {
+        QU_HALT("joystick_impl_count == 0");
+    }
+
+    for (int i = 0; i < core_impl_count; i++) {
+        priv.impl = supported_core_impl_list[i];
+
+        // if (priv.impl->query()) {
+            break;
+        // }
+    }
+
+    for (int i = 0; i < joystick_impl_count; i++) {
+        priv.joystick = supported_joystick_impl_list[i];
+
+        // if (priv.joystick->query()) {
+            break;
+        // }
+    }
 
 	priv.impl->initialize(params);
     priv.joystick->initialize(params);

@@ -56,6 +56,7 @@ if(QU_OS_WINDOWS)
         qu_joystick_win32.cpp
         qu_platform_win32.c)
 
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi shcore XInput XAudio2)
 endif()
 
@@ -65,12 +66,14 @@ if(QU_OS_LINUX)
         qu_joystick_linux.c
         qu_platform_posix.c)
 
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_LINUX)
     target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GLX ${X11_LIBRARIES})
 endif()
 
 if(QU_OS_EMSCRIPTEN)
     target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c qu_platform_posix.c)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_EMSCRIPTEN)
     target_compile_options(${PROJECT_NAME} PUBLIC -sUSE_SDL)
     target_link_options(${PROJECT_NAME} PUBLIC -sINITIAL_MEMORY=536870912 -sPTHREAD_POOL_SIZE=4)
 endif()
