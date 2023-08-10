@@ -222,6 +222,24 @@ extern struct qu__core const qu__core_emscripten;
 extern struct qu__core const qu__core_win32;
 extern struct qu__core const qu__core_x11;
 
+struct qu__joystick
+{
+    void (*initialize)(qu_params const *params);
+    void (*terminate)(void);
+    bool (*is_connected)(int id);
+    char const *(*get_name)(int id);
+    int (*get_button_count)(int id);
+    int (*get_axis_count)(int id);
+    char const *(*get_button_name)(int id, int button);
+    char const *(*get_axis_name)(int id, int axis);
+    bool (*is_button_pressed)(int id, int button);
+    float (*get_axis_value)(int id, int axis);
+};
+
+extern struct qu__joystick const qu__joystick_null;
+extern struct qu__joystick const qu__joystick_win32;
+extern struct qu__joystick const qu__joystick_linux;
+
 void qu__core_initialize(qu_params const *params);
 void qu__core_terminate(void);
 bool qu__core_process(void);
@@ -238,11 +256,11 @@ qu_vec2i qu__core_get_mouse_cursor_position(void);
 qu_vec2i qu__core_get_mouse_cursor_delta(void);
 qu_vec2i qu__core_get_mouse_wheel_delta(void);
 bool qu__core_is_joystick_connected(int joystick);
-char const *qu__core_get_joystick_id(int joystick);
+char const *qu__core_get_joystick_name(int joystick);
 int qu__core_get_joystick_button_count(int joystick);
 int qu__core_get_joystick_axis_count(int joystick);
-char const *qu__core_get_joystick_button_id(int joystick, int button);
-char const *qu__core_get_joystick_axis_id(int joystick, int axis);
+char const *qu__core_get_joystick_button_name(int joystick, int button);
+char const *qu__core_get_joystick_axis_name(int joystick, int axis);
 bool qu__core_is_joystick_button_pressed(int joystick, int button);
 float qu__core_get_joystick_axis_value(int joystick, int axis);
 void qu__core_set_key_press_fn(qu_key_fn fn);

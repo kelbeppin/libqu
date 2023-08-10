@@ -220,7 +220,7 @@ bool qu_is_joystick_connected(int joystick)
 
 char const *qu_get_joystick_id(int joystick)
 {
-    return qu__core_get_joystick_id(joystick);
+    return qu__core_get_joystick_name(joystick);
 }
 
 int qu_get_joystick_button_count(int joystick)
@@ -235,12 +235,12 @@ int qu_get_joystick_axis_count(int joystick)
 
 char const *qu_get_joystick_button_id(int joystick, int button)
 {
-    return qu__core_get_joystick_button_id(joystick, button);
+    return qu__core_get_joystick_button_name(joystick, button);
 }
 
 char const *qu_get_joystick_axis_id(int joystick, int axis)
 {
-    return qu__core_get_joystick_axis_id(joystick, axis);
+    return qu__core_get_joystick_axis_name(joystick, axis);
 }
 
 bool qu_is_joystick_button_pressed(int joystick, int button)
