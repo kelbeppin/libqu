@@ -242,11 +242,6 @@ static struct qu__graphics const *get_graphics(void)
     return &qu__graphics_es2;
 }
 
-static struct qu__audio const *get_audio(void)
-{
-    return &qu__audio_openal;
-}
-
 static bool gl_check_extension(char const *name)
 {
     return false;
@@ -265,7 +260,6 @@ struct qu__core const qu__core_emscripten = {
     .process = process,
     .present = present,
     .get_graphics = get_graphics,
-    .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
 };

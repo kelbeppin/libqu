@@ -206,7 +206,6 @@ struct qu__core
     void (*present)(void);
 
     struct qu__graphics const *(*get_graphics)(void);
-    struct qu__audio const *(*get_audio)(void);
 
     bool (*gl_check_extension)(char const *name);
     void *(*gl_proc_address)(char const *name);
@@ -249,7 +248,6 @@ void qu__core_terminate(void);
 bool qu__core_process(void);
 void qu__core_present(void);
 struct qu__graphics const *qu__core_get_graphics(void);
-struct qu__audio const *qu__core_get_audio(void);
 void *qu__core_get_gl_proc_address(char const *name);
 void qu__core_on_key_pressed(qu_key key);
 void qu__core_on_key_released(qu_key key);

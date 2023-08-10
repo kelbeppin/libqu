@@ -552,11 +552,6 @@ static struct qu__graphics const *get_graphics(void)
     return &qu__graphics_es2;
 }
 
-static struct qu__audio const *get_audio(void)
-{
-    return &qu__audio_openal;
-}
-
 static bool gl_check_extension(char const *name)
 {
     char *list = strdup(glXQueryExtensionsString(impl.display, impl.screen));
@@ -588,7 +583,6 @@ struct qu__core const qu__core_x11 = {
     .process = process,
     .present = present,
     .get_graphics = get_graphics,
-    .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
 };

@@ -657,17 +657,6 @@ static struct qu__graphics const *get_graphics(void)
     return &qu__graphics_gl2;
 }
 
-static struct qu__audio const *get_audio(void)
-{
-    // TODO: sumanue qaidaq ere talueaqtaaqtar. arai env var'uenan?
-
-#ifdef QU_USE_OPENAL
-    return &qu__audio_openal;
-#else
-    return &qu__audio_xaudio2;
-#endif
-}
-
 static bool gl_check_extension(char const *name)
 {
     if (!wgl.wglGetExtensionsStringARB) {
@@ -708,7 +697,6 @@ struct qu__core const qu__core_win32 = {
     .process = process,
     .present = present,
     .get_graphics = get_graphics,
-    .get_audio = get_audio,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
 };

@@ -163,11 +163,6 @@ struct qu__graphics const *qu__core_get_graphics(void)
     return priv.impl->get_graphics();
 }
 
-struct qu__audio const *qu__core_get_audio(void)
-{
-    return priv.impl->get_audio();
-}
-
 void *qu__core_get_gl_proc_address(char const *name)
 {
     return priv.impl->gl_proc_address(name);

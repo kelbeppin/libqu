@@ -26,6 +26,19 @@
 // qu_audio.c: Audio module
 //------------------------------------------------------------------------------
 
+static struct qu__audio const *supported_audio_impl_list[] = {
+
+#ifdef QU_WIN32
+    &qu__audio_xaudio2,
+#endif
+
+#ifdef QU_USE_OPENAL
+    &qu__audio_openal,
+#endif
+
+    &qu__audio_null,
+};
+
 struct qu__audio_priv
 {
 	struct qu__audio const *impl;
@@ -39,10 +52,19 @@ void qu__audio_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
-    priv.impl = qu__core_get_audio();
+    int audio_impl_count = QU__ARRAY_SIZE(supported_audio_impl_list);
 
-    if (!priv.impl->query(params)) {
-        priv.impl = &qu__audio_null;
+    if (audio_impl_count == 0) {
+        QU_HALT("audio_impl_count == 0");
+    }
+
+    for (int i = 0; i < audio_impl_count; i++) {
+        priv.impl = supported_audio_impl_list[i];
+
+        if (priv.impl->query(params)) {
+            QU_DEBUG("Selected audio implementation #%d.\n", i);
+            break;
+        }
     }
 
     priv.impl->initialize(params);
