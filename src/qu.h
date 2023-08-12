@@ -81,6 +81,9 @@ qu_vec2f qu_mat4_transform_point(qu_mat4 const *mat, qu_vec2f p);
 #define QU__ARRAY_SIZE(_array) \
     sizeof(_array) / sizeof(_array[0])
 
+#define QU__ALLOC_ARRAY(_ptr, _size) \
+    _ptr = malloc(sizeof(*_ptr) * _size)
+
 char *qu_strdup(char const *str);
 void qu_make_circle(float x, float y, float radius, float *data, int num_verts);
 
@@ -124,6 +127,14 @@ void qu_log_printf(qu_log level, char const *module, char const *fmt, ...);
     do { \
         qu_log_printf(QU_LOG_ERROR, QU_MODULE, __VA_ARGS__); \
         abort(); \
+    } while (0);
+
+#define QU_HALT_IF(_condition) \
+    do { \
+        if (_condition) { \
+            qu_log_printf(QU_LOG_ERROR, QU_MODULE, "QU_HALT_IF: %s\n", #_condition); \
+            abort(); \
+        } \
     } while (0);
 
 //------------------------------------------------------------------------------
@@ -281,6 +292,58 @@ void qu__core_on_mouse_wheel_scrolled(int dx, int dy);
 
 //------------------------------------------------------------------------------
 // Graphics
+
+enum qu__render_command
+{
+    QU__RENDER_COMMAND_NO_OP,
+    QU__RENDER_COMMAND_CLEAR,
+    QU__RENDER_COMMAND_DRAW,
+};
+
+enum qu__render_mode
+{
+    QU__RENDER_MODE_POINTS,
+    QU__RENDER_MODE_LINES,
+    QU__RENDER_MODE_LINE_STRIP,
+    QU__RENDER_MODE_LINE_LOOP,
+    QU__RENDER_MODE_TRIANGLES,
+    QU__RENDER_MODE_TRIANGLE_STRIP,
+    QU__RENDER_MODE_TRIANGLE_FAN,
+    QU__TOTAL_RENDER_MODES,
+};
+
+enum qu__vertex_attribute
+{
+    QU__VERTEX_ATTRIBUTE_POSITION,
+    QU__VERTEX_ATTRIBUTE_COLOR,
+    QU__VERTEX_ATTRIBUTE_TEXCOORD,
+    QU__TOTAL_VERTEX_ATTRIBUTES,
+};
+
+enum qu__vertex_format
+{
+    QU__VERTEX_FORMAT_SOLID,
+    QU__VERTEX_FORMAT_TEXTURED,
+    QU__TOTAL_VERTEX_FORMATS,
+};
+
+struct qu__renderer_impl
+{
+    bool (*query)(qu_params const *params);
+    void (*initialize)(qu_params const *params);
+    void (*terminate)(void);
+
+    void (*upload_vertex_data)(enum qu__vertex_format vertex_format, float const *data, size_t size);
+
+    void (*apply_clear_color)(qu_color clear_color);
+    void (*apply_draw_color)(qu_color draw_color);
+    void (*apply_vertex_format)(enum qu__vertex_format vertex_format);
+
+    void (*exec_clear)(void);
+    void (*exec_draw)(enum qu__render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices);
+};
+
+extern struct qu__renderer_impl const qu__renderer_gl1;
 
 struct qu__graphics
 {

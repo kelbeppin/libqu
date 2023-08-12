@@ -96,6 +96,7 @@ endif()
 
 if(QU_USE_OPENGL)
     target_sources(${PROJECT_NAME} PRIVATE qu_graphics_gl2.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_renderer_gl1.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_GL)
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL)
 endif()
