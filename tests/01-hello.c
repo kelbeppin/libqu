@@ -5,6 +5,8 @@
 #define TICK_RATE               10
 #define FRAME_DURATION          1.0 / TICK_RATE
 
+#define MAX_CIRCLES             8
+
 struct rectangle
 {
     float w;
@@ -22,6 +24,18 @@ struct rectangle
     qu_color fill;
 };
 
+struct circle
+{
+    float x;
+    float y;
+
+    float r;
+    float dr;
+
+    qu_color outline;
+    qu_color fill;
+};
+
 static struct
 {
     bool running;
@@ -29,6 +43,9 @@ static struct
     double frame_lag;
 
     struct rectangle rectangles[2];
+    struct circle circles[MAX_CIRCLES];
+
+    int current_circle;
 } app;
 
 static void key_press_callback(qu_key key)
@@ -39,6 +56,41 @@ static void key_press_callback(qu_key key)
         break;
     default:
         break;
+    }
+}
+
+static void mouse_button_press_callback(qu_mouse_button button)
+{
+    int x = qu_get_mouse_cursor_position().x;
+    int y = qu_get_mouse_cursor_position().y;
+
+    if (button == QU_MOUSE_BUTTON_LEFT) {
+        struct circle *circle = &app.circles[app.current_circle];
+
+        circle->x = (float) x;
+        circle->y = (float) y;
+
+        circle->r = 8.f;
+        circle->dr = 2.f;
+
+        circle->outline = QU_COLOR(224, 0, 0);
+        circle->fill = QU_COLOR(24, 24, 24);
+    }
+}
+
+static void mouse_button_release_callback(qu_mouse_button button)
+{
+    int x = qu_get_mouse_cursor_position().x;
+    int y = qu_get_mouse_cursor_position().y;
+
+    if (button == QU_MOUSE_BUTTON_LEFT) {
+        struct circle *circle = &app.circles[app.current_circle];
+
+        circle->dr = -2.f;
+        circle->outline = QU_COLOR(224, 224, 224);
+        circle->fill = QU_COLOR(24, 24, 24);
+
+        app.current_circle = (app.current_circle + 1) % MAX_CIRCLES;
     }
 }
 
@@ -67,10 +119,35 @@ static void rectangle_draw(struct rectangle *rectangle, float lag_offset)
     qu_pop_matrix();
 }
 
+static void circle_update(struct circle *circle)
+{
+    if (circle->r < 0.f) {
+        circle->dr = 0.f;
+    }
+
+    circle->r += circle->dr;
+}
+
+static void circle_draw(struct circle *circle, float lag_offset)
+{
+    if (circle->r < 0.f) {
+        return;
+    }
+
+    qu_push_matrix();
+    qu_translate(circle->x, circle->y);
+    qu_draw_circle(0.f, 0.f, circle->r + circle->dr * lag_offset, circle->outline, circle->fill);
+    qu_pop_matrix();
+}
+
 static void update(void)
 {
     for (int i = 0; i < 2; i++) {
         rectangle_update(&app.rectangles[i]);
+    }
+
+    for (int i = 0; i < MAX_CIRCLES; i++) {
+        circle_update(&app.circles[i]);
     }
 }
 
@@ -80,6 +157,10 @@ static void draw(float lag_offset)
     
     for (int i = 0; i < 2; i++) {
         rectangle_draw(&app.rectangles[i], lag_offset);
+    }
+
+    for (int i = 0; i < MAX_CIRCLES; i++) {
+        circle_draw(&app.circles[i], lag_offset);
     }
 
     qu_present();
@@ -142,6 +223,8 @@ int main(int argc, char *argv[])
     });
 
     qu_on_key_pressed(key_press_callback);
+    qu_on_mouse_button_pressed(mouse_button_press_callback);
+    qu_on_mouse_button_released(mouse_button_release_callback);
 
     qu_execute(loop);
 
