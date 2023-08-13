@@ -133,13 +133,6 @@ static void gl1__initialize(qu_params const *params)
 
     glViewport(0, 0, 512, 512);
 
-    glMatrixMode(GL_PROJECTION);
-
-    glLoadIdentity();
-    glOrtho(0.0, 512.0, 512.0, 0.0, -1.0, +1.0);
-
-    glMatrixMode(GL_MODELVIEW);
-
     QU_INFO("Initialized.\n");
 }
 
@@ -151,6 +144,19 @@ static void gl1__terminate(void)
 static void gl1__upload_vertex_data(enum qu__vertex_format vertex_format, float const *data, size_t size)
 {
     priv.vertex_data[vertex_format] = data;
+}
+
+static void gl1__apply_projection(qu_mat4 const *projection)
+{
+    glMatrixMode(GL_PROJECTION);
+    glLoadMatrixf(projection->m);
+
+    glMatrixMode(GL_MODELVIEW);
+}
+
+static void gl1__apply_transform(qu_mat4 const *transform)
+{
+    glLoadMatrixf(transform->m);
 }
 
 static void gl1__apply_clear_color(qu_color color)
@@ -207,6 +213,8 @@ struct qu__renderer_impl const qu__renderer_gl1 = {
     .initialize = gl1__initialize,
     .terminate = gl1__terminate,
     .upload_vertex_data = gl1__upload_vertex_data,
+    .apply_projection = gl1__apply_projection,
+    .apply_transform = gl1__apply_transform,
     .apply_clear_color = gl1__apply_clear_color,
     .apply_draw_color = gl1__apply_draw_color,
     .apply_vertex_format = gl1__apply_vertex_format,

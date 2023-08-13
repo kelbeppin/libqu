@@ -296,6 +296,8 @@ void qu__core_on_mouse_wheel_scrolled(int dx, int dy);
 enum qu__render_command
 {
     QU__RENDER_COMMAND_NO_OP,
+    QU__RENDER_COMMAND_STACK_OP,
+    QU__RENDER_COMMAND_TRANSFORM,
     QU__RENDER_COMMAND_CLEAR,
     QU__RENDER_COMMAND_DRAW,
 };
@@ -335,6 +337,8 @@ struct qu__renderer_impl
 
     void (*upload_vertex_data)(enum qu__vertex_format vertex_format, float const *data, size_t size);
 
+    void (*apply_projection)(qu_mat4 const *projection);
+    void (*apply_transform)(qu_mat4 const *transform);
     void (*apply_clear_color)(qu_color clear_color);
     void (*apply_draw_color)(qu_color draw_color);
     void (*apply_vertex_format)(enum qu__vertex_format vertex_format);

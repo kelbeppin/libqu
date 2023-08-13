@@ -46,8 +46,33 @@ static unsigned int vertex_size_map[QU__TOTAL_VERTEX_FORMATS] = {
 
 //------------------------------------------------------------------------------
 
+#define QU__MATRIX_STACK_SIZE                           32
 #define QU__RENDER_COMMAND_BUFFER_INITIAL_CAPACITY      256
 #define QU__VERTEX_BUFFER_INITIAL_CAPACITY              1024
+
+enum qu__stack_op
+{
+    QU__STACK_PUSH,
+    QU__STACK_POP,
+};
+
+enum qu__transform
+{
+    QU__TRANSFORM_TRANSLATE,
+    QU__TRANSFORM_SCALE,
+    QU__TRANSFORM_ROTATE,
+};
+
+struct qu__stack_op_render_command_args
+{
+    enum qu__stack_op type;
+};
+
+struct qu__transform_render_command_args
+{
+    enum qu__transform type;
+    float v[2];
+};
 
 struct qu__clear_render_command_args
 {
@@ -65,6 +90,8 @@ struct qu__draw_render_command_args
 
 union qu__render_command_args
 {
+    struct qu__stack_op_render_command_args stack_op;
+    struct qu__transform_render_command_args transform;
     struct qu__clear_render_command_args clear;
     struct qu__draw_render_command_args draw;
 };
@@ -89,8 +116,16 @@ struct qu__vertex_buffer
     size_t capacity;
 };
 
+struct qu__matrix_stack
+{
+    qu_mat4 data[QU__MATRIX_STACK_SIZE];
+    unsigned int current;
+};
+
 struct qu__graphics_state
 {
+    qu_mat4 projection;
+    struct qu__matrix_stack matrix_stack;
     qu_color clear_color;
     qu_color draw_color;
     enum qu__vertex_format vertex_format;
@@ -110,6 +145,50 @@ static struct qu__graphics_priv priv;
 
 //------------------------------------------------------------------------------
 // Render commands
+
+static void graphics__exec_stack_op(struct qu__stack_op_render_command_args const *args)
+{
+    unsigned int *index = &priv.state.matrix_stack.current;
+
+    switch (args->type) {
+    case QU__STACK_PUSH:
+        if ((*index) < (QU__MATRIX_STACK_SIZE - 1)) {
+            qu_mat4 *next = &priv.state.matrix_stack.data[*index + 1];
+            qu_mat4 *current = &priv.state.matrix_stack.data[*index];
+
+            qu_mat4_copy(next, current);
+            (*index)++;
+        }
+        break;
+    case QU__STACK_POP:
+        if ((*index) > 0) {
+            (*index)--;
+
+            qu_mat4 *current = &priv.state.matrix_stack.data[*index];
+            priv.renderer->apply_transform(current);
+        }
+        break;
+    }
+}
+
+static void graphics__exec_transform(struct qu__transform_render_command_args const *args)
+{
+    qu_mat4 *matrix = &priv.state.matrix_stack.data[priv.state.matrix_stack.current];
+
+    switch (args->type) {
+    case QU__TRANSFORM_TRANSLATE:
+        qu_mat4_translate(matrix, args->v[0], args->v[1], 0.f);
+        break;
+    case QU__TRANSFORM_SCALE:
+        qu_mat4_scale(matrix, args->v[0], args->v[1], 1.f);
+        break;
+    case QU__TRANSFORM_ROTATE:
+        qu_mat4_rotate(matrix, QU_DEG2RAD(args->v[0]), 0.f, 0.f, 1.f);
+        break;
+    }
+
+    priv.renderer->apply_transform(matrix);
+}
 
 static void graphics__exec_clear(struct qu__clear_render_command_args const *args)
 {
@@ -164,6 +243,12 @@ static void graphics__append_render_command(struct qu__render_command_info const
 static void graphics__execute_command(struct qu__render_command_info const *info)
 {
     switch (info->command) {
+    case QU__RENDER_COMMAND_STACK_OP:
+        graphics__exec_stack_op(&info->args.stack_op);
+        break;
+    case QU__RENDER_COMMAND_TRANSFORM:
+        graphics__exec_transform(&info->args.transform);
+        break;
     case QU__RENDER_COMMAND_CLEAR:
         graphics__exec_clear(&info->args.clear);
         break;
@@ -263,6 +348,8 @@ void qu__graphics_initialize(qu_params const *params)
     QU_HALT_IF(!priv.renderer->terminate);
     QU_HALT_IF(!priv.renderer->upload_vertex_data);
 
+    QU_HALT_IF(!priv.renderer->apply_projection);
+    QU_HALT_IF(!priv.renderer->apply_transform);
     QU_HALT_IF(!priv.renderer->apply_clear_color);
     QU_HALT_IF(!priv.renderer->apply_draw_color);
     QU_HALT_IF(!priv.renderer->apply_vertex_format);
@@ -282,9 +369,16 @@ void qu__graphics_initialize(qu_params const *params)
         priv.vertex_buffers[i].capacity = QU__VERTEX_BUFFER_INITIAL_CAPACITY;
     }
 
+    qu_mat4_ortho(&priv.state.projection, 0.f, 512.f, 512.f, 0.f);
+
+    qu_mat4_identity(&priv.state.matrix_stack.data[0]);
+    priv.state.matrix_stack.current = 0;
+
     priv.state.clear_color = QU_COLOR(0, 0, 0);
     priv.state.draw_color = QU_COLOR(255, 255, 255);
 
+    priv.renderer->apply_projection(&priv.state.projection);
+    priv.renderer->apply_transform(&priv.state.matrix_stack.data[0]);
     priv.renderer->apply_clear_color(priv.state.clear_color);
     priv.renderer->apply_draw_color(priv.state.draw_color);
 }
@@ -366,27 +460,52 @@ void qu_reset_view(void)
 
 void qu_push_matrix(void)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_STACK_OP };
+
+    info.args.stack_op.type = QU__STACK_PUSH;
+
+    graphics__append_render_command(&info);
 }
 
 void qu_pop_matrix(void)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_STACK_OP };
+
+    info.args.stack_op.type = QU__STACK_POP;
+
+    graphics__append_render_command(&info);
 }
 
 void qu_translate(float x, float y)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_TRANSFORM };
+
+    info.args.transform.type = QU__TRANSFORM_TRANSLATE;
+    info.args.transform.v[0] = x;
+    info.args.transform.v[1] = y;
+
+    graphics__append_render_command(&info);
 }
 
 void qu_scale(float x, float y)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_TRANSFORM };
+
+    info.args.transform.type = QU__TRANSFORM_SCALE;
+    info.args.transform.v[0] = x;
+    info.args.transform.v[1] = y;
+
+    graphics__append_render_command(&info);
 }
 
 void qu_rotate(float degrees)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_TRANSFORM };
+
+    info.args.transform.type = QU__TRANSFORM_ROTATE;
+    info.args.transform.v[0] = degrees;
+
+    graphics__append_render_command(&info);
 }
 
 void qu_clear(qu_color color)
