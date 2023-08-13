@@ -122,10 +122,6 @@ void qu__core_terminate(void)
 
 bool qu__core_process(void)
 {
-    memset(&priv.keyboard, 0, sizeof(priv.keyboard));
-
-    priv.mouse_buttons = 0;
-
     priv.mouse_cursor_delta.x = 0;
     priv.mouse_cursor_delta.y = 0;
 
