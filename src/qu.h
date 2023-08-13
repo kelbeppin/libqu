@@ -296,6 +296,7 @@ void qu__core_on_mouse_wheel_scrolled(int dx, int dy);
 enum qu__render_command
 {
     QU__RENDER_COMMAND_NO_OP,
+    QU__RENDER_COMMAND_RESIZE,
     QU__RENDER_COMMAND_STACK_OP,
     QU__RENDER_COMMAND_TRANSFORM,
     QU__RENDER_COMMAND_CLEAR,
@@ -343,6 +344,7 @@ struct qu__renderer_impl
     void (*apply_draw_color)(qu_color draw_color);
     void (*apply_vertex_format)(enum qu__vertex_format vertex_format);
 
+    void (*exec_resize)(int width, int height);
     void (*exec_clear)(void);
     void (*exec_draw)(enum qu__render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices);
 };

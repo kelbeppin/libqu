@@ -63,6 +63,12 @@ enum qu__transform
     QU__TRANSFORM_ROTATE,
 };
 
+struct qu__resize_render_command_args
+{
+    int width;
+    int height;
+};
+
 struct qu__stack_op_render_command_args
 {
     enum qu__stack_op type;
@@ -90,6 +96,7 @@ struct qu__draw_render_command_args
 
 union qu__render_command_args
 {
+    struct qu__resize_render_command_args resize;
     struct qu__stack_op_render_command_args stack_op;
     struct qu__transform_render_command_args transform;
     struct qu__clear_render_command_args clear;
@@ -145,6 +152,13 @@ static struct qu__graphics_priv priv;
 
 //------------------------------------------------------------------------------
 // Render commands
+
+static void graphics__exec_resize(struct qu__resize_render_command_args const *args)
+{
+    qu_mat4_ortho(&priv.state.projection, 0.f, args->width, args->height, 0.f);
+    priv.renderer->apply_projection(&priv.state.projection);
+    priv.renderer->exec_resize(args->width, args->height);
+}
 
 static void graphics__exec_stack_op(struct qu__stack_op_render_command_args const *args)
 {
@@ -232,6 +246,20 @@ static void graphics__grow_render_command_buffer(void)
 
 static void graphics__append_render_command(struct qu__render_command_info const *info)
 {
+    size_t last_index = priv.command_buffer.size;
+    struct qu__render_command_info *last = &priv.command_buffer.data[last_index];
+
+    if (last->command == info->command) {
+        switch (last->command) {
+        case QU__RENDER_COMMAND_RESIZE:
+            last->args.resize.width = info->args.resize.width;
+            last->args.resize.height = info->args.resize.height;
+            return;
+        default:
+            break;
+        }
+    }
+
     if (priv.command_buffer.size >= priv.command_buffer.capacity) {
         graphics__grow_render_command_buffer();
     }
@@ -243,6 +271,10 @@ static void graphics__append_render_command(struct qu__render_command_info const
 static void graphics__execute_command(struct qu__render_command_info const *info)
 {
     switch (info->command) {
+    case QU__RENDER_COMMAND_RESIZE:
+        QU_DEBUG("QU__RENDER_COMMAND_RESIZE: %d, %d\n", info->args.resize.width, info->args.resize.height);
+        graphics__exec_resize(&info->args.resize);
+        break;
     case QU__RENDER_COMMAND_STACK_OP:
         graphics__exec_stack_op(&info->args.stack_op);
         break;
@@ -354,6 +386,7 @@ void qu__graphics_initialize(qu_params const *params)
     QU_HALT_IF(!priv.renderer->apply_draw_color);
     QU_HALT_IF(!priv.renderer->apply_vertex_format);
 
+    QU_HALT_IF(!priv.renderer->exec_resize);
     QU_HALT_IF(!priv.renderer->exec_clear);
     QU_HALT_IF(!priv.renderer->exec_draw);
 
@@ -369,7 +402,7 @@ void qu__graphics_initialize(qu_params const *params)
         priv.vertex_buffers[i].capacity = QU__VERTEX_BUFFER_INITIAL_CAPACITY;
     }
 
-    qu_mat4_ortho(&priv.state.projection, 0.f, 512.f, 512.f, 0.f);
+    qu_mat4_ortho(&priv.state.projection, 0.f, params->display_width, params->display_height, 0.f);
 
     qu_mat4_identity(&priv.state.matrix_stack.data[0]);
     priv.state.matrix_stack.current = 0;
@@ -417,7 +450,12 @@ void qu__graphics_on_display_resize(int width, int height)
         return;
     }
 
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_RESIZE };
+
+    info.args.resize.width = width;
+    info.args.resize.height = height;
+
+    graphics__append_render_command(&info);
 }
 
 qu_vec2i qu__graphics_conv_cursor(qu_vec2i position)

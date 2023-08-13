@@ -196,6 +196,11 @@ static void gl1__apply_vertex_format(enum qu__vertex_format vertex_format)
     }
 }
 
+static void gl1__exec_resize(int width, int height)
+{
+    _GL_CHECK(glViewport(0, 0, width, height));
+}
+
 static void gl1__exec_clear(void)
 {
     _GL_CHECK(glClear(GL_COLOR_BUFFER_BIT));
@@ -218,6 +223,7 @@ struct qu__renderer_impl const qu__renderer_gl1 = {
     .apply_clear_color = gl1__apply_clear_color,
     .apply_draw_color = gl1__apply_draw_color,
     .apply_vertex_format = gl1__apply_vertex_format,
+    .exec_resize = gl1__exec_resize,
 	.exec_clear = gl1__exec_clear,
 	.exec_draw = gl1__exec_draw,
 };
