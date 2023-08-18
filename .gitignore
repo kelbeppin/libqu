@@ -1,5 +1,6 @@
 # Build output
 out/
+*build/
 
 # Doxygen output
 docs/_site
