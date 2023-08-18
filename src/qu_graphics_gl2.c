@@ -153,7 +153,6 @@ static PFNGLRENDERBUFFERSTORAGEEXTPROC     pf_glRenderbufferStorageEXT;
 
 #define GL2_SHADER_SOLID_SRC \
     "#version 120\n" \
-    "precision mediump float;\n" \
     "uniform vec4 u_color;\n" \
     "void main()\n" \
     "{\n" \
@@ -162,7 +161,6 @@ static PFNGLRENDERBUFFERSTORAGEEXTPROC     pf_glRenderbufferStorageEXT;
 
 #define GL2_SHADER_TEXTURED_SRC \
     "#version 120\n" \
-    "precision mediump float;\n" \
     "varying vec2 v_texCoord;\n" \
     "uniform sampler2D u_texture;\n" \
     "uniform vec4 u_color;\n" \
