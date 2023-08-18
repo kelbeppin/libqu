@@ -30,8 +30,9 @@
 // qu_core_win32.c: Win32-based core module
 //------------------------------------------------------------------------------
 
-//------------------------------------------------------------------------------
-// Immersive Dark Mode
+#ifndef WM_MOUSEHWHEEL
+#define WM_MOUSEHWHEEL 0x020E
+#endif
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
