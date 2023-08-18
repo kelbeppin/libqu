@@ -22,7 +22,6 @@
 #include "qu.h"
 #include <windowsx.h>
 #include <dwmapi.h>
-#include <shellscalingapi.h>
 #include <GL/gl.h>
 #include <GL/wglext.h>
 
@@ -37,6 +36,8 @@
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
+
+typedef HRESULT (*SETPROCESSDPIAWARENESSPROC)(int);
 
 //------------------------------------------------------------------------------
 
@@ -551,7 +552,17 @@ static void initialize(qu_params const *params)
 
     // DPI awareness
 
-    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    qu__library *shcore_dll = qu__platform_open_library("shcore.dll");
+
+    if (shcore_dll) {
+        SETPROCESSDPIAWARENESSPROC pfnSetProcessDpiAwareness =
+            qu__platform_get_procedure(shcore_dll, "SetProcessDpiAwareness");
+
+        if (pfnSetProcessDpiAwareness) {
+            // 2: PROCESS_PER_MONITOR_DPI_AWARE
+            pfnSetProcessDpiAwareness(2);
+        }
+    }
 
     // Set cursor and keyboard
 

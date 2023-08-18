@@ -57,7 +57,7 @@ if(QU_OS_WINDOWS)
         qu_platform_win32.c)
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi shcore XInput)
+    target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi XInput)
 endif()
 
 if(QU_OS_LINUX)
