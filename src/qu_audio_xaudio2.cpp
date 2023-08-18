@@ -44,6 +44,28 @@
 #define BGM_TOTAL_BUFFERS           4
 #define BGM_BUFFER_LENGTH           8192
 
+//------------------------------------------------------------------------------
+
+typedef HRESULT (*PFNXAUDIO2CREATEPROC)(IXAudio2 **, UINT32, XAUDIO2_PROCESSOR);
+
+struct qu__xaudio2_module
+{
+    char const *name;
+    int version;
+};
+
+static struct qu__xaudio2_module const s_modules[] = {
+    { "XAudio2_9.dll", 209 },
+    { "XAudio2_9redist.dll", 209 },
+    { "XAudio2_8.dll", 208 },
+};
+
+static qu__library *g_library;
+static int g_libraryVersion;
+static PFNXAUDIO2CREATEPROC g_pfnXAudio2Create;
+
+//------------------------------------------------------------------------------
+
 struct Sound
 {
     void *pData;
@@ -509,6 +531,41 @@ static void StopDynamicStream(struct Stream *pStream)
 
 static bool query(qu_params const *params)
 {
+    int moduleCount = sizeof(s_modules) / sizeof(s_modules[0]);
+
+    char const *name;
+    int major, minor;
+
+    for (int i = 0; i < moduleCount; i++) {
+        g_library = qu__platform_open_library(s_modules[i].name);
+        g_libraryVersion = s_modules[i].version;
+
+        if (g_library) {
+            name = s_modules[i].name;
+            major = s_modules[i].version / 100; 
+            minor = s_modules[i].version % 100;
+
+            QU_INFO("Loaded %s.\n", s_modules[i].name);
+            break;
+        }
+
+        QU_WARNING("Unable to load %s.\n", s_modules[i].name);
+    }
+
+    if (!g_library) {
+        QU_ERROR("XAudio2 is not found.\n");
+        return false;
+    }
+
+    g_pfnXAudio2Create = (PFNXAUDIO2CREATEPROC) qu__platform_get_procedure(g_library, "XAudio2Create");
+
+    if (!g_pfnXAudio2Create) {
+        QU_ERROR("XAudio2Create() procedure is not found.\n");
+        return false;
+    }
+
+    QU_INFO("XAudio %d.%d is found in %s.\n", major, minor, name);
+
     return true;
 }
 
@@ -531,7 +588,7 @@ static void initialize(qu_params const *params)
 
     // Create XAudio2 engine.
 
-    hResult = XAudio2Create(&g_pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
+    hResult = g_pfnXAudio2Create(&g_pXAudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
 
     if (FAILED(hResult)) {
         QU_HALT("Failed to create XAudio2 engine instance [0x%08x].", hResult);

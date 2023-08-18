@@ -46,6 +46,11 @@ struct qu_mutex
     CRITICAL_SECTION cs;
 };
 
+struct qu__library
+{
+    HMODULE module;
+};
+
 //------------------------------------------------------------------------------
 
 static double      frequency_highp;
@@ -214,3 +219,70 @@ void qu_sleep(double seconds)
     DWORD milliseconds = (DWORD) (seconds * 1000);
     Sleep(milliseconds);
 }
+
+//------------------------------------------------------------------------------
+// Dynamic loading libraries
+
+static wchar_t *conv_str(char const *str)
+{
+    int size = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    wchar_t *str_w = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size * sizeof(wchar_t));
+
+    if (!str_w) {
+        return NULL;
+    }
+
+    int result = MultiByteToWideChar(CP_UTF8, 0, str, -1, str_w, size);
+
+    if (result == 0) {
+        HeapFree(GetProcessHeap(), 0, str_w);
+        return NULL;
+    }
+
+    return str_w;
+}
+
+qu__library *qu__platform_open_library(char const *path)
+{
+    wchar_t *path_w = conv_str(path);
+
+    if (!path_w) {
+        return NULL;
+    }
+
+    HMODULE module = LoadLibraryExW(path_w, NULL, 0);
+    HeapFree(GetProcessHeap(), 0, path_w);
+
+    if (!module) {
+        return NULL;
+    }
+
+    qu__library *library = HeapAlloc(GetProcessHeap(), 0, sizeof(qu__library));
+
+    if (!library) {
+        FreeLibrary(module);
+        return NULL;
+    }
+
+    library->module = module;
+
+    return library;
+}
+
+void qu__platform_close_library(qu__library *library)
+{
+    if (library) {
+        FreeLibrary(library->module);
+        HeapFree(GetProcessHeap(), 0, library);
+    }
+}
+
+qu__procedure qu__platform_get_procedure(qu__library *library, char const *name)
+{
+    if (library) {
+        return (qu__procedure) GetProcAddress(library->module, name);
+    }
+
+    return NULL;
+}
+
