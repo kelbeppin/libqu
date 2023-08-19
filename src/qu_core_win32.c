@@ -73,7 +73,7 @@ static int init_wgl_extensions(void)
     // Create dummy window and OpenGL context and check for
     // available WGL extensions
 
-    QU_INFO("WinAPI: Creating dummy invisible window to check supported WGL extensions.\n");
+    QU_INFO("Creating dummy invisible window to check supported WGL extensions.\n");
 
     WNDCLASSEXW wc = {
         .cbSize         = sizeof(WNDCLASSEXW),
@@ -84,7 +84,7 @@ static int init_wgl_extensions(void)
     };
 
     if (!RegisterClassExW(&wc)) {
-        QU_ERROR("WinAPI: Unable to register dummy window class.\n");
+        QU_ERROR("Unable to register dummy window class.\n");
         return -1;
     }
 
@@ -93,14 +93,14 @@ static int init_wgl_extensions(void)
         NULL, NULL, wc.hInstance, NULL);
 
     if (!window) {
-        QU_ERROR("WinAPI: Unable to create dummy window.\n");
+        QU_ERROR("Unable to create dummy window.\n");
         return -1;
     }
 
     HDC dc = GetDC(window);
 
     if (!dc) {
-        QU_ERROR("WinAPI: Dummy window has invalid Device Context.\n");
+        QU_ERROR("Dummy window has invalid Device Context.\n");
 
         DestroyWindow(window);
         return -1;
@@ -119,7 +119,7 @@ static int init_wgl_extensions(void)
     int format = ChoosePixelFormat(dc, &pfd);
 
     if (!format || !SetPixelFormat(dc, format, &pfd)) {
-        QU_ERROR("WinAPI: Invalid pixel format.\n");
+        QU_ERROR("Invalid pixel format.\n");
 
         ReleaseDC(window, dc);
         DestroyWindow(window);
@@ -129,7 +129,7 @@ static int init_wgl_extensions(void)
     HGLRC rc = wglCreateContext(dc);
 
     if (!rc || !wglMakeCurrent(dc, rc)) {
-        QU_ERROR("WinAPI: Failed to create dummy OpenGL context.\n");
+        QU_ERROR("Failed to create dummy OpenGL context.\n");
 
         if (rc) {
             wglDeleteContext(rc);
@@ -154,11 +154,11 @@ static int init_wgl_extensions(void)
     ReleaseDC(window, dc);
     DestroyWindow(window);
 
-    QU_INFO("WGL: Pointers to required functions acquired:\n");
-    QU_INFO(":: wglGetExtensionsStringARB -> %p\n", wgl.wglGetExtensionsStringARB);
-    QU_INFO(":: wglGetPixelFormatAttribivARB -> %p\n", wgl.wglGetPixelFormatAttribivARB);
-    QU_INFO(":: wglChoosePixelFormatARB -> %p\n", wgl.wglChoosePixelFormatARB);
-    QU_INFO(":: wglCreateContextAttribsARB -> %p\n", wgl.wglCreateContextAttribsARB);
+    QU_DEBUG("Pointers to required functions acquired:\n");
+    QU_DEBUG(":: wglGetExtensionsStringARB -> %p\n", wgl.wglGetExtensionsStringARB);
+    QU_DEBUG(":: wglGetPixelFormatAttribivARB -> %p\n", wgl.wglGetPixelFormatAttribivARB);
+    QU_DEBUG(":: wglChoosePixelFormatARB -> %p\n", wgl.wglChoosePixelFormatARB);
+    QU_DEBUG(":: wglCreateContextAttribsARB -> %p\n", wgl.wglCreateContextAttribsARB);
 
     // These functions are mandatory to create OpenGL Core Profile Context.
 
@@ -204,7 +204,7 @@ static int choose_pixel_format(HDC dc)
     wgl.wglChoosePixelFormatARB(dc, format_attribs, NULL, 256, formats, &total_formats);
 
     if (!total_formats) {
-        QU_ERROR("WGL: No suitable Pixel Format found.\n");
+        QU_ERROR("No suitable Pixel Format found.\n");
         return -1;
     }
 
@@ -237,22 +237,21 @@ static int choose_pixel_format(HDC dc)
 static int init_wgl_context(HWND window)
 {
     if (init_wgl_extensions() == -1) {
-        QU_HALT("WGL: Failed to fetch extension list.");
+        QU_HALT("Failed to fetch extension list.");
     }
 
     HDC dc = GetDC(window);
 
     if (!dc) {
-        QU_HALT("WGL: Failed to get Device Context for main window.");
+        QU_HALT("Failed to get Device Context for main window.");
     }
 
-    QU_INFO("WGL: available extensions:\n");
-    QU_INFO(":: %s\n", wgl.wglGetExtensionsStringARB(dc));
+    QU_INFO("Available WGL extensions: %s\n", wgl.wglGetExtensionsStringARB(dc));
 
     int format = choose_pixel_format(dc);
 
     if (format == -1) {
-        QU_ERROR("WGL: Failed to choose appropriate Pixel Format.\n");
+        QU_ERROR("Failed to choose appropriate Pixel Format.\n");
 
         ReleaseDC(window, dc);
         return -1;
@@ -262,7 +261,7 @@ static int init_wgl_context(HWND window)
     DescribePixelFormat(dc, format, sizeof(pfd), &pfd);
 
     if (!SetPixelFormat(dc, format, &pfd)) {
-        QU_ERROR("WGL: Failed to set Pixel Format.\n");
+        QU_ERROR("Failed to set Pixel Format.\n");
         QU_ERROR(":: GetLastError -> 0x%08x\n", GetLastError());
 
         ReleaseDC(window, dc);
@@ -286,15 +285,15 @@ static int init_wgl_context(HWND window)
         rc = wgl.wglCreateContextAttribsARB(dc, NULL, attribs);
 
         if (rc && wglMakeCurrent(dc, rc)) {
-            QU_INFO("WGL: OpenGL version %d.%d seems to be supported.\n", major, minor);
+            QU_INFO("OpenGL version %d.%d seems to be supported.\n", major, minor);
             break;
         }
 
-        QU_ERROR("WGL: Unable to create OpenGL version %d.%d context.\n", major, minor);
+        QU_ERROR("Unable to create OpenGL version %d.%d context.\n", major, minor);
     }
 
     if (!rc) {
-        QU_ERROR("WGL: Neither of listed OpenGL versions is supported.\n");
+        QU_ERROR("Neither of listed OpenGL versions is supported.\n");
 
         ReleaseDC(window, dc);
         return -1;
@@ -309,7 +308,7 @@ static int init_wgl_context(HWND window)
     dpy.dc = dc;
     dpy.rc = rc;
 
-    QU_INFO("WGL: OpenGL context is successfully created.\n");
+    QU_INFO("OpenGL context is successfully created.\n");
 
     return 0;
 }
@@ -545,7 +544,7 @@ static void initialize(qu_params const *params)
     HINSTANCE instance = GetModuleHandleW(NULL);
 
     if (!instance) {
-        QU_HALT("WinAPI: no module instance.");
+        QU_HALT("Invalid module instance.");
     }
 
     // DPI awareness
@@ -560,6 +559,8 @@ static void initialize(qu_params const *params)
             // 2: PROCESS_PER_MONITOR_DPI_AWARE
             pfnSetProcessDpiAwareness(2);
         }
+
+        qu__platform_close_library(shcore_dll);
     }
 
     // Set cursor and keyboard
@@ -592,7 +593,7 @@ static void initialize(qu_params const *params)
     };
 
     if (!RegisterClassExW(&wcex)) {
-        QU_HALT("WinAPI: failed to register class.");
+        QU_HALT("Failed to register class.");
     }
 
     dpy.window = CreateWindowW(dpy.class_name, dpy.window_name, dpy.style,
@@ -600,7 +601,7 @@ static void initialize(qu_params const *params)
         NULL, NULL, instance, NULL);
     
     if (!dpy.window) {
-        QU_HALT("WinAPI: failed to create window.");
+        QU_HALT("Failed to create window.");
     }
 
     // Enable dark mode on Windows 11.
@@ -614,7 +615,7 @@ static void initialize(qu_params const *params)
 
     // Done.
 
-    QU_INFO("Win32 core module initialized.\n");
+    QU_INFO("Initialized.\n");
 }
 
 static void terminate(void)
@@ -632,7 +633,7 @@ static void terminate(void)
         DestroyWindow(dpy.window);
     }
 
-    QU_INFO("Win32 core module terminated.\n");
+    QU_INFO("Terminated.\n");
 }
 
 static bool process(void)
