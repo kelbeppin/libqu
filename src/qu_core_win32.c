@@ -550,7 +550,7 @@ static void initialize(qu_params const *params)
 
     // DPI awareness
 
-    qu__library *shcore_dll = qu__platform_open_library("shcore.dll");
+    qu__library shcore_dll = qu__platform_open_library("shcore.dll");
 
     if (shcore_dll) {
         SETPROCESSDPIAWARENESSPROC pfnSetProcessDpiAwareness =

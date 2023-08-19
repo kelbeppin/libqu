@@ -242,7 +242,7 @@ static wchar_t *conv_str(char const *str)
     return str_w;
 }
 
-qu__library *qu__platform_open_library(char const *path)
+qu__library qu__platform_open_library(char const *path)
 {
     wchar_t *path_w = conv_str(path);
 
@@ -250,37 +250,27 @@ qu__library *qu__platform_open_library(char const *path)
         return NULL;
     }
 
-    HMODULE module = LoadLibraryExW(path_w, NULL, 0);
+    HMODULE library = LoadLibraryExW(path_w, NULL, 0);
     HeapFree(GetProcessHeap(), 0, path_w);
 
-    if (!module) {
-        return NULL;
-    }
-
-    qu__library *library = HeapAlloc(GetProcessHeap(), 0, sizeof(qu__library));
-
     if (!library) {
-        FreeLibrary(module);
         return NULL;
     }
 
-    library->module = module;
-
-    return library;
+    return (qu__library) library;
 }
 
-void qu__platform_close_library(qu__library *library)
+void qu__platform_close_library(qu__library library)
 {
     if (library) {
-        FreeLibrary(library->module);
-        HeapFree(GetProcessHeap(), 0, library);
+        FreeLibrary(library);
     }
 }
 
-qu__procedure qu__platform_get_procedure(qu__library *library, char const *name)
+qu__procedure qu__platform_get_procedure(qu__library library, char const *name)
 {
     if (library) {
-        return (qu__procedure) GetProcAddress(library->module, name);
+        return (qu__procedure) GetProcAddress(library, name);
     }
 
     return NULL;

@@ -60,7 +60,7 @@ static struct qu__xaudio2_module const s_modules[] = {
     { "XAudio2_8.dll", 208 },
 };
 
-static qu__library *g_library;
+static qu__library g_library;
 static int g_libraryVersion;
 static PFNXAUDIO2CREATEPROC g_pfnXAudio2Create;
 

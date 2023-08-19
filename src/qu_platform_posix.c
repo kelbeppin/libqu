@@ -25,6 +25,7 @@
 #define QU_MODULE "platform-posix"
 #include "qu.h"
 
+#include <dlfcn.h>
 #include <errno.h>
 #include <pthread.h>
 
@@ -211,4 +212,28 @@ void qu_sleep(double seconds)
     while ((nanosleep(&ts, &ts) == -1) && (errno == EINTR)) {
         // Wait, do nothing.
     }
+}
+
+//------------------------------------------------------------------------------
+// Dynamic loading libraries
+
+qu__library qu__platform_open_library(char const *path)
+{
+    return dlopen(path, RTLD_LAZY);
+}
+
+void qu__platform_close_library(qu__library library)
+{
+    if (library) {
+        dlclose(library);
+    }
+}
+
+qu__procedure qu__platform_get_procedure(qu__library library, char const *name)
+{
+    if (library) {
+        return dlsym(library, name);
+    }
+
+    return NULL;
 }

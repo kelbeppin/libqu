@@ -189,7 +189,7 @@ void qu_sound_seek(qu_sound_reader *reader, int64_t sample_offset);
 typedef struct qu_thread qu_thread;
 typedef struct qu_mutex qu_mutex;
 typedef intptr_t (*qu_thread_func)(void *);
-typedef struct qu__library qu__library;
+typedef void *qu__library;
 typedef void *qu__procedure;
 
 void qu_platform_initialize(void);
@@ -206,9 +206,9 @@ void qu_unlock_mutex(qu_mutex *mutex);
 
 void qu_sleep(double seconds);
 
-qu__library *qu__platform_open_library(char const *path);
-void qu__platform_close_library(qu__library *library);
-qu__procedure qu__platform_get_procedure(qu__library *library, char const *name);
+qu__library qu__platform_open_library(char const *path);
+void qu__platform_close_library(qu__library library);
+qu__procedure qu__platform_get_procedure(qu__library library, char const *name);
 
 //------------------------------------------------------------------------------
 // Core
