@@ -52,8 +52,9 @@ static struct
 
 static struct
 {
-    LPCTSTR     class_name;
-    LPCTSTR     window_name;
+    WCHAR       wide_title[256];
+    LPCWSTR     class_name;
+    LPCWSTR     window_name;
     DWORD       style;
     HWND        window;
     HDC         dc;
@@ -63,10 +64,6 @@ static struct
     BOOL        key_autorepeat;
     UINT        mouse_button_ordinal;
     UINT        mouse_buttons;
-
-#if defined(UNICODE)
-    WCHAR       wide_title[256];
-#endif
 } dpy;
 
 //------------------------------------------------------------------------------
@@ -78,19 +75,20 @@ static int init_wgl_extensions(void)
 
     QU_INFO("WinAPI: Creating dummy invisible window to check supported WGL extensions.\n");
 
-    WNDCLASS wc = {
+    WNDCLASSEXW wc = {
+        .cbSize         = sizeof(WNDCLASSEXW),
         .style          = CS_HREDRAW | CS_VREDRAW | CS_OWNDC,
-        .lpfnWndProc    = DefWindowProc,
-        .hInstance      = GetModuleHandle(0),
-        .lpszClassName  = TEXT("Trampoline"),
+        .lpfnWndProc    = DefWindowProcW,
+        .hInstance      = GetModuleHandleW(0),
+        .lpszClassName  = L"Trampoline",
     };
 
-    if (!RegisterClass(&wc)) {
+    if (!RegisterClassW(&wc)) {
         QU_ERROR("WinAPI: Unable to register dummy window class.\n");
         return -1;
     }
 
-    HWND window = CreateWindowEx(0, wc.lpszClassName, wc.lpszClassName, 0,
+    HWND window = CreateWindowExW(0, wc.lpszClassName, wc.lpszClassName, 0,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
         NULL, NULL, wc.hInstance, NULL);
 
@@ -521,7 +519,7 @@ static void set_size(int width, int height)
 {
     HMONITOR monitor = MonitorFromWindow(dpy.window, MONITOR_DEFAULTTONEAREST);
     MONITORINFO mi = { sizeof(MONITORINFO) };
-    GetMonitorInfo(monitor, &mi);
+    GetMonitorInfoW(monitor, &mi);
 
     int dx = (mi.rcMonitor.right - mi.rcMonitor.left - width) / 2;
     int dy = (mi.rcMonitor.bottom - mi.rcMonitor.top - height) / 2;
@@ -544,7 +542,7 @@ static void initialize(qu_params const *params)
 {
     // Check instance
 
-    HINSTANCE instance = GetModuleHandle(NULL);
+    HINSTANCE instance = GetModuleHandleW(NULL);
 
     if (!instance) {
         QU_HALT("WinAPI: no module instance.");
@@ -566,32 +564,26 @@ static void initialize(qu_params const *params)
 
     // Set cursor and keyboard
 
-    dpy.cursor = LoadCursor(NULL, IDC_CROSS);
+    dpy.cursor = LoadCursorW(NULL, IDC_CROSS);
     dpy.hide_cursor = FALSE;
     dpy.key_autorepeat = FALSE;
 
     // Create window
 
-#if defined(UNICODE)
-    MultiByteToWideChar(CP_UTF8, 0, title, -1, dpy.wide_title, ARRAYSIZE(dpy.wide_title));
-
+    MultiByteToWideChar(CP_UTF8, 0, params->title, -1, dpy.wide_title, ARRAYSIZE(dpy.wide_title));
     dpy.class_name = dpy.wide_title;
     dpy.window_name = dpy.wide_title;
-#else
-    dpy.class_name = params->title;
-    dpy.window_name = params->title;
-#endif
 
     dpy.style = WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_SIZEBOX;
 
-    WNDCLASSEX wcex = {
-        .cbSize         = sizeof(WNDCLASSEX),
+    WNDCLASSEXW wcex = {
+        .cbSize         = sizeof(WNDCLASSEXW),
         .style          = CS_VREDRAW | CS_HREDRAW | CS_OWNDC,
         .lpfnWndProc    = wndproc,
         .cbClsExtra     = 0,
         .cbWndExtra     = 0,
         .hInstance      = instance,
-        .hIcon          = LoadIcon(NULL, IDI_WINLOGO),
+        .hIcon          = LoadIconW(NULL, IDI_WINLOGO),
         .hCursor        = NULL,
         .hbrBackground  = NULL,
         .lpszMenuName   = NULL,
@@ -599,11 +591,11 @@ static void initialize(qu_params const *params)
         .hIconSm        = NULL,
     };
 
-    if (!RegisterClassEx(&wcex)) {
+    if (!RegisterClassExW(&wcex)) {
         QU_HALT("WinAPI: failed to register class.");
     }
 
-    dpy.window = CreateWindow(dpy.class_name, dpy.window_name, dpy.style,
+    dpy.window = CreateWindowW(dpy.class_name, dpy.window_name, dpy.style,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
         NULL, NULL, instance, NULL);
     
@@ -647,13 +639,13 @@ static bool process(void)
 {
     MSG msg;
 
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
             return false;
         }
 
         TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        DispatchMessageW(&msg);
     }
 
     return true;
