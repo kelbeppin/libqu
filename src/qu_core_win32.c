@@ -83,7 +83,7 @@ static int init_wgl_extensions(void)
         .lpszClassName  = L"Trampoline",
     };
 
-    if (!RegisterClassW(&wc)) {
+    if (!RegisterClassExW(&wc)) {
         QU_ERROR("WinAPI: Unable to register dummy window class.\n");
         return -1;
     }
