@@ -97,10 +97,18 @@ static GLenum const mode_map[QU__TOTAL_RENDER_MODES] = {
     GL_TRIANGLE_FAN,
 };
 
+static GLenum const texture_format_map[4] = {
+    GL_LUMINANCE,
+    GL_LUMINANCE_ALPHA,
+    GL_RGB,
+    GL_RGBA,
+};
+
 //------------------------------------------------------------------------------
 
 struct qu__gl1_renderer_priv
 {
+    GLuint bound_texture;
     float const *vertex_data[QU__TOTAL_VERTEX_FORMATS];
 };
 
@@ -129,9 +137,17 @@ static bool gl1__query(qu_params const *params)
 
 static void gl1__initialize(qu_params const *params)
 {
+    memset(&priv, 0, sizeof(priv));
+
     // Temporary.
 
     glViewport(0, 0, 512, 512);
+
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_BLEND);
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     QU_INFO("Initialized.\n");
 }
@@ -157,6 +173,12 @@ static void gl1__apply_projection(qu_mat4 const *projection)
 static void gl1__apply_transform(qu_mat4 const *transform)
 {
     glLoadMatrixf(transform->m);
+}
+
+static void gl1__apply_texture(struct qu__texture_data const *data)
+{
+    priv.bound_texture = data ? data->u : 0;
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
 static void gl1__apply_clear_color(qu_color color)
@@ -211,6 +233,42 @@ static void gl1__exec_draw(enum qu__render_mode render_mode, unsigned int first_
     _GL_CHECK(glDrawArrays(mode_map[render_mode], (GLint) first_vertex, (GLsizei) total_vertices));
 }
 
+static void gl1__load_texture(struct qu__texture_data *texture)
+{
+    GLuint id;
+    
+    _GL_CHECK(glGenTextures(1, &id));
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
+
+    GLenum format = texture_format_map[texture->image->channels - 1];
+
+    _GL_CHECK(glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        format,
+        texture->image->width,
+        texture->image->height,
+        0,
+        format,
+        GL_UNSIGNED_BYTE,
+        texture->image->pixels
+    ));
+
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+
+    texture->u = (uintptr_t) id;
+
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
+}
+
+static void gl1__unload_texture(struct qu__texture_data *texture)
+{
+    GLuint id = (GLuint) texture->u;
+
+    _GL_CHECK(glDeleteTextures(1, &id));
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__renderer_impl const qu__renderer_gl1 = {
@@ -220,10 +278,13 @@ struct qu__renderer_impl const qu__renderer_gl1 = {
     .upload_vertex_data = gl1__upload_vertex_data,
     .apply_projection = gl1__apply_projection,
     .apply_transform = gl1__apply_transform,
+    .apply_texture = gl1__apply_texture,
     .apply_clear_color = gl1__apply_clear_color,
     .apply_draw_color = gl1__apply_draw_color,
     .apply_vertex_format = gl1__apply_vertex_format,
     .exec_resize = gl1__exec_resize,
 	.exec_clear = gl1__exec_clear,
 	.exec_draw = gl1__exec_draw,
+    .load_texture = gl1__load_texture,
+    .unload_texture = gl1__unload_texture,
 };

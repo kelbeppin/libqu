@@ -330,6 +330,13 @@ enum qu__vertex_format
     QU__TOTAL_VERTEX_FORMATS,
 };
 
+struct qu__texture_data
+{
+    qu_image *image;
+    uintptr_t u;
+    uintptr_t v;
+};
+
 struct qu__renderer_impl
 {
     bool (*query)(qu_params const *params);
@@ -340,6 +347,7 @@ struct qu__renderer_impl
 
     void (*apply_projection)(qu_mat4 const *projection);
     void (*apply_transform)(qu_mat4 const *transform);
+    void (*apply_texture)(struct qu__texture_data const *data);
     void (*apply_clear_color)(qu_color clear_color);
     void (*apply_draw_color)(qu_color draw_color);
     void (*apply_vertex_format)(enum qu__vertex_format vertex_format);
@@ -347,6 +355,9 @@ struct qu__renderer_impl
     void (*exec_resize)(int width, int height);
     void (*exec_clear)(void);
     void (*exec_draw)(enum qu__render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices);
+
+    void (*load_texture)(struct qu__texture_data *data);
+    void (*unload_texture)(struct qu__texture_data *data);
 };
 
 extern struct qu__renderer_impl const qu__renderer_gl1;

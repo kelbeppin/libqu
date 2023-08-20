@@ -7,6 +7,8 @@
 
 #define MAX_CIRCLES             8
 
+#define MAX_DUCKS               64
+
 struct rectangle
 {
     float w;
@@ -36,6 +38,15 @@ struct circle
     qu_color fill;
 };
 
+struct duck
+{
+    float x;
+    float y;
+
+    float dx;
+    float dy;
+};
+
 static struct
 {
     bool running;
@@ -46,6 +57,9 @@ static struct
     struct circle circles[MAX_CIRCLES];
 
     int current_circle;
+
+    struct duck ducks[MAX_DUCKS];
+    qu_texture duck_texture;
 } app;
 
 static void key_press_callback(qu_key key)
@@ -140,6 +154,28 @@ static void circle_draw(struct circle *circle, float lag_offset)
     qu_pop_matrix();
 }
 
+static void duck_update(struct duck *duck)
+{
+    duck->x += duck->dx;
+    duck->y += duck->dy;
+
+    if (duck->x < -128.f) {
+        duck->x = 7 * 128.f;
+    }
+
+    if (duck->y < -128.f) {
+        duck->y = 7 * 128.f;
+    }
+}
+
+static void duck_draw(struct duck *duck, float lag_offset)
+{
+    qu_push_matrix();
+    qu_translate(duck->x + duck->dx * lag_offset, duck->y + duck->dy * lag_offset);
+    qu_draw_texture(app.duck_texture, -32.f, -32.f, 64.f, 64.f);
+    qu_pop_matrix();
+}
+
 static void update(void)
 {
     for (int i = 0; i < 2; i++) {
@@ -149,12 +185,26 @@ static void update(void)
     for (int i = 0; i < MAX_CIRCLES; i++) {
         circle_update(&app.circles[i]);
     }
+
+    for (int i = 0; i < MAX_DUCKS; i++) {
+        duck_update(&app.ducks[i]);
+    }
 }
 
 static void draw(float lag_offset)
 {
     qu_clear(QU_COLOR(24, 24, 24));
     
+    qu_push_matrix();
+
+    qu_rotate(-10.f);
+
+    for (int i = 0; i < MAX_DUCKS; i++) {
+        duck_draw(&app.ducks[i], lag_offset);
+    }
+
+    qu_pop_matrix();
+
     for (int i = 0; i < 2; i++) {
         rectangle_draw(&app.rectangles[i], lag_offset);
     }
@@ -216,11 +266,26 @@ int main(int argc, char *argv[])
     app.rectangles[1].outline = QU_COLOR(224, 0, 0);
     app.rectangles[1].fill = QU_COLOR(24, 24, 24);
 
+    for (int y = 0; y < 8; y++) {
+        for (int x = 0; x < 8; x++) {
+            app.ducks[y * 8 + x].x = x * 128.f;
+            app.ducks[y * 8 + x].y = y * 128.f;
+            app.ducks[y * 8 + x].dx = -5.f;
+            app.ducks[y * 8 + x].dy = -5.f;
+        }
+    }
+
     qu_initialize(&(qu_params) {
         .display_width = 512,
         .display_height = 512,
         .enable_canvas = true,
     });
+
+    app.duck_texture = qu_load_texture("assets/duck.png");
+
+    if (!app.duck_texture.id) {
+        return -1;
+    }
 
     qu_on_key_pressed(key_press_callback);
     qu_on_mouse_button_pressed(mouse_button_press_callback);

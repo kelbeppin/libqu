@@ -88,6 +88,7 @@ struct qu__clear_render_command_args
 
 struct qu__draw_render_command_args
 {
+    qu_texture texture;
     qu_color color;
     enum qu__vertex_format vertex_format;
     enum qu__render_mode render_mode;
@@ -134,6 +135,7 @@ struct qu__graphics_state
 {
     qu_mat4 projection;
     struct qu__matrix_stack matrix_stack;
+    qu_texture texture;
     qu_color clear_color;
     qu_color draw_color;
     enum qu__vertex_format vertex_format;
@@ -145,6 +147,8 @@ struct qu__graphics_priv
 
     struct qu__render_command_buffer command_buffer;
     struct qu__vertex_buffer vertex_buffers[QU__TOTAL_VERTEX_FORMATS];
+
+    qu_array *textures;
 
     struct qu__graphics_state state;
 
@@ -219,6 +223,20 @@ static void graphics__exec_clear(struct qu__clear_render_command_args const *arg
 
 static void graphics__exec_draw(struct qu__draw_render_command_args const *args)
 {
+    if (priv.state.texture.id != args->texture.id) {
+        if (args->texture.id) {
+            void *data = qu_array_get(priv.textures, args->texture.id);
+
+            if (data) {
+                priv.state.texture = args->texture;
+                priv.renderer->apply_texture(data);
+            }
+        } else {
+            priv.state.texture.id = 0;
+            priv.renderer->apply_texture(NULL);
+        }
+    }
+
     if (priv.state.draw_color != args->color) {
         priv.state.draw_color = args->color;
         priv.renderer->apply_draw_color(priv.state.draw_color);
@@ -358,6 +376,16 @@ static void graphics__upload_vertex_data(enum qu__vertex_format format)
 
 //------------------------------------------------------------------------------
 
+static void texture_dtor(void *ptr)
+{
+    struct qu__texture_data *data = ptr;
+
+    priv.renderer->unload_texture(data);
+    qu_delete_image(data->image);
+}
+
+//------------------------------------------------------------------------------
+
 void qu__graphics_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
@@ -385,6 +413,7 @@ void qu__graphics_initialize(qu_params const *params)
 
     QU_HALT_IF(!priv.renderer->apply_projection);
     QU_HALT_IF(!priv.renderer->apply_transform);
+    QU_HALT_IF(!priv.renderer->apply_texture);
     QU_HALT_IF(!priv.renderer->apply_clear_color);
     QU_HALT_IF(!priv.renderer->apply_draw_color);
     QU_HALT_IF(!priv.renderer->apply_vertex_format);
@@ -392,6 +421,9 @@ void qu__graphics_initialize(qu_params const *params)
     QU_HALT_IF(!priv.renderer->exec_resize);
     QU_HALT_IF(!priv.renderer->exec_clear);
     QU_HALT_IF(!priv.renderer->exec_draw);
+
+    QU_HALT_IF(!priv.renderer->load_texture);
+    QU_HALT_IF(!priv.renderer->unload_texture);
 
     priv.renderer->initialize(params);
 
@@ -404,6 +436,8 @@ void qu__graphics_initialize(qu_params const *params)
         priv.vertex_buffers[i].size = 0;
         priv.vertex_buffers[i].capacity = QU__VERTEX_BUFFER_INITIAL_CAPACITY;
     }
+    
+    priv.textures = qu_create_array(sizeof(struct qu__texture_data), texture_dtor);
 
     QU__ALLOC_ARRAY(priv.circle_vertices, 2 * QU__CIRCLE_VERTEX_COUNT);
 
@@ -428,6 +462,8 @@ void qu__graphics_terminate(void)
     for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
         free(priv.vertex_buffers[i].data);
     }
+
+    qu_destroy_array(priv.textures);
 
     free(priv.circle_vertices);
 
@@ -693,12 +729,32 @@ void qu_draw_circle(float x, float y, float radius, qu_color outline, qu_color f
 
 qu_texture qu_load_texture(char const *path)
 {
-    return (qu_texture) { 0 }; // [TODO] Bring back.
+    qu_file *file = qu_fopen(path);
+
+    if (!file) {
+        return (qu_texture) { 0 };
+    }
+
+    qu_image *image = qu_load_image(file);
+
+    qu_fclose(file);
+
+    if (!image) {
+        return (qu_texture) { 0 };
+    }
+
+    struct qu__texture_data data = {
+        .image = image,
+    };
+
+    priv.renderer->load_texture(&data);
+
+    return (qu_texture) { qu_array_add(priv.textures, &data) };
 }
 
 void qu_delete_texture(qu_texture texture)
 {
-    // [TODO] Bring back.
+    qu_array_remove(priv.textures, texture.id);
 }
 
 void qu_set_texture_smooth(qu_texture texture, bool smooth)
@@ -708,7 +764,23 @@ void qu_set_texture_smooth(qu_texture texture, bool smooth)
 
 void qu_draw_texture(qu_texture texture, float x, float y, float w, float h)
 {
-    // [TODO] Bring back.
+    float const vertices[] = {
+        x,      y,      0.f,    0.f,
+        x + w,  y,      1.f,    0.f,
+        x + w,  y + h,  1.f,    1.f,
+        x,      y + h,  0.f,    1.f,
+    };
+
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_DRAW };
+
+    info.args.draw.texture = texture;
+    info.args.draw.color = QU_COLOR(255, 255, 255);
+    info.args.draw.render_mode = QU__RENDER_MODE_TRIANGLE_FAN;
+    info.args.draw.vertex_format = QU__VERTEX_FORMAT_TEXTURED;
+    info.args.draw.first_vertex = graphics__append_vertex_data(info.args.draw.vertex_format, vertices, 16);
+    info.args.draw.total_vertices = 4;
+
+    graphics__append_render_command(&info);
 }
 
 void qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, float rx, float ry, float rw, float rh)
