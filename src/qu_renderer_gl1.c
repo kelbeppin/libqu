@@ -139,15 +139,11 @@ static void gl1__initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
-    // Temporary.
+    _GL_CHECK(glEnable(GL_TEXTURE_2D));
+    _GL_CHECK(glEnable(GL_BLEND));
 
-    glViewport(0, 0, 512, 512);
-
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    _GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    _GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
     QU_INFO("Initialized.\n");
 }
@@ -159,6 +155,7 @@ static void gl1__terminate(void)
 
 static void gl1__upload_vertex_data(enum qu__vertex_format vertex_format, float const *data, size_t size)
 {
+    // Don't actually upload anything.
     priv.vertex_data[vertex_format] = data;
 }
 
@@ -201,17 +198,19 @@ static void gl1__apply_vertex_format(enum qu__vertex_format vertex_format)
 {
     switch (vertex_format) {
     case QU__VERTEX_FORMAT_SOLID:
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glDisableClientState(GL_COLOR_ARRAY);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        glVertexPointer(2, GL_FLOAT, 0, priv.vertex_data[vertex_format]);
+        _GL_CHECK(glEnableClientState(GL_VERTEX_ARRAY));
+        _GL_CHECK(glDisableClientState(GL_COLOR_ARRAY));
+        _GL_CHECK(glDisableClientState(GL_TEXTURE_COORD_ARRAY));
+        
+        _GL_CHECK(glVertexPointer(2, GL_FLOAT, 0, priv.vertex_data[vertex_format]));
         break;
     case QU__VERTEX_FORMAT_TEXTURED:
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glDisableClientState(GL_COLOR_ARRAY);
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        glVertexPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 0);
-        glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 2);
+        _GL_CHECK(glEnableClientState(GL_VERTEX_ARRAY));
+        _GL_CHECK(glDisableClientState(GL_COLOR_ARRAY));
+        _GL_CHECK(glEnableClientState(GL_TEXTURE_COORD_ARRAY));
+
+        _GL_CHECK(glVertexPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 0));
+        _GL_CHECK(glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 2));
         break;
     default:
         break;

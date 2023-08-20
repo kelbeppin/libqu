@@ -453,6 +453,9 @@ void qu__graphics_initialize(qu_params const *params)
     priv.renderer->apply_transform(&priv.state.matrix_stack.data[0]);
     priv.renderer->apply_clear_color(priv.state.clear_color);
     priv.renderer->apply_draw_color(priv.state.draw_color);
+
+    // Trigger resize.
+    priv.renderer->exec_resize(params->display_width, params->display_height);
 }
 
 void qu__graphics_terminate(void)
