@@ -361,6 +361,7 @@ struct qu__renderer_impl
 };
 
 extern struct qu__renderer_impl const qu__renderer_gl1;
+extern struct qu__renderer_impl const qu__renderer_gl3;
 
 struct qu__graphics
 {

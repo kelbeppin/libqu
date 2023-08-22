@@ -29,6 +29,7 @@
 static struct qu__renderer_impl const *supported_renderer_impl_list[] = {
 
 #ifdef QU_USE_GL
+    &qu__renderer_gl3,
     &qu__renderer_gl1,
 #endif
 

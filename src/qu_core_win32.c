@@ -269,7 +269,7 @@ static int init_wgl_context(HWND window)
     }
 
     HGLRC rc = NULL;
-    int gl_versions[] = { 320, 310, 300, 210 };
+    int gl_versions[] = { 460, 450, 440, 420, 410, 400, 330 };
 
     for (unsigned int i = 0; i < ARRAYSIZE(gl_versions); i++) {
         int major = gl_versions[i] / 100;
@@ -278,7 +278,7 @@ static int init_wgl_context(HWND window)
         int attribs[] = {
             WGL_CONTEXT_MAJOR_VERSION_ARB,  major,
             WGL_CONTEXT_MINOR_VERSION_ARB,  minor,
-            WGL_CONTEXT_PROFILE_MASK_ARB,   WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB,
+            WGL_CONTEXT_PROFILE_MASK_ARB,   WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
             0,
         };
 
@@ -659,7 +659,7 @@ static void present(void)
 
 static enum qu__renderer get_renderer(void)
 {
-    return QU__RENDERER_GL_COMPAT;
+    return QU__RENDERER_GL_CORE;
 }
 
 static bool gl_check_extension(char const *name)
