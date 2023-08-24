@@ -126,6 +126,18 @@ struct gl3__program_desc
     enum gl3__shader frag;
 };
 
+struct gl3__vertex_attribute_desc
+{
+    unsigned int size;
+};
+
+struct gl3__vertex_format_desc
+{
+    unsigned int attributes;
+    unsigned int stride;
+    enum gl3__program program;
+};
+
 static char const *s_attributes[QU__TOTAL_VERTEX_ATTRIBUTES] = {
     [QU__VERTEX_ATTRIBUTE_POSITION] = "a_position",
     [QU__VERTEX_ATTRIBUTE_COLOR] = "a_color",
@@ -223,6 +235,25 @@ static char const *s_uniforms[GL3__TOTAL_UNIFORMS] = {
     [GL3__UNIFORM_COLOR] = "u_color",
 };
 
+static struct gl3__vertex_attribute_desc const s_vertex_attributes[QU__TOTAL_VERTEX_ATTRIBUTES] = {
+    [QU__VERTEX_ATTRIBUTE_POSITION] = { .size = 2 },
+    [QU__VERTEX_ATTRIBUTE_COLOR] = { .size = 4 },
+    [QU__VERTEX_ATTRIBUTE_TEXCOORD] = { .size = 2 },
+};
+
+static struct gl3__vertex_format_desc const s_vertex_formats[QU__TOTAL_VERTEX_FORMATS] = {
+    [QU__VERTEX_FORMAT_SOLID] = {
+        .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION),
+        .stride = 2,
+        .program = GL3__PROGRAM_SHAPE,
+    },
+    [QU__VERTEX_FORMAT_TEXTURED] = {
+        .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION) | (1 << QU__VERTEX_ATTRIBUTE_TEXCOORD),
+        .stride = 4,
+        .program = GL3__PROGRAM_TEXTURE,
+    },
+};
+
 //------------------------------------------------------------------------------
 
 static GLenum const mode_map[QU__TOTAL_RENDER_MODES] = {
@@ -244,17 +275,27 @@ static GLenum const texture_format_map[4] = {
 
 //------------------------------------------------------------------------------
 
+struct gl3__program_info
+{
+    GLuint id;
+    GLint uniforms[GL3__TOTAL_UNIFORMS];
+    unsigned int dirty_uniforms;
+};
+
+struct gl3__vertex_format_info
+{
+    GLuint array;
+    GLuint buffer;
+    GLuint buffer_size;
+};
+
 struct qu__gl3_renderer_priv
 {
-    GLuint bound_texture;
-    GLuint vao[QU__TOTAL_VERTEX_FORMATS];
-    GLuint vbo[QU__TOTAL_VERTEX_FORMATS];
-    size_t vbo_size[QU__TOTAL_VERTEX_FORMATS];
-
+    struct qu__texture_data const *bound_texture;
     enum gl3__program used_program;
-    GLuint programs[GL3__TOTAL_PROGRAMS];
-    GLint uniforms[GL3__TOTAL_PROGRAMS][GL3__TOTAL_UNIFORMS];
-    unsigned int dirty_uniforms[GL3__TOTAL_PROGRAMS];
+
+    struct gl3__program_info programs[GL3__TOTAL_PROGRAMS];
+    struct gl3__vertex_format_info vertex_formats[QU__TOTAL_VERTEX_FORMATS];
 
     qu_mat4 projection;
     qu_mat4 modelview;
@@ -285,6 +326,7 @@ struct qu__gl3_renderer_priv
     PFNGLBINDBUFFERPROC glBindBuffer;
     PFNGLBUFFERDATAPROC glBufferData;
     PFNGLBUFFERSUBDATAPROC glBufferSubData;
+    PFNGLDELETEBUFFERSPROC glDeleteBuffers;
     PFNGLDISABLEVERTEXATTRIBARRAYPROC glDisableVertexAttribArray;
     PFNGLENABLEVERTEXATTRIBARRAYPROC glEnableVertexAttribArray;
     PFNGLGENBUFFERSPROC glGenBuffers;
@@ -337,6 +379,7 @@ static void load_gl_functions(void)
     priv.glBindBuffer = qu__core_get_gl_proc_address("glBindBuffer");
     priv.glBufferData = qu__core_get_gl_proc_address("glBufferData");
     priv.glBufferSubData = qu__core_get_gl_proc_address("glBufferSubData");
+    priv.glDeleteBuffers = qu__core_get_gl_proc_address("glDeleteBuffers");
     priv.glDisableVertexAttribArray = qu__core_get_gl_proc_address("glDisableVertexAttribArray");
     priv.glEnableVertexAttribArray = qu__core_get_gl_proc_address("glEnableVertexAttribArray");
     priv.glGenBuffers = qu__core_get_gl_proc_address("glGenBuffers");
@@ -417,40 +460,27 @@ static void update_uniforms(void)
         return;
     }
 
-    unsigned int mask = priv.dirty_uniforms[priv.used_program];
-    GLint const *location = priv.uniforms[priv.used_program];
+    struct gl3__program_info *info = &priv.programs[priv.used_program];
 
-    if (mask & (1 << GL3__UNIFORM_PROJECTION)) {
+    if (info->dirty_uniforms & (1 << GL3__UNIFORM_PROJECTION)) {
         _GL_CHECK(priv.glUniformMatrix4fv(
-            location[GL3__UNIFORM_PROJECTION],
+            info->uniforms[GL3__UNIFORM_PROJECTION],
             1, GL_FALSE, priv.projection.m
         ));
     }
 
-    if (mask & (1 << GL3__UNIFORM_MODELVIEW)) {
+    if (info->dirty_uniforms & (1 << GL3__UNIFORM_MODELVIEW)) {
         _GL_CHECK(priv.glUniformMatrix4fv(
-            location[GL3__UNIFORM_MODELVIEW],
+            info->uniforms[GL3__UNIFORM_MODELVIEW],
             1, GL_FALSE, priv.modelview.m
         ));
     }
 
-    if (mask & (1 << GL3__UNIFORM_COLOR)) {
-        _GL_CHECK(priv.glUniform4fv(location[GL3__UNIFORM_COLOR], 1, priv.color));
+    if (info->dirty_uniforms & (1 << GL3__UNIFORM_COLOR)) {
+        _GL_CHECK(priv.glUniform4fv(info->uniforms[GL3__UNIFORM_COLOR], 1, priv.color));
     }
 
-    priv.dirty_uniforms[priv.used_program] = 0;
-}
-
-static void use_program(enum gl3__program program)
-{
-    if (priv.used_program == program) {
-        return;
-    }
-
-    _GL_CHECK(priv.glUseProgram(priv.programs[program]));
-    priv.used_program = program;
-
-    update_uniforms();
+    info->dirty_uniforms = 0;
 }
 
 //------------------------------------------------------------------------------
@@ -470,23 +500,13 @@ static void gl3__initialize(qu_params const *params)
 
     load_gl_functions();
 
-    // _GL_CHECK(glEnable(GL_BLEND));
+    _GL_CHECK(glEnable(GL_BLEND));
 
     _GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     _GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
-    _GL_CHECK(priv.glGenVertexArrays(QU__TOTAL_VERTEX_FORMATS, priv.vao));
-    _GL_CHECK(priv.glGenBuffers(QU__TOTAL_VERTEX_FORMATS, priv.vbo));
-
-    _GL_CHECK(priv.glBindVertexArray(priv.vao[QU__VERTEX_FORMAT_SOLID]));
-    _GL_CHECK(priv.glEnableVertexAttribArray(QU__VERTEX_ATTRIBUTE_POSITION));
-
-    _GL_CHECK(priv.glBindVertexArray(priv.vao[QU__VERTEX_FORMAT_TEXTURED]));
-    _GL_CHECK(priv.glEnableVertexAttribArray(QU__VERTEX_ATTRIBUTE_POSITION));
-    _GL_CHECK(priv.glEnableVertexAttribArray(QU__VERTEX_ATTRIBUTE_TEXCOORD));
-
     GLuint shaders[GL3__TOTAL_SHADERS];
-
+    
     for (int i = 0; i < GL3__TOTAL_SHADERS; i++) {
         shaders[i] = load_shader(&s_shaders[i]);
     }
@@ -495,11 +515,10 @@ static void gl3__initialize(qu_params const *params)
         GLuint vs = shaders[s_programs[i].vert];
         GLuint fs = shaders[s_programs[i].frag];
 
-        priv.programs[i] = build_program(s_programs[i].name, vs, fs);
-        priv.dirty_uniforms[i] = (unsigned int) -1;
+        priv.programs[i].id = build_program(s_programs[i].name, vs, fs);
 
         for (int j = 0; j < GL3__TOTAL_UNIFORMS; j++) {
-            priv.uniforms[i][j] = priv.glGetUniformLocation(priv.programs[i], s_uniforms[j]);
+            priv.programs[i].uniforms[j] = priv.glGetUniformLocation(priv.programs[i].id, s_uniforms[j]);
         }
     }
 
@@ -509,24 +528,66 @@ static void gl3__initialize(qu_params const *params)
 
     priv.used_program = -1;
 
+    for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
+        struct gl3__vertex_format_info *format = &priv.vertex_formats[i];
+
+        _GL_CHECK(priv.glGenVertexArrays(1, &format->array));
+        _GL_CHECK(priv.glGenBuffers(1, &format->buffer));
+
+        _GL_CHECK(priv.glBindVertexArray(format->array));
+
+        for (int j = 0; j < QU__TOTAL_VERTEX_ATTRIBUTES; j++) {
+            if (s_vertex_formats[i].attributes & (1 << j)) {
+                _GL_CHECK(priv.glEnableVertexAttribArray(j));
+            }
+        }
+    }
+
     QU_INFO("Initialized.\n");
 }
 
 static void gl3__terminate(void)
 {
+    for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
+        priv.glDeleteVertexArrays(1, &priv.vertex_formats[i].array);
+        priv.glDeleteBuffers(1, &priv.vertex_formats[i].buffer);
+    }
+
+    for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
+        priv.glDeleteProgram(priv.programs[i].id);
+    }
+
     QU_INFO("Terminated.\n");
 }
 
 static void gl3__upload_vertex_data(enum qu__vertex_format vertex_format, float const *data, size_t size)
 {
-    _GL_CHECK(priv.glBindBuffer(GL_ARRAY_BUFFER, priv.vbo[vertex_format]));
+    struct gl3__vertex_format_info *info = &priv.vertex_formats[vertex_format];
 
-    if (size < priv.vbo_size[vertex_format]) {
+    _GL_CHECK(priv.glBindBuffer(GL_ARRAY_BUFFER, info->buffer));
+
+    if (size < info->buffer_size) {
         _GL_CHECK(priv.glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * size, data));
-    } else {
-        priv.vbo_size[vertex_format] = size;
-        _GL_CHECK(priv.glBufferData(GL_ARRAY_BUFFER, sizeof(float) * size, data, GL_STREAM_DRAW));
+        return;
     }
+
+    _GL_CHECK(priv.glBufferData(GL_ARRAY_BUFFER, sizeof(float) * size, data, GL_STREAM_DRAW));
+
+    _GL_CHECK(priv.glBindVertexArray(info->array));
+
+    unsigned int offset = 0;
+
+    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+        if (s_vertex_formats[vertex_format].attributes & (1 << i)) {
+            GLsizei size = s_vertex_attributes[i].size;
+            GLsizei stride = sizeof(float) * s_vertex_formats[vertex_format].stride;
+
+            _GL_CHECK(priv.glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
+            offset += sizeof(float) * size;
+        }
+    }
+
+    info->buffer_size = size;
 }
 
 static void gl3__apply_projection(qu_mat4 const *projection)
@@ -534,7 +595,7 @@ static void gl3__apply_projection(qu_mat4 const *projection)
     qu_mat4_copy(&priv.projection, projection);
 
     for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
-        priv.dirty_uniforms[i] |= (1 << GL3__UNIFORM_PROJECTION);
+        priv.programs[i].dirty_uniforms |= (1 << GL3__UNIFORM_PROJECTION);
     }
 
     update_uniforms();
@@ -545,7 +606,7 @@ static void gl3__apply_transform(qu_mat4 const *transform)
     qu_mat4_copy(&priv.modelview, transform);
     
     for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
-        priv.dirty_uniforms[i] |= (1 << GL3__UNIFORM_MODELVIEW);
+        priv.programs[i].dirty_uniforms |= (1 << GL3__UNIFORM_MODELVIEW);
     }
 
     update_uniforms();
@@ -553,8 +614,8 @@ static void gl3__apply_transform(qu_mat4 const *transform)
 
 static void gl3__apply_texture(struct qu__texture_data const *data)
 {
-    priv.bound_texture = data ? data->u : 0;
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
+    priv.bound_texture = data;
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, data ? data->u : 0));
 }
 
 static void gl3__apply_clear_color(qu_color color)
@@ -570,7 +631,7 @@ static void gl3__apply_draw_color(qu_color color)
     color_conv(priv.color, color);
     
     for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
-        priv.dirty_uniforms[i] |= (1 << GL3__UNIFORM_COLOR);
+        priv.programs[i].dirty_uniforms |= (1 << GL3__UNIFORM_COLOR);
     }
 
     update_uniforms();
@@ -578,21 +639,17 @@ static void gl3__apply_draw_color(qu_color color)
 
 static void gl3__apply_vertex_format(enum qu__vertex_format vertex_format)
 {
-    _GL_CHECK(priv.glBindVertexArray(priv.vao[vertex_format]));
-    _GL_CHECK(priv.glBindBuffer(GL_ARRAY_BUFFER, priv.vbo[vertex_format]));
+    struct gl3__vertex_format_info *info = &priv.vertex_formats[vertex_format];
 
-    switch (vertex_format) {
-    case QU__VERTEX_FORMAT_SOLID:
-        use_program(GL3__PROGRAM_SHAPE);
-        _GL_CHECK(priv.glVertexAttribPointer(QU__VERTEX_ATTRIBUTE_POSITION, 2, GL_FLOAT, GL_FALSE, 0, (void *) 0));
-        break;
-    case QU__VERTEX_FORMAT_TEXTURED:
-        use_program(GL3__PROGRAM_TEXTURE);
-        _GL_CHECK(priv.glVertexAttribPointer(QU__VERTEX_ATTRIBUTE_POSITION, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void *) 0));
-        _GL_CHECK(priv.glVertexAttribPointer(QU__VERTEX_ATTRIBUTE_TEXCOORD, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 4, (void *) (sizeof(float) * 2)));
-        break;
-    default:
-        break;
+    _GL_CHECK(priv.glBindVertexArray(info->array));
+
+    GLuint program = s_vertex_formats[vertex_format].program;
+
+    if (priv.used_program != program) {
+        priv.used_program = program;
+
+        _GL_CHECK(priv.glUseProgram(priv.programs[program].id));
+        update_uniforms();
     }
 }
 
@@ -637,7 +694,7 @@ static void gl3__load_texture(struct qu__texture_data *texture)
 
     texture->u = (uintptr_t) id;
 
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture ? priv.bound_texture->u : 0));
 }
 
 static void gl3__unload_texture(struct qu__texture_data *texture)
