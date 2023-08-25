@@ -301,6 +301,7 @@ enum qu__render_command
     QU__RENDER_COMMAND_TRANSFORM,
     QU__RENDER_COMMAND_CLEAR,
     QU__RENDER_COMMAND_DRAW,
+    QU__RENDER_COMMAND_SURFACE,
 };
 
 enum qu__render_mode
@@ -330,11 +331,23 @@ enum qu__vertex_format
     QU__TOTAL_VERTEX_FORMATS,
 };
 
+enum qu__texture_type
+{
+    QU__TEXTURE_REGULAR,
+    QU__TEXTURE_SURFACE,
+};
+
 struct qu__texture_data
 {
+    enum qu__texture_type type;
+
     qu_image *image;
     uintptr_t u;
     uintptr_t v;
+
+    unsigned int width;
+    unsigned int height;
+    uintptr_t priv[4];
 };
 
 struct qu__renderer_impl
@@ -347,6 +360,7 @@ struct qu__renderer_impl
 
     void (*apply_projection)(qu_mat4 const *projection);
     void (*apply_transform)(qu_mat4 const *transform);
+    void (*apply_surface)(struct qu__texture_data const *data);
     void (*apply_texture)(struct qu__texture_data const *data);
     void (*apply_clear_color)(qu_color clear_color);
     void (*apply_draw_color)(qu_color draw_color);
@@ -358,6 +372,9 @@ struct qu__renderer_impl
 
     void (*load_texture)(struct qu__texture_data *data);
     void (*unload_texture)(struct qu__texture_data *data);
+
+    void (*create_surface)(struct qu__texture_data *data);
+    void (*destroy_surface)(struct qu__texture_data *data);
 };
 
 extern struct qu__renderer_impl const qu__renderer_gl1;

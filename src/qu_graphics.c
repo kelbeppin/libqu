@@ -97,6 +97,11 @@ struct qu__draw_render_command_args
     unsigned int total_vertices;
 };
 
+struct qu__surface_render_command_args
+{
+    qu_surface surface;
+};
+
 union qu__render_command_args
 {
     struct qu__resize_render_command_args resize;
@@ -104,6 +109,7 @@ union qu__render_command_args
     struct qu__transform_render_command_args transform;
     struct qu__clear_render_command_args clear;
     struct qu__draw_render_command_args draw;
+    struct qu__surface_render_command_args surface;
 };
 
 struct qu__render_command_info
@@ -134,12 +140,23 @@ struct qu__matrix_stack
 
 struct qu__graphics_state
 {
+    int display_width;
+    int display_height;
+    qu_mat4 display_projection;
     qu_mat4 projection;
     struct qu__matrix_stack matrix_stack;
     qu_texture texture;
+    qu_surface surface;
     qu_color clear_color;
     qu_color draw_color;
     enum qu__vertex_format vertex_format;
+
+    bool canvas_enabled;
+    float canvas_ax;
+    float canvas_ay;
+    float canvas_bx;
+    float canvas_by;
+    struct qu__texture_data canvas;
 };
 
 struct qu__graphics_priv
@@ -161,9 +178,18 @@ static struct qu__graphics_priv priv;
 //------------------------------------------------------------------------------
 // Render commands
 
+static void graphics__update_canvas_coords(int w_display, int h_display);
+
 static void graphics__exec_resize(struct qu__resize_render_command_args const *args)
 {
-    qu_mat4_ortho(&priv.state.projection, 0.f, args->width, args->height, 0.f);
+    qu_mat4_ortho(&priv.state.display_projection, 0.f, args->width, args->height, 0.f);
+
+    if (priv.state.canvas_enabled) {
+        graphics__update_canvas_coords(args->width, args->height);
+    } else {
+        qu_mat4_copy(&priv.state.projection, &priv.state.display_projection);
+    }
+
     priv.renderer->apply_projection(&priv.state.projection);
     priv.renderer->exec_resize(args->width, args->height);
 }
@@ -225,17 +251,13 @@ static void graphics__exec_clear(struct qu__clear_render_command_args const *arg
 static void graphics__exec_draw(struct qu__draw_render_command_args const *args)
 {
     if (priv.state.texture.id != args->texture.id) {
-        if (args->texture.id) {
-            void *data = qu_array_get(priv.textures, args->texture.id);
-
-            if (data) {
-                priv.state.texture = args->texture;
-                priv.renderer->apply_texture(data);
-            }
+        if (args->texture.id == -1) {
+            priv.renderer->apply_texture(&priv.state.canvas);
         } else {
-            priv.state.texture.id = 0;
-            priv.renderer->apply_texture(NULL);
+            priv.renderer->apply_texture(qu_array_get(priv.textures, args->texture.id));
         }
+
+        priv.state.texture = args->texture;
     }
 
     if (priv.state.draw_color != args->color) {
@@ -249,6 +271,30 @@ static void graphics__exec_draw(struct qu__draw_render_command_args const *args)
     }
 
     priv.renderer->exec_draw(args->render_mode, args->first_vertex, args->total_vertices);
+}
+
+static void graphics__exec_surface(struct qu__surface_render_command_args const *args)
+{
+    if (priv.state.surface.id != args->surface.id) {
+        struct qu__texture_data const *surface;
+
+        if (args->surface.id == -1) {
+            surface = &priv.state.canvas;
+        } else {
+            surface = qu_array_get(priv.textures, args->surface.id);
+        }
+
+        if (surface) {
+            qu_mat4_ortho(&priv.state.projection, 0.f, surface->width, surface->height, 0.f);
+        } else {
+            qu_mat4_copy(&priv.state.projection, &priv.state.display_projection);
+        }
+
+        priv.renderer->apply_projection(&priv.state.projection);
+        priv.renderer->apply_surface(surface);
+
+        priv.state.surface = args->surface;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -308,6 +354,9 @@ static void graphics__execute_command(struct qu__render_command_info const *info
         break;
     case QU__RENDER_COMMAND_DRAW:
         graphics__exec_draw(&info->args.draw);
+        break;
+    case QU__RENDER_COMMAND_SURFACE:
+        graphics__exec_surface(&info->args.surface);
         break;
     default:
         break;
@@ -377,12 +426,63 @@ static void graphics__upload_vertex_data(enum qu__vertex_format format)
 
 //------------------------------------------------------------------------------
 
+static void graphics__update_canvas_coords(int w_display, int h_display)
+{
+    float ard = w_display / (float) h_display;
+    float arc = priv.state.canvas.width / (float) priv.state.canvas.height;
+
+    if (ard > arc) {
+        priv.state.canvas_ax = (w_display / 2.f) - ((arc / ard) * w_display / 2.f);
+        priv.state.canvas_ay = 0.f;
+        priv.state.canvas_bx = (w_display / 2.f) + ((arc / ard) * w_display / 2.f);
+        priv.state.canvas_by = h_display;
+    } else {
+        priv.state.canvas_ax = 0.f;
+        priv.state.canvas_ay = (h_display / 2.f) - ((ard / arc) * h_display / 2.f);
+        priv.state.canvas_bx = w_display;
+        priv.state.canvas_by = (h_display / 2.f) + ((ard / arc) * h_display / 2.f);
+    }
+}
+
+static void graphics__flush_canvas(void)
+{
+    struct qu__render_command_info info = { 0 };
+
+    info.command = QU__RENDER_COMMAND_SURFACE;
+    info.args.surface.surface.id = 0;
+    graphics__append_render_command(&info);
+
+    info.command = QU__RENDER_COMMAND_CLEAR;
+    info.args.clear.color = QU_COLOR(0, 0, 0);
+    graphics__append_render_command(&info);
+
+    float vertices[] = {
+        priv.state.canvas_ax, priv.state.canvas_ay, 0.f, 1.f,
+        priv.state.canvas_bx, priv.state.canvas_ay, 1.f, 1.f,
+        priv.state.canvas_bx, priv.state.canvas_by, 1.f, 0.f,
+        priv.state.canvas_ax, priv.state.canvas_by, 0.f, 0.f,
+    };
+
+    info.command = QU__RENDER_COMMAND_DRAW;
+    info.args.draw.texture.id = -1;
+    info.args.draw.color = QU_COLOR(255, 255, 255);
+    info.args.draw.render_mode = QU__RENDER_MODE_TRIANGLE_FAN;
+    info.args.draw.vertex_format = QU__VERTEX_FORMAT_TEXTURED;
+    info.args.draw.first_vertex = graphics__append_vertex_data(info.args.draw.vertex_format, vertices, 16);
+    info.args.draw.total_vertices = 4;
+    graphics__append_render_command(&info);
+}
+
 static void texture_dtor(void *ptr)
 {
     struct qu__texture_data *data = ptr;
 
-    priv.renderer->unload_texture(data);
-    qu_delete_image(data->image);
+    if (data->type == QU__TEXTURE_REGULAR) {
+        priv.renderer->unload_texture(data);
+        qu_delete_image(data->image);
+    } else {
+        priv.renderer->destroy_surface(data);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -414,6 +514,7 @@ void qu__graphics_initialize(qu_params const *params)
 
     QU_HALT_IF(!priv.renderer->apply_projection);
     QU_HALT_IF(!priv.renderer->apply_transform);
+    QU_HALT_IF(!priv.renderer->apply_surface);
     QU_HALT_IF(!priv.renderer->apply_texture);
     QU_HALT_IF(!priv.renderer->apply_clear_color);
     QU_HALT_IF(!priv.renderer->apply_draw_color);
@@ -425,6 +526,9 @@ void qu__graphics_initialize(qu_params const *params)
 
     QU_HALT_IF(!priv.renderer->load_texture);
     QU_HALT_IF(!priv.renderer->unload_texture);
+
+    QU_HALT_IF(!priv.renderer->create_surface);
+    QU_HALT_IF(!priv.renderer->destroy_surface);
 
     priv.renderer->initialize(params);
 
@@ -442,7 +546,8 @@ void qu__graphics_initialize(qu_params const *params)
 
     QU__ALLOC_ARRAY(priv.circle_vertices, 2 * QU__CIRCLE_VERTEX_COUNT);
 
-    qu_mat4_ortho(&priv.state.projection, 0.f, params->display_width, params->display_height, 0.f);
+    qu_mat4_ortho(&priv.state.display_projection, 0.f, params->display_width, params->display_height, 0.f);
+    qu_mat4_copy(&priv.state.projection, &priv.state.display_projection);
 
     qu_mat4_identity(&priv.state.matrix_stack.data[0]);
     priv.state.matrix_stack.current = 0;
@@ -457,6 +562,25 @@ void qu__graphics_initialize(qu_params const *params)
 
     // Trigger resize.
     priv.renderer->exec_resize(params->display_width, params->display_height);
+
+    if (params->enable_canvas) {
+        priv.state.canvas_enabled = true;
+
+        priv.state.canvas.type = QU__TEXTURE_SURFACE;
+        priv.state.canvas.width = params->canvas_width;
+        priv.state.canvas.height = params->canvas_height;
+
+        priv.renderer->create_surface(&priv.state.canvas);
+
+        struct qu__render_command_info info = { QU__RENDER_COMMAND_SURFACE };
+        info.args.surface.surface.id = -1;
+        graphics__append_render_command(&info);
+
+        graphics__update_canvas_coords(params->display_width, params->display_height);
+    }
+
+    priv.state.display_width = params->display_width;
+    priv.state.display_height = params->display_height;
 }
 
 void qu__graphics_terminate(void)
@@ -468,6 +592,10 @@ void qu__graphics_terminate(void)
     }
 
     qu_destroy_array(priv.textures);
+
+    if (priv.state.canvas_enabled) {
+        priv.renderer->destroy_surface(&priv.state.canvas);
+    }
 
     free(priv.circle_vertices);
 
@@ -481,6 +609,10 @@ void qu__graphics_refresh(void)
 
 void qu__graphics_swap(void)
 {
+    if (priv.state.canvas_enabled) {
+        graphics__flush_canvas();
+    }
+
     for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
         graphics__upload_vertex_data(i);
     }
@@ -488,6 +620,12 @@ void qu__graphics_swap(void)
     graphics__execute_command_buffer();
 
     priv.state.vertex_format = -1;
+
+    if (priv.state.canvas_enabled) {
+        struct qu__render_command_info info = { QU__RENDER_COMMAND_SURFACE };
+        info.args.surface.surface.id = -1;
+        graphics__append_render_command(&info);
+    }
 }
 
 void qu__graphics_on_display_resize(int width, int height)
@@ -496,6 +634,9 @@ void qu__graphics_on_display_resize(int width, int height)
     if (!priv.renderer) {
         return;
     }
+
+    priv.state.display_width = width;
+    priv.state.display_height = height;
 
     struct qu__render_command_info info = { QU__RENDER_COMMAND_RESIZE };
 
@@ -507,12 +648,58 @@ void qu__graphics_on_display_resize(int width, int height)
 
 qu_vec2i qu__graphics_conv_cursor(qu_vec2i position)
 {
-    return position; // [TODO] Bring back.
+    if (!priv.state.canvas_enabled) {
+        return position;
+    }
+
+    float dw = priv.state.display_width;
+    float dh = priv.state.display_height;
+    float cw = priv.state.canvas.width;
+    float ch = priv.state.canvas.height;
+
+    float dar = dw / dh;
+    float car = cw / ch;
+
+    if (dar > car) {
+        float x_scale = dh / ch;
+        float x_offset = (dw - (cw * x_scale)) / (x_scale * 2.0f);
+
+        return (qu_vec2i) {
+            .x = (position.x * ch) / dh - x_offset,
+            .y = (position.y / dh) * ch,
+        };
+    } else {
+        float y_scale = dw / cw;
+        float y_offset = (dh - (ch * y_scale)) / (y_scale * 2.0f);
+
+        return (qu_vec2i) {
+            .x = (position.x / dw) * cw,
+            .y = (position.y * cw) / dw - y_offset,
+        };
+    }
 }
 
-qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i position)
+qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i delta)
 {
-    return position; // [TODO] Bring back.
+    float dw = priv.state.display_width;
+    float dh = priv.state.display_height;
+    float cw = priv.state.canvas.width;
+    float ch = priv.state.canvas.height;
+
+    float dar = dw / dh;
+    float car = cw / ch;
+
+    if (dar > car) {
+        return (qu_vec2i) {
+            .x = (delta.x * ch) / dh,
+            .y = (delta.y / dh) * ch,
+        };
+    } else {
+        return (qu_vec2i) {
+            .x = (delta.x / dw) * cw,
+            .y = (delta.y * cw) / dw,
+        };
+    }
 }
 
 int32_t qu__graphics_create_texture(int w, int h, int channels)
@@ -794,25 +981,61 @@ void qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, 
 
 qu_surface qu_create_surface(int width, int height)
 {
-    return (qu_surface) { 0 }; // [TODO] Bring back.
+    struct qu__texture_data data = {
+        .type = QU__TEXTURE_SURFACE,
+        .width = (unsigned int) width,
+        .height = (unsigned int) height,
+    };
+
+    priv.renderer->create_surface(&data);
+
+    return (qu_surface) { qu_array_add(priv.textures, &data) };
 }
 
 void qu_delete_surface(qu_surface surface)
 {
-    // [TODO] Bring back.
+    qu_array_remove(priv.textures, surface.id);
 }
 
 void qu_set_surface(qu_surface surface)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_SURFACE };
+
+    info.args.surface.surface = surface;
+
+    graphics__append_render_command(&info);
 }
 
 void qu_reset_surface(void)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_SURFACE };
+
+    if (priv.state.canvas_enabled) {
+        info.args.surface.surface.id = -1;
+    } else {
+        info.args.surface.surface.id = 0;
+    }
+
+    graphics__append_render_command(&info);
 }
 
 void qu_draw_surface(qu_surface surface, float x, float y, float w, float h)
 {
-    // [TODO] Bring back.
+    float const vertices[] = {
+        x,      y,      0.f,    0.f,
+        x + w,  y,      1.f,    0.f,
+        x + w,  y + h,  1.f,    1.f,
+        x,      y + h,  0.f,    1.f,
+    };
+
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_DRAW };
+
+    info.args.draw.texture = (qu_texture) { surface.id };
+    info.args.draw.color = QU_COLOR(255, 255, 255);
+    info.args.draw.render_mode = QU__RENDER_MODE_TRIANGLE_FAN;
+    info.args.draw.vertex_format = QU__VERTEX_FORMAT_TEXTURED;
+    info.args.draw.first_vertex = graphics__append_vertex_data(info.args.draw.vertex_format, vertices, 16);
+    info.args.draw.total_vertices = 4;
+
+    graphics__append_render_command(&info);
 }

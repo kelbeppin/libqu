@@ -292,6 +292,7 @@ struct gl3__vertex_format_info
 struct qu__gl3_renderer_priv
 {
     struct qu__texture_data const *bound_texture;
+    struct qu__texture_data const *bound_surface;
     enum gl3__program used_program;
 
     struct gl3__program_info programs[GL3__TOTAL_PROGRAMS];
@@ -300,6 +301,9 @@ struct qu__gl3_renderer_priv
     qu_mat4 projection;
     qu_mat4 modelview;
     GLfloat color[4];
+
+    int w_display;
+    int h_display;
 
     PFNGLATTACHSHADERPROC glAttachShader;
     PFNGLBINDATTRIBLOCATIONPROC glBindAttribLocation;
@@ -612,10 +616,31 @@ static void gl3__apply_transform(qu_mat4 const *transform)
     update_uniforms();
 }
 
+static void gl3__apply_surface(struct qu__texture_data const *data)
+{
+    if (priv.bound_surface == data) {
+        return;
+    }
+
+    _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, data ? data->priv[0] : 0));
+
+    if (data) {
+        _GL_CHECK(glViewport(0, 0, data->width, data->height));
+    } else {
+        _GL_CHECK(glViewport(0, 0, priv.w_display, priv.h_display));
+    }
+
+    priv.bound_surface = data;
+}
+
 static void gl3__apply_texture(struct qu__texture_data const *data)
 {
-    priv.bound_texture = data;
+    if (priv.bound_texture == data) {
+        return;
+    }
+
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, data ? data->u : 0));
+    priv.bound_texture = data;
 }
 
 static void gl3__apply_clear_color(qu_color color)
@@ -655,7 +680,12 @@ static void gl3__apply_vertex_format(enum qu__vertex_format vertex_format)
 
 static void gl3__exec_resize(int width, int height)
 {
-    _GL_CHECK(glViewport(0, 0, width, height));
+    if (!priv.bound_surface) {
+        _GL_CHECK(glViewport(0, 0, width, height));
+    }
+
+    priv.w_display = width;
+    priv.h_display = height;
 }
 
 static void gl3__exec_clear(void)
@@ -704,6 +734,57 @@ static void gl3__unload_texture(struct qu__texture_data *texture)
     _GL_CHECK(glDeleteTextures(1, &id));
 }
 
+static void gl3__create_surface(struct qu__texture_data *data)
+{
+    GLuint fbo;
+    GLuint depth;
+    GLuint color;
+
+    _GL_CHECK(priv.glGenFramebuffers(1, &fbo));
+    _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, fbo));
+
+    _GL_CHECK(priv.glGenRenderbuffers(1, &depth));
+    _GL_CHECK(priv.glBindRenderbuffer(GL_RENDERBUFFER, depth));
+    _GL_CHECK(priv.glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, data->width, data->height));
+
+    _GL_CHECK(glGenTextures(1, &color));
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, color));
+    _GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, data->width, data->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
+    _GL_CHECK(priv.glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth));
+    _GL_CHECK(priv.glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0));
+
+    GLenum status = priv.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        QU_HALT("[TODO] FBO error handling.");
+    }
+
+    data->priv[0] = fbo;
+    data->priv[1] = depth;
+    data->u = color;
+
+    _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, priv.bound_surface ? priv.bound_surface->priv[0] : 0));
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture ? priv.bound_texture->u : 0));
+}
+
+static void gl3__destroy_surface(struct qu__texture_data *data)
+{
+    GLuint fbo = data->priv[0];
+    GLuint depth = data->priv[1];
+    GLuint color = data->u;
+
+    _GL_CHECK(priv.glDeleteFramebuffers(1, &fbo));
+    _GL_CHECK(priv.glDeleteRenderbuffers(1, &depth));
+    _GL_CHECK(glDeleteTextures(1, &color));
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__renderer_impl const qu__renderer_gl3 = {
@@ -713,6 +794,7 @@ struct qu__renderer_impl const qu__renderer_gl3 = {
     .upload_vertex_data = gl3__upload_vertex_data,
     .apply_projection = gl3__apply_projection,
     .apply_transform = gl3__apply_transform,
+    .apply_surface = gl3__apply_surface,
     .apply_texture = gl3__apply_texture,
     .apply_clear_color = gl3__apply_clear_color,
     .apply_draw_color = gl3__apply_draw_color,
@@ -722,4 +804,6 @@ struct qu__renderer_impl const qu__renderer_gl3 = {
 	.exec_draw = gl3__exec_draw,
     .load_texture = gl3__load_texture,
     .unload_texture = gl3__unload_texture,
+    .create_surface = gl3__create_surface,
+    .destroy_surface = gl3__destroy_surface,
 };
