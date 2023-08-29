@@ -976,7 +976,34 @@ void qu_draw_texture(qu_texture texture, float x, float y, float w, float h)
 
 void qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, float rx, float ry, float rw, float rh)
 {
-    // [TODO] Bring back.
+    struct qu__texture_data *texture_info = qu_array_get(priv.textures, texture.id);
+
+    if (!texture_info) {
+        return;
+    }
+
+    float s = rx / texture_info->width;
+    float t = ry / texture_info->height;
+    float u = rw / texture_info->width;
+    float v = rh / texture_info->height;
+
+    float const vertices[] = {
+        x,      y,      s,      t,
+        x + w,  y,      s + u,  t,
+        x + w,  y + h,  s + u,  t + v,
+        x,      y + h,  s,      t + v,
+    };
+
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_DRAW };
+
+    info.args.draw.texture = texture;
+    info.args.draw.color = QU_COLOR(255, 255, 255);
+    info.args.draw.render_mode = QU__RENDER_MODE_TRIANGLE_FAN;
+    info.args.draw.vertex_format = QU__VERTEX_FORMAT_TEXTURED;
+    info.args.draw.first_vertex = graphics__append_vertex_data(info.args.draw.vertex_format, vertices, 16);
+    info.args.draw.total_vertices = 4;
+
+    graphics__append_render_command(&info);
 }
 
 qu_surface qu_create_surface(int width, int height)
