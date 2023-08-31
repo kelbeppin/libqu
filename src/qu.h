@@ -372,6 +372,7 @@ struct qu__renderer_impl
 
     void (*load_texture)(struct qu__texture_data *data);
     void (*unload_texture)(struct qu__texture_data *data);
+    void (*set_texture_smooth)(struct qu__texture_data *data, bool smooth);
 
     void (*create_surface)(struct qu__texture_data *data);
     void (*destroy_surface)(struct qu__texture_data *data);

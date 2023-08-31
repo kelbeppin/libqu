@@ -734,6 +734,25 @@ static void gl3__unload_texture(struct qu__texture_data *texture)
     _GL_CHECK(glDeleteTextures(1, &id));
 }
 
+static void gl3__set_texture_smooth(struct qu__texture_data *data, bool smooth)
+{
+    GLuint id = (GLuint) data->u;
+
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
+
+    if (smooth) {
+        _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    } else {
+        _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    }
+
+    if (priv.bound_texture) {
+        _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture->u));
+    } else {
+        _GL_CHECK(glBindTexture(GL_TEXTURE_2D, 0));
+    }
+}
+
 static void gl3__create_surface(struct qu__texture_data *data)
 {
     GLuint fbo;
@@ -804,6 +823,7 @@ struct qu__renderer_impl const qu__renderer_gl3 = {
 	.exec_draw = gl3__exec_draw,
     .load_texture = gl3__load_texture,
     .unload_texture = gl3__unload_texture,
+    .set_texture_smooth = gl3__set_texture_smooth,
     .create_surface = gl3__create_surface,
     .destroy_surface = gl3__destroy_surface,
 };

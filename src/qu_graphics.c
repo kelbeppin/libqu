@@ -526,6 +526,7 @@ void qu__graphics_initialize(qu_params const *params)
 
     QU_HALT_IF(!priv.renderer->load_texture);
     QU_HALT_IF(!priv.renderer->unload_texture);
+    QU_HALT_IF(!priv.renderer->set_texture_smooth);
 
     QU_HALT_IF(!priv.renderer->create_surface);
     QU_HALT_IF(!priv.renderer->destroy_surface);
@@ -950,7 +951,11 @@ void qu_delete_texture(qu_texture texture)
 
 void qu_set_texture_smooth(qu_texture texture, bool smooth)
 {
-    // [TODO] Bring back.
+    struct qu__texture_data *data = qu_array_get(priv.textures, texture.id);
+
+    if (data) {
+        priv.renderer->set_texture_smooth(data, smooth);
+    }
 }
 
 void qu_draw_texture(qu_texture texture, float x, float y, float w, float h)
