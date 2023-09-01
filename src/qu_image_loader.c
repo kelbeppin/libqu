@@ -49,14 +49,54 @@ static int eof(void *user)
     return (position == size);
 }
 
-qu_image *qu_load_image(qu_file *file)
-{
-    qu_image *image = malloc(sizeof(qu_image));
+//------------------------------------------------------------------------------
 
-    if (!image) {
-        return NULL;
+void qu__image_create(struct qu__image *image)
+{
+    if (image->width <= 0 || image->height <= 0) {
+        QU_ERROR("create(): invalid dimensions (%dx%d)\n", image->width, image->height);
+        return;
     }
 
+    if (image->channels < 1 || image->channels > 4) {
+        QU_ERROR("create(): wrong number of channels (%d)\n", image->channels);
+        return;
+    }
+
+    if (image->pixels) {
+        QU_ERROR("create(): non-NULL .pixels pointer\n", image->channels);
+        return;
+    }
+
+    size_t size = image->width * image->height * image->channels;
+    image->pixels = malloc(sizeof(unsigned char) * size);
+
+    if (!image->pixels) {
+        QU_ERROR("create(): malloc() failed.\n");
+        return;
+    }
+
+    unsigned char value[4] = { 0x80, 0x80, 0x80, 0xFF };
+
+    if (image->channels == 2) {
+        value[1] = 0xFF;
+    }
+
+    for (int i = 0; i < image->height; i++) {
+        size_t r = i * image->width * image->channels;
+
+        for (int j = 0; j < image->width; j++) {
+            size_t c = j * image->channels;
+
+            for (int k = 0; k < image->channels; k++) {
+                image->pixels[r + c + k] = value[k];
+            }
+        }
+    }
+}
+
+void qu__image_load(struct qu__image *image, qu_file *file)
+{
     image->pixels = stbi_load_from_callbacks(
         &(stbi_io_callbacks) {
             .read = read,
@@ -72,21 +112,50 @@ qu_image *qu_load_image(qu_file *file)
         QU_ERROR("Failed to load image from %s. stbi error: %s\n",
             qu_file_repr(file), stbi_failure_reason());
 
-        free(image);
-        return NULL;
+        image->width = -1;
+        image->height = -1;
+        image->channels = 0;
+
+        return;
     }
 
     QU_INFO("Loaded %dx%d (%d bits) image from %s.\n",
         image->width, image->height,
         image->channels * 8, qu_file_repr(file));
+}
+
+void qu__image_delete(struct qu__image *image)
+{
+    free(image->pixels);
+
+    image->width = -1;
+    image->height = -1;
+    image->channels = 0;
+    image->pixels = NULL;
+}
+
+//------------------------------------------------------------------------------
+
+qu_image *qu_load_image(qu_file *file)
+{
+    qu_image *image = malloc(sizeof(qu_image));
+
+    if (!image) {
+        return NULL;
+    }
+
+    qu__image_load(image, file);
+
+    if (!image->pixels) {
+        free(image);
+        return NULL;
+    }
 
     return image;
 }
 
 void qu_delete_image(qu_image *image)
 {
-    stbi_image_free(image->pixels);
+    qu__image_delete(image);
     free(image);
 }
-
-//------------------------------------------------------------------------------

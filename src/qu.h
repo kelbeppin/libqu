@@ -166,14 +166,19 @@ char const *qu_file_repr(qu_file *file);
 //------------------------------------------------------------------------------
 // Image loader
 
-typedef struct
+struct qu__image
 {
     int width;
     int height;
     int channels;
     unsigned char *pixels;
-} qu_image;
+};
 
+void qu__image_create(struct qu__image *image);
+void qu__image_load(struct qu__image *image, qu_file *file);
+void qu__image_delete(struct qu__image *image);
+
+typedef struct qu__image qu_image;
 qu_image *qu_load_image(qu_file *file);
 void qu_delete_image(qu_image *image);
 
