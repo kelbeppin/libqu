@@ -370,6 +370,7 @@ struct qu__renderer_impl
     void (*destroy_surface)(struct qu__texture_data *data);
 };
 
+extern struct qu__renderer_impl const qu__renderer_null;
 extern struct qu__renderer_impl const qu__renderer_gl1;
 extern struct qu__renderer_impl const qu__renderer_gl3;
 

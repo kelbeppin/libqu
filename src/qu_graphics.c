@@ -37,7 +37,7 @@ static struct qu__renderer_impl const *supported_renderer_impl_list[] = {
     &qu__renderer_es2,
 #endif
 
-    // &qu__graphics_null,
+    &qu__graphics_null,
 };
 
 static unsigned int vertex_size_map[QU__TOTAL_VERTEX_FORMATS] = {
