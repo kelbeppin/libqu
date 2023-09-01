@@ -346,7 +346,7 @@ struct qu__texture_data
 {
     enum qu__texture_type type;
 
-    qu_image *image;
+    struct qu__image image;
     uintptr_t u;
     uintptr_t v;
 

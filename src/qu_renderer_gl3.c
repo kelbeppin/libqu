@@ -705,18 +705,18 @@ static void gl3__load_texture(struct qu__texture_data *texture)
     _GL_CHECK(glGenTextures(1, &id));
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
 
-    GLenum format = texture_format_map[texture->image->channels - 1];
+    GLenum format = texture_format_map[texture->image.channels - 1];
 
     _GL_CHECK(glTexImage2D(
         GL_TEXTURE_2D,
         0,
         format,
-        texture->image->width,
-        texture->image->height,
+        texture->image.width,
+        texture->image.height,
         0,
         format,
         GL_UNSIGNED_BYTE,
-        texture->image->pixels
+        texture->image.pixels
     ));
 
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));

@@ -479,7 +479,7 @@ static void texture_dtor(void *ptr)
 
     if (data->type == QU__TEXTURE_REGULAR) {
         priv.renderer->unload_texture(data);
-        qu_delete_image(data->image);
+        qu__image_delete(&data->image);
     } else {
         priv.renderer->destroy_surface(data);
     }
@@ -921,27 +921,22 @@ void qu_draw_circle(float x, float y, float radius, qu_color outline, qu_color f
 
 qu_texture qu_load_texture(char const *path)
 {
+    qu_texture result = { 0 };
     qu_file *file = qu_fopen(path);
 
-    if (!file) {
-        return (qu_texture) { 0 };
+    if (file) {
+        struct qu__texture_data data = { 0 };
+        qu__image_load(&data.image, file);
+
+        if (data.image.pixels) {
+            priv.renderer->load_texture(&data);
+            result.id = qu_array_add(priv.textures, &data);
+        }
+
+        qu_fclose(file);
     }
 
-    qu_image *image = qu_load_image(file);
-
-    qu_fclose(file);
-
-    if (!image) {
-        return (qu_texture) { 0 };
-    }
-
-    struct qu__texture_data data = {
-        .image = image,
-    };
-
-    priv.renderer->load_texture(&data);
-
-    return (qu_texture) { qu_array_add(priv.textures, &data) };
+    return result;
 }
 
 void qu_delete_texture(qu_texture texture)
