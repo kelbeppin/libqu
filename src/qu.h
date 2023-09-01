@@ -336,22 +336,9 @@ enum qu__vertex_format
     QU__TOTAL_VERTEX_FORMATS,
 };
 
-enum qu__texture_type
-{
-    QU__TEXTURE_REGULAR,
-    QU__TEXTURE_SURFACE,
-};
-
 struct qu__texture_data
 {
-    enum qu__texture_type type;
-
     struct qu__image image;
-    uintptr_t u;
-    uintptr_t v;
-
-    unsigned int width;
-    unsigned int height;
     uintptr_t priv[4];
 };
 

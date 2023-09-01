@@ -285,7 +285,7 @@ static void graphics__exec_surface(struct qu__surface_render_command_args const 
         }
 
         if (surface) {
-            qu_mat4_ortho(&priv.state.projection, 0.f, surface->width, surface->height, 0.f);
+            qu_mat4_ortho(&priv.state.projection, 0.f, surface->image.width, surface->image.height, 0.f);
         } else {
             qu_mat4_copy(&priv.state.projection, &priv.state.display_projection);
         }
@@ -429,7 +429,7 @@ static void graphics__upload_vertex_data(enum qu__vertex_format format)
 static void graphics__update_canvas_coords(int w_display, int h_display)
 {
     float ard = w_display / (float) h_display;
-    float arc = priv.state.canvas.width / (float) priv.state.canvas.height;
+    float arc = priv.state.canvas.image.width / (float) priv.state.canvas.image.height;
 
     if (ard > arc) {
         priv.state.canvas_ax = (w_display / 2.f) - ((arc / ard) * w_display / 2.f);
@@ -477,7 +477,7 @@ static void texture_dtor(void *ptr)
 {
     struct qu__texture_data *data = ptr;
 
-    if (data->type == QU__TEXTURE_REGULAR) {
+    if (data->image.channels > 0) {
         priv.renderer->unload_texture(data);
         qu__image_delete(&data->image);
     } else {
@@ -567,9 +567,10 @@ void qu__graphics_initialize(qu_params const *params)
     if (params->enable_canvas) {
         priv.state.canvas_enabled = true;
 
-        priv.state.canvas.type = QU__TEXTURE_SURFACE;
-        priv.state.canvas.width = params->canvas_width;
-        priv.state.canvas.height = params->canvas_height;
+        priv.state.canvas.image.width = params->canvas_width;
+        priv.state.canvas.image.height = params->canvas_height;
+        priv.state.canvas.image.channels = 0;
+        priv.state.canvas.image.pixels = NULL;
 
         priv.renderer->create_surface(&priv.state.canvas);
 
@@ -655,8 +656,8 @@ qu_vec2i qu__graphics_conv_cursor(qu_vec2i position)
 
     float dw = priv.state.display_width;
     float dh = priv.state.display_height;
-    float cw = priv.state.canvas.width;
-    float ch = priv.state.canvas.height;
+    float cw = priv.state.canvas.image.width;
+    float ch = priv.state.canvas.image.height;
 
     float dar = dw / dh;
     float car = cw / ch;
@@ -684,8 +685,8 @@ qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i delta)
 {
     float dw = priv.state.display_width;
     float dh = priv.state.display_height;
-    float cw = priv.state.canvas.width;
-    float ch = priv.state.canvas.height;
+    float cw = priv.state.canvas.image.width;
+    float ch = priv.state.canvas.image.height;
 
     float dar = dw / dh;
     float car = cw / ch;
@@ -982,10 +983,10 @@ void qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, 
         return;
     }
 
-    float s = rx / texture_info->width;
-    float t = ry / texture_info->height;
-    float u = rw / texture_info->width;
-    float v = rh / texture_info->height;
+    float s = rx / texture_info->image.width;
+    float t = ry / texture_info->image.height;
+    float u = rw / texture_info->image.width;
+    float v = rh / texture_info->image.height;
 
     float const vertices[] = {
         x,      y,      s,      t,
@@ -1009,9 +1010,12 @@ void qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, 
 qu_surface qu_create_surface(int width, int height)
 {
     struct qu__texture_data data = {
-        .type = QU__TEXTURE_SURFACE,
-        .width = (unsigned int) width,
-        .height = (unsigned int) height,
+        .image = {
+            .width = width,
+            .height = height,
+            .channels = 0,
+            .pixels = NULL,
+        },
     };
 
     priv.renderer->create_surface(&data);

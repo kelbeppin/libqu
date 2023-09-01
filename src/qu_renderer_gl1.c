@@ -174,7 +174,7 @@ static void gl1__apply_transform(qu_mat4 const *transform)
 
 static void gl1__apply_texture(struct qu__texture_data const *data)
 {
-    priv.bound_texture = data ? data->u : 0;
+    priv.bound_texture = data ? data->priv[0] : 0;
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
@@ -256,14 +256,14 @@ static void gl1__load_texture(struct qu__texture_data *texture)
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 
-    texture->u = (uintptr_t) id;
+    texture->priv[0] = (uintptr_t) id;
 
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
 static void gl1__unload_texture(struct qu__texture_data *texture)
 {
-    GLuint id = (GLuint) texture->u;
+    GLuint id = (GLuint) texture->priv[0];
 
     _GL_CHECK(glDeleteTextures(1, &id));
 }
