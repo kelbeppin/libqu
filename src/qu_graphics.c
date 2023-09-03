@@ -704,19 +704,69 @@ qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i delta)
     }
 }
 
-int32_t qu__graphics_create_texture(int w, int h, int channels)
+int32_t qu__graphics_create_texture(int width, int height, int channels)
 {
-    return 0; // [TODO] Bring back.
+    struct qu__texture_data texture = {
+        .image = {
+            .width = width,
+            .height = height,
+            .channels = channels,
+        }
+    };
+
+    qu__image_create(&texture.image);
+
+    if (!texture.image.pixels) {
+        return 0;
+    }
+
+    priv.renderer->load_texture(&texture);
+    return qu_array_add(priv.textures, &texture);
 }
 
 void qu__graphics_update_texture(int32_t texture_id, int x, int y, int w, int h, uint8_t const *pixels)
 {
-    // [TODO] Bring back.
+    struct qu__texture_data *texture = qu_array_get(priv.textures, texture_id);
+
+    if (!texture || !texture->image.pixels) {
+        return;
+    }
+
+    if (w == -1) {
+        w = texture->image.width;
+    }
+
+    if (h == -1) {
+        h = texture->image.height;
+    }
+
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j++) {
+            size_t nc = texture->image.channels;
+            size_t di = (y + i) * texture->image.width * nc + (x + j) * nc;
+            size_t si = i * w * nc + j * nc;
+
+            for (int k = 0; k < nc; k++) {
+                texture->image.pixels[di + k] = pixels[si + k];
+            }
+        }
+    }
+
+    priv.renderer->load_texture(texture);
 }
 
 void qu__graphics_draw_text(int32_t texture_id, qu_color color, float const *data, int count)
 {
-    // [TODO] Bring back.
+    struct qu__render_command_info info = { QU__RENDER_COMMAND_DRAW };
+
+    info.args.draw.texture.id = texture_id;
+    info.args.draw.color = QU_COLOR(255, 255, 255);
+    info.args.draw.render_mode = QU__RENDER_MODE_TRIANGLES;
+    info.args.draw.vertex_format = QU__VERTEX_FORMAT_TEXTURED;
+    info.args.draw.first_vertex = graphics__append_vertex_data(info.args.draw.vertex_format, data, count * 4);
+    info.args.draw.total_vertices = count;
+
+    graphics__append_render_command(&info);
 }
 
 //------------------------------------------------------------------------------
