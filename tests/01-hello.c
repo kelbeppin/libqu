@@ -60,6 +60,8 @@ static struct
 
     struct duck ducks[MAX_DUCKS];
     qu_texture duck_texture;
+
+    qu_font font;
 } app;
 
 static void key_press_callback(qu_key key)
@@ -213,6 +215,8 @@ static void draw(float lag_offset)
         circle_draw(&app.circles[i], lag_offset);
     }
 
+    qu_draw_text_fmt(app.font, 8.f, 8.f, QU_COLOR(255, 255, 255), "Time: %.2f", qu_get_time_mediump());
+
     qu_present();
 }
 
@@ -284,6 +288,12 @@ int main(int argc, char *argv[])
     app.duck_texture = qu_load_texture("assets/duck.png");
 
     if (!app.duck_texture.id) {
+        return -1;
+    }
+
+    app.font = qu_load_font("assets/unispace.ttf", 16.f);
+
+    if (!app.font.id) {
         return -1;
     }
 
