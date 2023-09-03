@@ -305,9 +305,13 @@ static void gl1__exec_draw(enum qu__render_mode render_mode, unsigned int first_
 
 static void gl1__load_texture(struct qu__texture_data *texture)
 {
-    GLuint id;
+    GLuint id = texture->priv[0];
     
-    _GL_CHECK(glGenTextures(1, &id));
+    if (id == 0) {
+        _GL_CHECK(glGenTextures(1, &id));
+        texture->priv[0] = (uintptr_t) id;
+    }
+
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
 
     GLenum format = texture_format_map[texture->image.channels - 1];
@@ -326,8 +330,6 @@ static void gl1__load_texture(struct qu__texture_data *texture)
 
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-
-    texture->priv[0] = (uintptr_t) id;
 
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
