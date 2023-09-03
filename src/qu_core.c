@@ -128,6 +128,12 @@ bool qu__core_process(void)
     priv.mouse_wheel_delta.x = 0;
     priv.mouse_wheel_delta.y = 0;
 
+    for (int i = 0; i < QU_TOTAL_KEYS; i++) {
+        if (priv.keyboard.keys[i] == QU_KEY_RELEASED) {
+            priv.keyboard.keys[i] = QU_KEY_IDLE;
+        }
+    }
+
     if (!priv.impl->process()) {
         return false;
     }
