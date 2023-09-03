@@ -266,11 +266,18 @@ static GLenum const mode_map[QU__TOTAL_RENDER_MODES] = {
     GL_TRIANGLE_FAN,
 };
 
-static GLenum const texture_format_map[4] = {
-    GL_LUMINANCE,
-    GL_LUMINANCE_ALPHA,
-    GL_RGB,
-    GL_RGBA,
+static GLenum const texture_format_map[4][2] = {
+    { GL_R8, GL_RED },
+    { GL_RG8, GL_RG },
+    { GL_RGB8, GL_RGB },
+    { GL_RGBA8, GL_RGBA },
+};
+
+static GLenum const texture_swizzle_map[4][4] = {
+    { GL_RED, GL_RED, GL_RED, GL_ONE },
+    { GL_RED, GL_RED, GL_RED, GL_GREEN },
+    { GL_RED, GL_GREEN, GL_BLUE, GL_ONE },
+    { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA },
 };
 
 //------------------------------------------------------------------------------
@@ -700,17 +707,22 @@ static void gl3__exec_draw(enum qu__render_mode render_mode, unsigned int first_
 
 static void gl3__load_texture(struct qu__texture_data *texture)
 {
-    GLuint id;
+    GLuint id = texture->priv[0];
     
-    _GL_CHECK(glGenTextures(1, &id));
+    if (id == 0) {
+        _GL_CHECK(glGenTextures(1, &id));
+        texture->priv[0] = (uintptr_t) id;
+    }
+
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
 
-    GLenum format = texture_format_map[texture->image.channels - 1];
+    GLenum internal_format = texture_format_map[texture->image.channels - 1][0];
+    GLenum format = texture_format_map[texture->image.channels - 1][1];
 
     _GL_CHECK(glTexImage2D(
         GL_TEXTURE_2D,
         0,
-        format,
+        internal_format,
         texture->image.width,
         texture->image.height,
         0,
@@ -722,7 +734,12 @@ static void gl3__load_texture(struct qu__texture_data *texture)
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 
-    texture->priv[0] = (uintptr_t) id;
+    GLenum const *swizzle = texture_swizzle_map[texture->image.channels - 1];
+
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, swizzle[0]));
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, swizzle[1]));
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, swizzle[2]));
+    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, swizzle[3]));
 
     if (priv.bound_texture) {
         _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture->priv[0]));
