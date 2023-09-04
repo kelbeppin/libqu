@@ -23,6 +23,7 @@
 #include "qu.h"
 
 #include <linux/joystick.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -91,13 +92,13 @@ static void joystick_linux__process(void)
             // if event is sent for the first time in order to give you
             // initial values for buttons and axes.
 
-            if (event->type & JS_EVENT_BUTTON) {
+            if (event.type & JS_EVENT_BUTTON) {
                 priv.device[i].button[event.number] = event.value;
 
-                if (!(event->type & JS_EVENT_INIT)) {
+                if (!(event.type & JS_EVENT_INIT)) {
                     // TODO: ???
                 }
-            } else if (event->type & JS_EVENT_AXIS) {
+            } else if (event.type & JS_EVENT_AXIS) {
                 priv.device[i].axis[event.number] = event.value / 32767.f;
             }
         }
@@ -120,7 +121,7 @@ static void joystick_linux__process(void)
 
 static bool joystick_linux__is_connected(int id)
 {
-	if (joystick < 0 || joystick >= MAX_JOYSTICKS) {
+	if (id < 0 || id >= MAX_JOYSTICKS) {
         return false;
     }
 
