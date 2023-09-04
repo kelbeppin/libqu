@@ -51,7 +51,7 @@ static int eof(void *user)
 
 //------------------------------------------------------------------------------
 
-void qu__image_create(struct qu__image *image)
+void qu__image_create(struct qu__image *image, unsigned char *fill)
 {
     if (image->width <= 0 || image->height <= 0) {
         QU_ERROR("create(): invalid dimensions (%dx%d)\n", image->width, image->height);
@@ -78,8 +78,15 @@ void qu__image_create(struct qu__image *image)
 
     unsigned char value[4] = { 0x80, 0x80, 0x80, 0xFF };
 
-    if (image->channels == 2) {
+    if (fill) {
+        for (int k = 0; k < image->channels; k++) {
+            value[k] = fill[k];
+        }
+    } else {
+        value[0] = 0x80;
         value[1] = 0xFF;
+        value[2] = 0x80;
+        value[3] = 0xFF;
     }
 
     for (int i = 0; i < image->height; i++) {

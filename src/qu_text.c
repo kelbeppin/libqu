@@ -201,7 +201,8 @@ static bool grow_atlas(struct atlas *atlas)
 
     qu_delete_texture((qu_texture) { atlas->texture_id });
 
-    atlas->texture_id = qu__graphics_create_texture(atlas->width, atlas->height, 2);
+    unsigned char fill[2] = { 0x00, 0x00 };
+    atlas->texture_id = qu__graphics_create_texture(atlas->width, atlas->height, 2, fill);
     qu_set_texture_smooth((qu_texture) { atlas->texture_id }, true);
     qu__graphics_update_texture(atlas->texture_id, 0, 0, -1, -1, atlas->bitmap);
 
@@ -438,7 +439,8 @@ static int32_t load_font(qu_file *file, float pt)
         height *= 2;
     }
 
-    fontp->atlas.texture_id = qu__graphics_create_texture(width, height, 2);
+    unsigned char fill[2] = { 0x00, 0x00 };
+    fontp->atlas.texture_id = qu__graphics_create_texture(width, height, 2, fill);
     qu_set_texture_smooth((qu_texture) { fontp->atlas.texture_id }, true);
     fontp->atlas.bitmap = calloc(width * height * 2, sizeof(unsigned char));
 

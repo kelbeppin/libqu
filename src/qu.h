@@ -174,7 +174,7 @@ struct qu__image
     unsigned char *pixels;
 };
 
-void qu__image_create(struct qu__image *image);
+void qu__image_create(struct qu__image *image, unsigned char *fill);
 void qu__image_load(struct qu__image *image, qu_file *file);
 void qu__image_delete(struct qu__image *image);
 
@@ -395,7 +395,7 @@ void qu__graphics_draw_line(float ax, float ay, float bx, float by, qu_color col
 void qu__graphics_draw_triangle(float ax, float ay, float bx, float by, float cx, float cy, qu_color outline, qu_color fill);
 void qu__graphics_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_color fill);
 void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, qu_color fill);
-int32_t qu__graphics_create_texture(int w, int h, int channels);
+int32_t qu__graphics_create_texture(int w, int h, int channels, unsigned char *fill);
 int32_t qu__graphics_load_texture(qu_file *file);
 void qu__graphics_delete_texture(int32_t id);
 void qu__graphics_set_texture_smooth(int32_t id, bool smooth);

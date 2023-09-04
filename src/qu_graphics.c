@@ -987,7 +987,7 @@ void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, 
     }
 }
 
-int32_t qu__graphics_create_texture(int width, int height, int channels)
+int32_t qu__graphics_create_texture(int width, int height, int channels, unsigned char *fill)
 {
     struct qu__texture texture = {
         .image = {
@@ -997,7 +997,7 @@ int32_t qu__graphics_create_texture(int width, int height, int channels)
         }
     };
 
-    qu__image_create(&texture.image);
+    qu__image_create(&texture.image, fill);
 
     if (!texture.image.pixels) {
         return 0;
