@@ -56,18 +56,14 @@ enum qu__render_command
 {
     QU__RENDER_COMMAND_NO_OP,
     QU__RENDER_COMMAND_RESIZE,
-    QU__RENDER_COMMAND_VIEW_OP,
-    QU__RENDER_COMMAND_STACK_OP,
+    QU__RENDER_COMMAND_SET_VIEW,
+    QU__RENDER_COMMAND_RESET_VIEW,
+    QU__RENDER_COMMAND_PUSH_MATRIX,
+    QU__RENDER_COMMAND_POP_MATRIX,
     QU__RENDER_COMMAND_TRANSFORM,
     QU__RENDER_COMMAND_CLEAR,
     QU__RENDER_COMMAND_DRAW,
     QU__RENDER_COMMAND_SURFACE,
-};
-
-enum qu__stack_op
-{
-    QU__STACK_PUSH,
-    QU__STACK_POP,
 };
 
 enum qu__transform
@@ -83,19 +79,13 @@ struct qu__resize_render_command_args
     int height;
 };
 
-struct qu__view_op_render_command_args
+struct qu__set_view_render_command_args
 {
-    int reset;
     float x;
     float y;
     float w;
     float h;
-    float r;
-};
-
-struct qu__stack_op_render_command_args
-{
-    enum qu__stack_op type;
+    float rot;
 };
 
 struct qu__transform_render_command_args
@@ -127,8 +117,7 @@ struct qu__surface_render_command_args
 union qu__render_command_args
 {
     struct qu__resize_render_command_args resize;
-    struct qu__view_op_render_command_args view_op;
-    struct qu__stack_op_render_command_args stack_op;
+    struct qu__set_view_render_command_args view;
     struct qu__transform_render_command_args transform;
     struct qu__clear_render_command_args clear;
     struct qu__draw_render_command_args draw;
@@ -208,63 +197,50 @@ static void graphics__exec_resize(struct qu__resize_render_command_args const *a
     }
 }
 
-static void graphics__exec_view_op(struct qu__view_op_render_command_args const *args)
+static void graphics__exec_set_view(struct qu__set_view_render_command_args const *args)
 {
-    float x;
-    float y;
-    float w;
-    float h;
-    float rot;
-
-    if (args->reset) {
-        x = priv.current_surface->texture.image.width / 2.f;
-        y = priv.current_surface->texture.image.height / 2.f;
-        w = priv.current_surface->texture.image.width;
-        h = priv.current_surface->texture.image.height;
-        rot = 0.f;
-    } else {
-        x = args->x;
-        y = args->y;
-        w = args->w;
-        h = args->h;
-        rot = args->r;
-    }
-
     qu_mat4_ortho(&priv.current_surface->projection,
-                  x - (w / 2.f), x + (w / 2.f),
-                  y + (h / 2.f), y - (h / 2.f));
+                  args->x - (args->w / 2.f), args->x + (args->w / 2.f),
+                  args->y + (args->h / 2.f), args->y - (args->h / 2.f));
 
-    if (rot != 0.f) {
-        qu_mat4_translate(&priv.current_surface->projection, x, y, 0.f);
-        qu_mat4_rotate(&priv.current_surface->projection, QU_DEG2RAD(rot), 0.f, 0.f, 1.f);
-        qu_mat4_translate(&priv.current_surface->projection, -x, -y, 0.f);
+    if (args->rot != 0.f) {
+        qu_mat4_translate(&priv.current_surface->projection, args->x, args->y, 0.f);
+        qu_mat4_rotate(&priv.current_surface->projection, QU_DEG2RAD(args->rot), 0.f, 0.f, 1.f);
+        qu_mat4_translate(&priv.current_surface->projection, -args->x, -args->y, 0.f);
     }
 
     priv.renderer->apply_projection(&priv.current_surface->projection);
 }
 
-static void graphics__exec_stack_op(struct qu__stack_op_render_command_args const *args)
+static void graphics__exec_reset_view(void)
 {
-    int *index = &priv.current_surface->modelview_index;
+    float w = priv.current_surface->texture.image.width;
+    float h = priv.current_surface->texture.image.height;
 
-    switch (args->type) {
-    case QU__STACK_PUSH:
-        if ((*index) < (QU__MATRIX_STACK_SIZE - 1)) {
-            qu_mat4 *next = &priv.current_surface->modelview[*index + 1];
-            qu_mat4 *current = &priv.current_surface->modelview[*index];
+    qu_mat4_ortho(&priv.current_surface->projection, 0.f, w, h, 0.f);
+    priv.renderer->apply_projection(&priv.current_surface->projection);
+}
 
-            qu_mat4_copy(next, current);
-            (*index)++;
-        }
-        break;
-    case QU__STACK_POP:
-        if ((*index) > 0) {
-            (*index)--;
+static void graphics__exec_push_matrix(void)
+{
+    int index = priv.current_surface->modelview_index;
 
-            qu_mat4 *current = &priv.current_surface->modelview[*index];
-            priv.renderer->apply_transform(current);
-        }
-        break;
+    if (index < (QU__MATRIX_STACK_SIZE - 1)) {
+        qu_mat4 *next = &priv.current_surface->modelview[index + 1];
+        qu_mat4 *current = &priv.current_surface->modelview[index];
+
+        qu_mat4_copy(next, current);
+        priv.current_surface->modelview_index++;
+    }
+}
+
+static void graphics__exec_pop_matrix(void)
+{
+    int index = priv.current_surface->modelview_index;
+
+    if (index > 0) {
+        priv.renderer->apply_transform(&priv.current_surface->modelview[index - 1]);
+        priv.current_surface->modelview_index--;
     }
 }
 
@@ -375,11 +351,17 @@ static void graphics__execute_command(struct qu__render_command_info const *info
     case QU__RENDER_COMMAND_RESIZE:
         graphics__exec_resize(&info->args.resize);
         break;
-    case QU__RENDER_COMMAND_VIEW_OP:
-        graphics__exec_view_op(&info->args.view_op);
+    case QU__RENDER_COMMAND_SET_VIEW:
+        graphics__exec_set_view(&info->args.view);
         break;
-    case QU__RENDER_COMMAND_STACK_OP:
-        graphics__exec_stack_op(&info->args.stack_op);
+    case QU__RENDER_COMMAND_RESET_VIEW:
+        graphics__exec_reset_view();
+        break;
+    case QU__RENDER_COMMAND_PUSH_MATRIX:
+        graphics__exec_push_matrix();
+        break;
+    case QU__RENDER_COMMAND_POP_MATRIX:
+        graphics__exec_pop_matrix();
         break;
     case QU__RENDER_COMMAND_TRANSFORM:
         graphics__exec_transform(&info->args.transform);
@@ -837,14 +819,13 @@ void qu__graphics_draw_text(int32_t texture_id, qu_color color, float const *dat
 void qu_set_view(float x, float y, float w, float h, float rotation)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_VIEW_OP,
-        .args.view_op = {
-            .reset = 0,
+        .command = QU__RENDER_COMMAND_SET_VIEW,
+        .args.view = {
             .x = x,
             .y = y,
             .w = w,
             .h = h,
-            .r = rotation,
+            .rot = rotation,
         },
     });
 }
@@ -852,30 +833,21 @@ void qu_set_view(float x, float y, float w, float h, float rotation)
 void qu_reset_view(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_VIEW_OP,
-        .args.view_op = {
-            .reset = 1,
-        },
+        .command = QU__RENDER_COMMAND_RESET_VIEW,
     });
 }
 
 void qu_push_matrix(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_STACK_OP,
-        .args.stack_op = {
-            .type = QU__STACK_PUSH,
-        },
+        .command = QU__RENDER_COMMAND_PUSH_MATRIX,
     });
 }
 
 void qu_pop_matrix(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_STACK_OP,
-        .args.stack_op = {
-            .type = QU__STACK_POP,
-        },
+        .command = QU__RENDER_COMMAND_POP_MATRIX,
     });
 }
 
