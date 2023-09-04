@@ -47,6 +47,17 @@ struct duck
     float dy;
 };
 
+struct camera
+{
+    float x;
+    float y;
+    float z;
+
+    float dx;
+    float dy;
+    float dz;
+};
+
 static struct
 {
     bool running;
@@ -62,6 +73,9 @@ static struct
     qu_texture duck_texture;
 
     qu_font font;
+
+    int b;
+    struct camera camera;
 } app;
 
 static void key_press_callback(qu_key key)
@@ -69,6 +83,9 @@ static void key_press_callback(qu_key key)
     switch (key) {
     case QU_KEY_ESCAPE:
         app.running = false;
+        break;
+    case QU_KEY_B:
+        app.b = !app.b;
         break;
     default:
         break;
@@ -191,12 +208,60 @@ static void update(void)
     for (int i = 0; i < MAX_DUCKS; i++) {
         duck_update(&app.ducks[i]);
     }
+
+    app.camera.x += app.camera.dx;
+    app.camera.y += app.camera.dy;
+    app.camera.z += app.camera.dz;
+
+    app.camera.dx = 0.f;
+    app.camera.dy = 0.f;
+    app.camera.dz = 0.f;
+
+    if (qu_is_key_pressed(QU_KEY_W)) {
+        app.camera.dy -= 30.f;
+    }
+
+    if (qu_is_key_pressed(QU_KEY_S)) {
+        app.camera.dy += 30.f;
+    }
+
+    if (qu_is_key_pressed(QU_KEY_A)) {
+        app.camera.dx -= 30.f;
+    }
+
+    if (qu_is_key_pressed(QU_KEY_D)) {
+        app.camera.dx += 30.f;
+    }
+
+    if (qu_is_key_pressed(QU_KEY_Q)) {
+        app.camera.dz -= 10.f;
+    }
+
+    if (qu_is_key_pressed(QU_KEY_E)) {
+        app.camera.dz += 10.f;
+    }
+
+    if (app.camera.z < 16.f) {
+        app.camera.z = 16.f;
+    }
+    
+    if (app.camera.z > 1024.f) {
+        app.camera.z = 1024.f;
+    }
 }
 
 static void draw(float lag_offset)
 {
     qu_clear(QU_COLOR(24, 24, 24));
     
+    qu_set_view(app.camera.x + app.camera.dx * lag_offset,
+                app.camera.y + app.camera.dy * lag_offset,
+                app.camera.z + app.camera.dz * lag_offset,
+                app.camera.z + app.camera.dz * lag_offset,
+                0.f);
+    
+    qu_draw_rectangle(0.f, 0.f, 512.f, 512.f, QU_COLOR(32, 32, 32), 0);
+
     qu_push_matrix();
 
     qu_rotate(-10.f);
@@ -214,6 +279,8 @@ static void draw(float lag_offset)
     for (int i = 0; i < MAX_CIRCLES; i++) {
         circle_draw(&app.circles[i], lag_offset);
     }
+
+    // qu_reset_view();
 
     qu_draw_text_fmt(app.font, 8.f, 8.f, QU_COLOR(255, 255, 255), "Time: %.2f", qu_get_time_mediump());
 
@@ -278,6 +345,10 @@ int main(int argc, char *argv[])
             app.ducks[y * 8 + x].dy = -5.f;
         }
     }
+
+    app.camera.x = 256.f;
+    app.camera.y = 256.f;
+    app.camera.z = 512.f;
 
     qu_initialize(&(qu_params) {
         .display_width = 512,
