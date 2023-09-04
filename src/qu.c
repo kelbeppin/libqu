@@ -202,3 +202,38 @@ void qu_draw_circle(float x, float y, float radius, qu_color outline, qu_color f
 {
     qu__graphics_draw_circle(x, y, radius, outline, fill);
 }
+
+qu_texture qu_load_texture(char const *path)
+{
+    qu_file *file = qu_fopen(path);
+
+    if (!file) {
+        return (qu_texture) { .id = 0 };
+    }
+
+    int32_t id = qu__graphics_load_texture(file);
+
+    qu_fclose(file);
+
+    return (qu_texture) { .id = id };
+}
+
+void qu_delete_texture(qu_texture texture)
+{
+    qu__graphics_delete_texture(texture.id);
+}
+
+void qu_set_texture_smooth(qu_texture texture, bool smooth)
+{
+    qu__graphics_set_texture_smooth(texture.id, smooth);
+}
+
+void qu_draw_texture(qu_texture texture, float x, float y, float w, float h)
+{
+    qu__graphics_draw_texture(texture.id, x, y, w, h);
+}
+
+void qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, float rx, float ry, float rw, float rh)
+{
+    qu__graphics_draw_subtexture(texture.id, x, y, w, h, rx, ry, rw, rh);
+}
