@@ -645,6 +645,9 @@ void qu__graphics_initialize(qu_params const *params)
 
         graphics__update_canvas_coords(params->display_width, params->display_height);
     }
+
+    // Enable alpha blend by default.
+    priv.renderer->apply_blend_mode(QU_BLEND_MODE_ALPHA);
 }
 
 void qu__graphics_terminate(void)
@@ -835,6 +838,30 @@ void qu__graphics_rotate(float degrees)
 
 void qu__graphics_set_blend_mode(qu_blend_mode mode)
 {
+    if (mode.color_src_factor < 0 || mode.color_src_factor >= 10) {
+        return;
+    }
+
+    if (mode.color_dst_factor < 0 || mode.color_dst_factor >= 10) {
+        return;
+    }
+
+    if (mode.alpha_src_factor < 0 || mode.alpha_src_factor >= 10) {
+        return;
+    }
+
+    if (mode.alpha_dst_factor < 0 || mode.alpha_dst_factor >= 10) {
+        return;
+    }
+
+    if (mode.color_equation < 0 || mode.color_equation >= 3) {
+        return;
+    }
+
+    if (mode.alpha_equation < 0 || mode.alpha_equation >= 3) {
+        return;
+    }
+
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_SET_BLEND_MODE,
         .args.blend = {
