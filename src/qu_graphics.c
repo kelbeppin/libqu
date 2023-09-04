@@ -749,81 +749,6 @@ qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i delta)
     }
 }
 
-int32_t qu__graphics_create_texture(int width, int height, int channels)
-{
-    struct qu__texture texture = {
-        .image = {
-            .width = width,
-            .height = height,
-            .channels = channels,
-        }
-    };
-
-    qu__image_create(&texture.image);
-
-    if (!texture.image.pixels) {
-        return 0;
-    }
-
-    priv.renderer->load_texture(&texture);
-    return qu_array_add(priv.textures, &texture);
-}
-
-void qu__graphics_update_texture(int32_t texture_id, int x, int y, int w, int h, uint8_t const *pixels)
-{
-    struct qu__texture *texture = qu_array_get(priv.textures, texture_id);
-
-    if (!texture || !texture->image.pixels) {
-        return;
-    }
-
-    if (w == -1) {
-        w = texture->image.width;
-    }
-
-    if (h == -1) {
-        h = texture->image.height;
-    }
-
-    for (int i = 0; i < h; i++) {
-        for (int j = 0; j < w; j++) {
-            size_t nc = texture->image.channels;
-            size_t di = (y + i) * texture->image.width * nc + (x + j) * nc;
-            size_t si = i * w * nc + j * nc;
-
-            for (int k = 0; k < nc; k++) {
-                texture->image.pixels[di + k] = pixels[si + k];
-            }
-        }
-    }
-
-    priv.renderer->load_texture(texture);
-}
-
-void qu__graphics_draw_text(int32_t texture_id, qu_color color, float const *data, int count)
-{
-    struct qu__texture *texture = qu_array_get(priv.textures, texture_id);
-
-    if (!texture) {
-        return;
-    }
-
-    graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_DRAW,
-        .args.draw = {
-            .texture = texture,
-            .color = color,
-            .render_mode = QU__RENDER_MODE_TRIANGLES,
-            .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
-            .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, data, count * 4),
-            .total_vertices = count,
-        },
-    });
-}
-
-//------------------------------------------------------------------------------
-// API entries
-
 void qu__graphics_set_view(float x, float y, float w, float h, float rotation)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
@@ -1062,6 +987,26 @@ void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, 
     }
 }
 
+int32_t qu__graphics_create_texture(int width, int height, int channels)
+{
+    struct qu__texture texture = {
+        .image = {
+            .width = width,
+            .height = height,
+            .channels = channels,
+        }
+    };
+
+    qu__image_create(&texture.image);
+
+    if (!texture.image.pixels) {
+        return 0;
+    }
+
+    priv.renderer->load_texture(&texture);
+    return qu_array_add(priv.textures, &texture);
+}
+
 int32_t qu__graphics_load_texture(qu_file *file)
 {
     struct qu__texture texture = { 0 };
@@ -1087,6 +1032,37 @@ void qu__graphics_set_texture_smooth(int32_t id, bool smooth)
     if (texture) {
         priv.renderer->set_texture_smooth(texture, smooth);
     }
+}
+
+void qu__graphics_update_texture(int32_t id, int x, int y, int w, int h, uint8_t const *pixels)
+{
+    struct qu__texture *texture = qu_array_get(priv.textures, id);
+
+    if (!texture || !texture->image.pixels) {
+        return;
+    }
+
+    if (w == -1) {
+        w = texture->image.width;
+    }
+
+    if (h == -1) {
+        h = texture->image.height;
+    }
+
+    for (int i = 0; i < h; i++) {
+        for (int j = 0; j < w; j++) {
+            size_t nc = texture->image.channels;
+            size_t di = (y + i) * texture->image.width * nc + (x + j) * nc;
+            size_t si = i * w * nc + j * nc;
+
+            for (int k = 0; k < nc; k++) {
+                texture->image.pixels[di + k] = pixels[si + k];
+            }
+        }
+    }
+
+    priv.renderer->load_texture(texture);
 }
 
 void qu__graphics_draw_texture(int32_t id, float x, float y, float w, float h)
@@ -1146,6 +1122,27 @@ void qu__graphics_draw_subtexture(int32_t id, float x, float y, float w, float h
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, vertices, 16),
             .total_vertices = 4,
+        },
+    });
+}
+
+void qu__graphics_draw_text(int32_t id, qu_color color, float const *data, int count)
+{
+    struct qu__texture *texture = qu_array_get(priv.textures, id);
+
+    if (!texture) {
+        return;
+    }
+
+    graphics__append_render_command(&(struct qu__render_command_info) {
+        .command = QU__RENDER_COMMAND_DRAW,
+        .args.draw = {
+            .texture = texture,
+            .color = color,
+            .render_mode = QU__RENDER_MODE_TRIANGLES,
+            .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
+            .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, data, count * 4),
+            .total_vertices = count,
         },
     });
 }
