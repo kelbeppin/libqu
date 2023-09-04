@@ -853,17 +853,17 @@ QU_API void QU_CALL qu_set_texture_smooth(qu_texture texture, bool smooth);
 QU_API void QU_CALL qu_draw_texture(qu_texture texture, float x, float y, float w, float h);
 QU_API void QU_CALL qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, float rx, float ry, float rw, float rh);
 
-QU_API qu_font QU_CALL qu_load_font(char const *path, float pt);
-QU_API void QU_CALL qu_delete_font(qu_font font);
-QU_API void QU_CALL qu_draw_text(qu_font font, float x, float y, qu_color color, char const *str);
-QU_API void QU_CALL qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const *fmt, ...);
-
 QU_API qu_surface QU_CALL qu_create_surface(int width, int height);
 QU_API void QU_CALL qu_delete_surface(qu_surface surface);
 QU_API void QU_CALL qu_set_surface_smooth(qu_surface surface, bool smooth);
 QU_API void QU_CALL qu_set_surface(qu_surface surface);
 QU_API void QU_CALL qu_reset_surface(void);
 QU_API void QU_CALL qu_draw_surface(qu_surface surface, float x, float y, float w, float h);
+
+QU_API qu_font QU_CALL qu_load_font(char const *path, float pt);
+QU_API void QU_CALL qu_delete_font(qu_font font);
+QU_API void QU_CALL qu_draw_text(qu_font font, float x, float y, qu_color color, char const *str);
+QU_API void QU_CALL qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const *fmt, ...);
 
 /**@}*/
 
