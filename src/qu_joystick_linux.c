@@ -138,7 +138,7 @@ static bool joystick_linux__is_connected(int id)
     priv.next_poll_time = current_time + 1.f;
 
     char path[64];
-    snprintf(path, sizeof(path) - 1, "/dev/input/js%d", joystick);
+    snprintf(path, sizeof(path) - 1, "/dev/input/js%d", id);
 
     int fd = open(path, O_RDONLY | O_NONBLOCK);
 
