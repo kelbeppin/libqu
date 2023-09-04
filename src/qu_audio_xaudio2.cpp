@@ -46,7 +46,7 @@
 
 //------------------------------------------------------------------------------
 
-typedef HRESULT (*PFNXAUDIO2CREATEPROC)(IXAudio2 **, UINT32, XAUDIO2_PROCESSOR);
+typedef HRESULT (APIENTRY *PFNXAUDIO2CREATEPROC)(IXAudio2 **, UINT32, XAUDIO2_PROCESSOR);
 
 struct qu__xaudio2_module
 {
@@ -113,23 +113,23 @@ static void ReleaseStream(struct Stream *pStream);
 class SoundCallback : public IXAudio2VoiceCallback
 {
 public:
-    void OnVoiceProcessingPassStart(UINT32 samplesRequired)
+    void APIENTRY OnVoiceProcessingPassStart(UINT32 samplesRequired)
     {
     }
 
-    void OnVoiceProcessingPassEnd()
+    void APIENTRY OnVoiceProcessingPassEnd()
     {
     }
 
-    void OnStreamEnd()
+    void APIENTRY OnStreamEnd()
     {
     }
 
-    void OnBufferStart(void *pBufferContext)
+    void APIENTRY OnBufferStart(void *pBufferContext)
     {
     }
 
-    void OnBufferEnd(void *pBufferContext)
+    void APIENTRY OnBufferEnd(void *pBufferContext)
     {
         struct Stream *pStream = (struct Stream *) pBufferContext;
 
@@ -138,11 +138,11 @@ public:
         }
     }
 
-    void OnLoopEnd(void *pBufferContext)
+    void APIENTRY OnLoopEnd(void *pBufferContext)
     {
     }
 
-    void OnVoiceError(void *pBufferContext, HRESULT hError)
+    void APIENTRY OnVoiceError(void *pBufferContext, HRESULT hError)
     {
     }
 };
@@ -155,31 +155,31 @@ static SoundCallback g_SoundVoiceCallback;
 class BGMCallback : public IXAudio2VoiceCallback
 {
 public:
-    void OnVoiceProcessingPassStart(UINT32 samplesRequired)
+    void APIENTRY OnVoiceProcessingPassStart(UINT32 samplesRequired)
     {
     }
 
-    void OnVoiceProcessingPassEnd()
+    void APIENTRY OnVoiceProcessingPassEnd()
     {
     }
 
-    void OnStreamEnd()
+    void APIENTRY OnStreamEnd()
     {
     }
 
-    void OnBufferStart(void *pBufferContext)
+    void APIENTRY OnBufferStart(void *pBufferContext)
     {
     }
 
-    void OnBufferEnd(void *pBufferContext)
+    void APIENTRY OnBufferEnd(void *pBufferContext)
     {
     }
 
-    void OnLoopEnd(void *pBufferContext)
+    void APIENTRY OnLoopEnd(void *pBufferContext)
     {
     }
 
-    void OnVoiceError(void *pBufferContext, HRESULT hError)
+    void APIENTRY OnVoiceError(void *pBufferContext, HRESULT hError)
     {
     }
 };

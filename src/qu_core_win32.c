@@ -37,7 +37,7 @@
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
-typedef HRESULT (*SETPROCESSDPIAWARENESSPROC)(int);
+typedef HRESULT (APIENTRY *SETPROCESSDPIAWARENESSPROC)(int);
 
 //------------------------------------------------------------------------------
 
