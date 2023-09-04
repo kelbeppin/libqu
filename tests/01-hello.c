@@ -74,7 +74,10 @@ static struct
 
     qu_font font;
 
-    int b;
+    bool pause;
+    float time;
+    float render_time;
+
     struct camera camera;
 } app;
 
@@ -84,8 +87,8 @@ static void key_press_callback(qu_key key)
     case QU_KEY_ESCAPE:
         app.running = false;
         break;
-    case QU_KEY_B:
-        app.b = !app.b;
+    case QU_KEY_SPACE:
+        app.pause = !app.pause;
         break;
     default:
         break;
@@ -197,6 +200,10 @@ static void duck_draw(struct duck *duck, float lag_offset)
 
 static void update(void)
 {
+    if (app.pause) {
+        return;
+    }
+
     for (int i = 0; i < 2; i++) {
         rectangle_update(&app.rectangles[i]);
     }
@@ -248,10 +255,16 @@ static void update(void)
     if (app.camera.z > 1024.f) {
         app.camera.z = 1024.f;
     }
+
+    app.time += FRAME_DURATION;
 }
 
 static void draw(float lag_offset)
 {
+    if (app.pause) {
+        lag_offset = 0.f;
+    }
+
     qu_clear(QU_COLOR(24, 24, 24));
     
     qu_set_view(app.camera.x + app.camera.dx * lag_offset,
@@ -282,7 +295,9 @@ static void draw(float lag_offset)
 
     // qu_reset_view();
 
-    qu_draw_text_fmt(app.font, 8.f, 8.f, QU_COLOR(255, 255, 255), "Time: %.2f", qu_get_time_mediump());
+    qu_draw_text_fmt(app.font, 8.f, 8.f, QU_COLOR(255, 255, 255), "Time: %.2f", app.time);
+    qu_draw_text_fmt(app.font, 8.f, 32.f, QU_COLOR(255, 255, 255), "Render time: %.2f", app.render_time);
+    qu_draw_text_fmt(app.font, 8.f, 56.f, QU_COLOR(255, 255, 255), "Lag: %.8f", app.frame_lag);
 
     qu_present();
 }
@@ -296,6 +311,7 @@ static bool loop(void)
     double current_time = qu_get_time_highp();
     double elapsed_time = current_time - app.frame_start_time;
 
+    app.render_time += elapsed_time;
     app.frame_start_time = current_time;
     app.frame_lag += elapsed_time;
 
@@ -354,6 +370,7 @@ int main(int argc, char *argv[])
         .display_width = 512,
         .display_height = 512,
         .enable_canvas = true,
+        .canvas_smooth = true,
     });
 
     app.duck_texture = qu_load_texture("assets/duck.png");
