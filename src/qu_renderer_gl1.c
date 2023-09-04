@@ -227,23 +227,31 @@ static void gl1__apply_transform(qu_mat4 const *transform)
     glLoadMatrixf(transform->m);
 }
 
-static void gl1__apply_surface(struct qu__texture_data const *texture)
+static void gl1__apply_surface(struct qu__surface const *surface)
 {
-    if (texture) {
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, texture->priv[1]));
-        _GL_CHECK(glViewport(0, 0, texture->image.width, texture->image.height));
-        priv.bound_surface = texture->priv[1];
-    } else {
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0));
-        _GL_CHECK(glViewport(0, 0, priv.w_display, priv.h_display));
-        priv.bound_surface = 0;
+    if (priv.bound_surface == surface->priv[0]) {
+        return;
     }
+
+    GLsizei width = surface->texture.image.width;
+    GLsizei height = surface->texture.image.height;
+
+    _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[0]));
+    priv.bound_surface = surface->priv[0];
+
+    _GL_CHECK(glViewport(0, 0, width, height));
 }
 
-static void gl1__apply_texture(struct qu__texture_data const *data)
+static void gl1__apply_texture(struct qu__texture const *texture)
 {
-    priv.bound_texture = data ? data->priv[0] : 0;
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
+    GLuint id = texture ? texture->priv[0] : 0;
+
+    if (priv.bound_texture == id) {
+        return;
+    }
+
+    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
+    priv.bound_texture = id;
 }
 
 static void gl1__apply_clear_color(qu_color color)
@@ -303,7 +311,7 @@ static void gl1__exec_draw(enum qu__render_mode render_mode, unsigned int first_
     _GL_CHECK(glDrawArrays(mode_map[render_mode], (GLint) first_vertex, (GLsizei) total_vertices));
 }
 
-static void gl1__load_texture(struct qu__texture_data *texture)
+static void gl1__load_texture(struct qu__texture *texture)
 {
     GLuint id = texture->priv[0];
     
@@ -334,14 +342,14 @@ static void gl1__load_texture(struct qu__texture_data *texture)
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1__unload_texture(struct qu__texture_data *texture)
+static void gl1__unload_texture(struct qu__texture *texture)
 {
     GLuint id = (GLuint) texture->priv[0];
 
     _GL_CHECK(glDeleteTextures(1, &id));
 }
 
-static void gl1__set_texture_smooth(struct qu__texture_data *texture, bool smooth)
+static void gl1__set_texture_smooth(struct qu__texture *texture, bool smooth)
 {
     GLuint id = (GLuint) texture->priv[0];
 
@@ -360,8 +368,11 @@ static void gl1__set_texture_smooth(struct qu__texture_data *texture, bool smoot
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1__create_surface(struct qu__texture_data *texture)
+static void gl1__create_surface(struct qu__surface *surface)
 {
+    GLsizei width = surface->texture.image.width;
+    GLsizei height = surface->texture.image.height;
+
     GLuint fbo;
     GLuint depth;
     GLuint color;
@@ -372,11 +383,11 @@ static void gl1__create_surface(struct qu__texture_data *texture)
     _GL_CHECK(priv.glGenRenderbuffersEXT(1, &depth));
     _GL_CHECK(priv.glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, depth));
     _GL_CHECK(priv.glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT16,
-                                            texture->image.width, texture->image.height));
+                                            width, height));
 
     _GL_CHECK(glGenTextures(1, &color));
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, color));
-    _GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, texture->image.width, texture->image.height,
+    _GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height,
                            0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
 
     _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -396,19 +407,19 @@ static void gl1__create_surface(struct qu__texture_data *texture)
         QU_HALT("[TODO] FBO error handling.");
     }
 
-    texture->priv[0] = color;
-    texture->priv[1] = fbo;
-    texture->priv[2] = depth;
+    surface->priv[0] = fbo;
+    surface->priv[1] = depth;
+    surface->texture.priv[0] = color;
 
     _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, priv.bound_surface));
     _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1__destroy_surface(struct qu__texture_data *texture)
+static void gl1__destroy_surface(struct qu__surface *surface)
 {
-    GLuint color = texture->priv[0];
-    GLuint fbo = texture->priv[1];
-    GLuint depth = texture->priv[2];
+    GLuint fbo = surface->priv[0];
+    GLuint depth = surface->priv[1];
+    GLuint color = surface->texture.priv[0];
 
     _GL_CHECK(priv.glDeleteFramebuffersEXT(1, &fbo));
     _GL_CHECK(priv.glDeleteRenderbuffersEXT(1, &depth));

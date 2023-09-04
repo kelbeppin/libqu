@@ -51,11 +51,11 @@ static void apply_transform(qu_mat4 const *transform)
 {
 }
 
-static void apply_surface(struct qu__texture_data const *texture)
+static void apply_surface(struct qu__surface const *surface)
 {
 }
 
-static void apply_texture(struct qu__texture_data const *texture)
+static void apply_texture(struct qu__texture const *texture)
 {
 }
 
@@ -83,23 +83,23 @@ static void exec_draw(enum qu__render_mode mode, unsigned int first_vertex, unsi
 {
 }
 
-static void load_texture(struct qu__texture_data *texture)
+static void load_texture(struct qu__texture *texture)
 {
 }
 
-static void unload_texture(struct qu__texture_data *texture)
+static void unload_texture(struct qu__texture *texture)
 {
 }
 
-static void set_texture_smooth(struct qu__texture_data *texture, bool smooth)
+static void set_texture_smooth(struct qu__texture *texture, bool smooth)
 {
 }
 
-static void create_surface(struct qu__texture_data *texture)
+static void create_surface(struct qu__surface *surface)
 {
 }
 
-static void destroy_surface(struct qu__texture_data *texture)
+static void destroy_surface(struct qu__surface *surface)
 {
 }
 

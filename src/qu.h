@@ -298,17 +298,6 @@ void qu__core_on_mouse_wheel_scrolled(int dx, int dy);
 //------------------------------------------------------------------------------
 // Graphics
 
-enum qu__render_command
-{
-    QU__RENDER_COMMAND_NO_OP,
-    QU__RENDER_COMMAND_RESIZE,
-    QU__RENDER_COMMAND_STACK_OP,
-    QU__RENDER_COMMAND_TRANSFORM,
-    QU__RENDER_COMMAND_CLEAR,
-    QU__RENDER_COMMAND_DRAW,
-    QU__RENDER_COMMAND_SURFACE,
-};
-
 enum qu__render_mode
 {
     QU__RENDER_MODE_POINTS,
@@ -336,9 +325,20 @@ enum qu__vertex_format
     QU__TOTAL_VERTEX_FORMATS,
 };
 
-struct qu__texture_data
+struct qu__texture
 {
     struct qu__image image;
+    uintptr_t priv[4];
+};
+
+struct qu__surface
+{
+    struct qu__texture texture;
+
+    qu_mat4 projection;
+    qu_mat4 modelview[32];
+    int modelview_index;
+
     uintptr_t priv[4];
 };
 
@@ -352,8 +352,8 @@ struct qu__renderer_impl
 
     void (*apply_projection)(qu_mat4 const *projection);
     void (*apply_transform)(qu_mat4 const *transform);
-    void (*apply_surface)(struct qu__texture_data const *data);
-    void (*apply_texture)(struct qu__texture_data const *data);
+    void (*apply_surface)(struct qu__surface const *surface);
+    void (*apply_texture)(struct qu__texture const *texture);
     void (*apply_clear_color)(qu_color clear_color);
     void (*apply_draw_color)(qu_color draw_color);
     void (*apply_vertex_format)(enum qu__vertex_format vertex_format);
@@ -362,12 +362,12 @@ struct qu__renderer_impl
     void (*exec_clear)(void);
     void (*exec_draw)(enum qu__render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices);
 
-    void (*load_texture)(struct qu__texture_data *data);
-    void (*unload_texture)(struct qu__texture_data *data);
-    void (*set_texture_smooth)(struct qu__texture_data *data, bool smooth);
+    void (*load_texture)(struct qu__texture *texture);
+    void (*unload_texture)(struct qu__texture *texture);
+    void (*set_texture_smooth)(struct qu__texture *texture, bool smooth);
 
-    void (*create_surface)(struct qu__texture_data *data);
-    void (*destroy_surface)(struct qu__texture_data *data);
+    void (*create_surface)(struct qu__surface *surface);
+    void (*destroy_surface)(struct qu__surface *surface);
 };
 
 extern struct qu__renderer_impl const qu__renderer_null;
