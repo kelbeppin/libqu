@@ -374,61 +374,6 @@ extern struct qu__renderer_impl const qu__renderer_null;
 extern struct qu__renderer_impl const qu__renderer_gl1;
 extern struct qu__renderer_impl const qu__renderer_gl3;
 
-struct qu__graphics
-{
-    bool (*query)(qu_params const *params);
-    void (*initialize)(qu_params const *params);
-    void (*terminate)(void);
-    void (*refresh)(void);
-    void (*swap)(void);
-    void (*on_display_resize)(int width, int height);
-    qu_vec2i (*conv_cursor)(qu_vec2i position);
-    qu_vec2i (*conv_cursor_delta)(qu_vec2i position);
-
-    void (*set_view)(float x, float y, float w, float h, float rotation);
-    void (*reset_view)(void);
-
-    void (*push_matrix)(void);
-    void (*pop_matrix)(void);
-    void (*translate)(float x, float y);
-    void (*scale)(float x, float y);
-    void (*rotate)(float degrees);
-
-    void (*clear)(qu_color color);
-    void (*draw_point)(float x, float y, qu_color color);
-    void (*draw_line)(float ax, float ay, float bx, float by, qu_color color);
-    void (*draw_triangle)(float ax, float ay, float bx, float by, float cx,
-                          float cy, qu_color outline, qu_color fill);
-    void (*draw_rectangle)(float x, float y, float w, float h, qu_color outline,
-                           qu_color fill);
-    void (*draw_circle)(float x, float y, float radius, qu_color outline,
-                        qu_color fill);
-
-    int32_t (*create_texture)(int w, int h, int channels);
-    void (*update_texture)(int32_t texture_id, int x, int y, int w, int h,
-                           uint8_t const *pixels);
-    int32_t (*load_texture)(qu_file *file);
-    void (*delete_texture)(int32_t texture_id);
-    void (*set_texture_smooth)(int32_t texture_id, bool smooth);
-    void (*draw_texture)(int32_t texture_id, float x, float y, float w,
-                         float h);
-    void (*draw_subtexture)(int32_t texture_id, float x, float y, float w,
-                            float h, float rx, float ry, float rw, float rh);
-
-    void (*draw_text)(int32_t texture_id, qu_color color, float const *data,
-                      int count);
-
-    int32_t (*create_surface)(int width, int height);
-    void (*delete_surface)(int32_t id);
-    void (*set_surface)(int32_t id);
-    void (*reset_surface)(void);
-    void (*draw_surface)(int32_t id, float x, float y, float w, float h);
-};
-
-extern struct qu__graphics const qu__graphics_null;
-extern struct qu__graphics const qu__graphics_gl2;
-extern struct qu__graphics const qu__graphics_es2;
-
 void qu__graphics_initialize(qu_params const *params);
 void qu__graphics_terminate(void);
 void qu__graphics_refresh(void);

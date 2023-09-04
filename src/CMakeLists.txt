@@ -10,7 +10,6 @@ add_library(${PROJECT_NAME}
     qu_core.c
     qu_fs.c
     qu_graphics.c
-    qu_graphics_null.c
     qu_image_loader.c
     qu_joystick_null.c
     qu_log.c
@@ -96,14 +95,14 @@ if(QU_USE_OPENAL)
 endif()
 
 if(QU_USE_OPENGL)
-    target_sources(${PROJECT_NAME} PRIVATE qu_graphics_gl2.c)
     target_sources(${PROJECT_NAME} PRIVATE qu_renderer_gl1.c qu_renderer_gl3.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_GL)
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL)
 endif()
 
 if(QU_USE_OPENGL_ES2)
-    target_sources(${PROJECT_NAME} PRIVATE qu_graphics_es2.c)
+    # TODO: implement
+    # target_sources(${PROJECT_NAME} PRIVATE qu_renderer_es2.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_ES2)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_GLESv2_LIBRARY})
 endif()
