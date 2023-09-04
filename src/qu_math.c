@@ -95,10 +95,12 @@ void qu_mat4_ortho(qu_mat4 *mat, float l, float r, float b, float t)
 void qu_mat4_translate(qu_mat4 *mat, float x, float y, float z)
 {
     qu_mat4 const translation = {
-        1.f,    0.f,    0.f,    0.f,
-        0.f,    1.f,    0.f,    0.f,
-        0.f,    0.f,    1.f,    0.f,
-        x,      y,      z,      1.f,
+        {
+            1.f,    0.f,    0.f,    0.f,
+            0.f,    1.f,    0.f,    0.f,
+            0.f,    0.f,    1.f,    0.f,
+            x,      y,      z,      1.f,
+        },
     };
 
     qu_mat4_multiply(mat, &translation);
@@ -107,10 +109,12 @@ void qu_mat4_translate(qu_mat4 *mat, float x, float y, float z)
 void qu_mat4_scale(qu_mat4 *mat, float x, float y, float z)
 {
     qu_mat4 const scale = {
-        x,      0.f,    0.f,    0.f,
-        0.f,    y,      0.f,    0.f,
-        0.f,    0.f,    z,      0.f,
-        0.f,    0.f,    0.f,    1.f,
+        {
+            x,      0.f,    0.f,    0.f,
+            0.f,    y,      0.f,    0.f,
+            0.f,    0.f,    z,      0.f,
+            0.f,    0.f,    0.f,    1.f,
+        },
     };
 
     qu_mat4_multiply(mat, &scale);
@@ -134,10 +138,12 @@ void qu_mat4_rotate(qu_mat4 *mat, float rad, float x, float y, float z)
     float zs = z * s;
 
     qu_mat4 const rotation = {
-        xx * ci + c,    y  * ci + zs,   xz * ci - ys,   0.f,
-        xy * ci - zs,   yy * ci + c,    yz * ci + xs,   0.f,
-        xz * ci + ys,   yz * ci - xs,   zz * ci + c,    0.f,
-        0.f,            0.f,            0.f,            1.f,
+        {
+            xx * ci + c,     y * ci + zs,   xz * ci - ys,   0.f,
+            xy * ci - zs,   yy * ci + c,    yz * ci + xs,   0.f,
+            xz * ci + ys,   yz * ci - xs,   zz * ci + c,    0.f,
+            0.f,            0.f,            0.f,            1.f,
+        },
     };
 
     qu_mat4_multiply(mat, &rotation);
