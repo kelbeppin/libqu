@@ -357,6 +357,7 @@ struct qu__renderer_impl
     void (*apply_clear_color)(qu_color clear_color);
     void (*apply_draw_color)(qu_color draw_color);
     void (*apply_vertex_format)(enum qu__vertex_format vertex_format);
+    void (*apply_blend_mode)(qu_blend_mode mode);
 
     void (*exec_resize)(int width, int height);
     void (*exec_clear)(void);
@@ -389,6 +390,7 @@ void qu__graphics_pop_matrix(void);
 void qu__graphics_translate(float x, float y);
 void qu__graphics_scale(float x, float y);
 void qu__graphics_rotate(float degrees);
+void qu__graphics_set_blend_mode(qu_blend_mode mode);
 void qu__graphics_clear(qu_color color);
 void qu__graphics_draw_point(float x, float y, qu_color color);
 void qu__graphics_draw_line(float ax, float ay, float bx, float by, qu_color color);

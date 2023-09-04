@@ -80,6 +80,23 @@
 
 //------------------------------------------------------------------------------
 
+/**
+ * C++ lacks C99's compound literals. However, since C++11, plain structures
+ * can be initialized with slightly different syntax:
+ * `xyz_person { "John", "Doe" }`
+ *
+ * The same thing, but without parentheses. Sadly, this doesn't support
+ * designated initializers.
+ */
+
+#ifdef __cplusplus
+#define QU_COMPOUND(type)       type
+#else
+#define QU_COMPOUND(type)       (type)
+#endif
+
+//------------------------------------------------------------------------------
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -695,6 +712,33 @@ QU_API double QU_CALL qu_get_time_highp(void);
     ((alpha) << 24 | (red) << 16 | (green) << 8 | (blue))
 
 /**
+ * Enumeration of blend mode factors.
+ */
+typedef enum qu_blend_factor
+{
+    QU_BLEND_ZERO,
+    QU_BLEND_ONE,
+    QU_BLEND_SRC_COLOR,
+    QU_BLEND_ONE_MINUS_SRC_COLOR,
+    QU_BLEND_DST_COLOR,
+    QU_BLEND_ONE_MINUS_DST_COLOR,
+    QU_BLEND_SRC_ALPHA,
+    QU_BLEND_ONE_MINUS_SRC_ALPHA,
+    QU_BLEND_DST_ALPHA,
+    QU_BLEND_ONE_MINUS_DST_ALPHA,
+} qu_blend_factor;
+
+/**
+ * Enumeration of blend mode equations.
+ */
+typedef enum qu_blend_equation
+{
+    QU_BLEND_ADD,
+    QU_BLEND_SUB,
+    QU_BLEND_REV_SUB,
+} qu_blend_equation;
+
+/**
  * \brief Color type.
  *
  * Assumed to hold components in ARGB order.
@@ -726,6 +770,20 @@ typedef struct qu_font
 } qu_font;
 
 /**
+ * Blend mode structure.
+ */
+typedef struct qu_blend_mode
+{
+    qu_blend_factor color_src_factor;
+    qu_blend_factor color_dst_factor;
+    qu_blend_equation color_equation;
+
+    qu_blend_factor alpha_src_factor;
+    qu_blend_factor alpha_dst_factor;
+    qu_blend_equation alpha_equation;
+} qu_blend_mode;
+
+/**
  * \brief Set the view parameters for rendering.
  *
  * This function sets the view parameters for rendering, including the position,
@@ -752,6 +810,54 @@ QU_API void QU_CALL qu_pop_matrix(void);
 QU_API void QU_CALL qu_translate(float x, float y);
 QU_API void QU_CALL qu_scale(float x, float y);
 QU_API void QU_CALL qu_rotate(float degrees);
+
+/**
+ * Shortcut macro to quickly define custom blend mode.
+ */
+#define QU_DEFINE_BLEND_MODE(src_factor, dst_factor) \
+    QU_COMPOUND(qu_blend_mode) { \
+        (src_factor), (dst_factor), QU_BLEND_ADD, \
+        (src_factor), (dst_factor), QU_BLEND_ADD, \
+    }
+
+/**
+ * Shortcut macro to quickly define custom blend mode with custom equation.
+ */
+#define QU_DEFINE_BLEND_MODE_EX(src_factor, dst_factor, equation) \
+    QU_COMPOUND(qu_blend_mode) { \
+        (src_factor), (dst_factor), (equation), \
+        (src_factor), (dst_factor), (equation), \
+    }
+
+/**
+ * Predefined blending mode: none.
+ * No blending is done, dst is overwritten by src.
+ */
+#define QU_BLEND_MODE_NONE \
+    QU_DEFINE_BLEND_MODE(QU_BLEND_ONE, QU_BLEND_ZERO)
+
+/**
+ * Predefined blending mode: alpha.
+ */
+#define QU_BLEND_MODE_ALPHA \
+    QU_DEFINE_BLEND_MODE(QU_BLEND_SRC_ALPHA, QU_BLEND_ONE_MINUS_SRC_ALPHA)
+
+/**
+ * Predefined blending mode: add.
+ */
+#define QU_BLEND_MODE_ADD \
+    QU_DEFINE_BLEND_MODE(QU_BLEND_SRC_ALPHA, QU_BLEND_ONE)
+
+/**
+ * Predefined blending mode: multiply.
+ */
+#define QU_BLEND_MODE_MUL \
+    QU_COMPOUND(qu_blend_mode) { \
+        QU_BLEND_ZERO, QU_BLEND_SRC_COLOR, QU_BLEND_ADD, \
+        QU_BLEND_ZERO, QU_BLEND_SRC_ALPHA, QU_BLEND_ADD, \
+    }
+
+QU_API void QU_CALL qu_set_blend_mode(qu_blend_mode mode);
 
 /**
  * \brief Clear the screen with a specified color.

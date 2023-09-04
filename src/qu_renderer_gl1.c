@@ -197,7 +197,6 @@ static void gl1__initialize(qu_params const *params)
     _GL_CHECK(glEnable(GL_TEXTURE_2D));
     _GL_CHECK(glEnable(GL_BLEND));
 
-    _GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     _GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
     QU_INFO("Initialized.\n");
@@ -291,6 +290,11 @@ static void gl1__apply_vertex_format(enum qu__vertex_format vertex_format)
     default:
         break;
     }
+}
+
+static void gl1__apply_blend_mode(qu_blend_mode mode)
+{
+
 }
 
 static void gl1__exec_resize(int width, int height)
@@ -440,6 +444,7 @@ struct qu__renderer_impl const qu__renderer_gl1 = {
     .apply_clear_color = gl1__apply_clear_color,
     .apply_draw_color = gl1__apply_draw_color,
     .apply_vertex_format = gl1__apply_vertex_format,
+    .apply_blend_mode = gl1__apply_blend_mode,
     .exec_resize = gl1__exec_resize,
 	.exec_clear = gl1__exec_clear,
 	.exec_draw = gl1__exec_draw,

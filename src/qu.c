@@ -173,6 +173,11 @@ void qu_rotate(float degrees)
     qu__graphics_rotate(degrees);
 }
 
+void qu_set_blend_mode(qu_blend_mode mode)
+{
+    qu__graphics_set_blend_mode(mode);
+}
+
 void qu_clear(qu_color color)
 {
     qu__graphics_clear(color);

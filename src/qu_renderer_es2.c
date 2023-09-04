@@ -73,6 +73,10 @@ static void apply_vertex_format(enum qu__vertex_format format)
 {
 }
 
+static void apply_blend_mode(qu_blend_mode mode)
+{
+}
+
 static void exec_resize(int width, int height)
 {
 }
@@ -119,6 +123,7 @@ struct qu__renderer_impl const qu__renderer_null = {
     .apply_clear_color = apply_clear_color,
     .apply_draw_color = apply_draw_color,
     .apply_vertex_format = apply_vertex_format,
+    .apply_blend_mode = apply_blend_mode,
     .exec_resize = exec_resize,
 	.exec_clear = exec_clear,
 	.exec_draw = exec_draw,

@@ -513,7 +513,6 @@ static void gl3__initialize(qu_params const *params)
 
     _GL_CHECK(glEnable(GL_BLEND));
 
-    _GL_CHECK(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     _GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
     GLuint shaders[GL3__TOTAL_SHADERS];
@@ -681,6 +680,11 @@ static void gl3__apply_vertex_format(enum qu__vertex_format vertex_format)
         _GL_CHECK(priv.glUseProgram(priv.programs[program].id));
         update_uniforms();
     }
+}
+
+static void gl3__apply_blend_mode(qu_blend_mode mode)
+{
+
 }
 
 static void gl3__exec_resize(int width, int height)
@@ -851,6 +855,7 @@ struct qu__renderer_impl const qu__renderer_gl3 = {
     .apply_clear_color = gl3__apply_clear_color,
     .apply_draw_color = gl3__apply_draw_color,
     .apply_vertex_format = gl3__apply_vertex_format,
+    .apply_blend_mode = gl3__apply_blend_mode,
     .exec_resize = gl3__exec_resize,
 	.exec_clear = gl3__exec_clear,
 	.exec_draw = gl3__exec_draw,

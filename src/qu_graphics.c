@@ -64,6 +64,7 @@ enum qu__render_command
     QU__RENDER_COMMAND_TRANSLATE,
     QU__RENDER_COMMAND_SCALE,
     QU__RENDER_COMMAND_ROTATE,
+    QU__RENDER_COMMAND_SET_BLEND_MODE,
     QU__RENDER_COMMAND_CLEAR,
     QU__RENDER_COMMAND_DRAW,
 };
@@ -94,6 +95,11 @@ struct qu__transform_render_command_args
     float b;
 };
 
+struct qu__blend_render_command_args
+{
+    qu_blend_mode mode;
+};
+
 struct qu__clear_render_command_args
 {
     qu_color color;
@@ -115,6 +121,7 @@ union qu__render_command_args
     struct qu__surface_render_command_args surface;
     struct qu__set_view_render_command_args view;
     struct qu__transform_render_command_args transform;
+    struct qu__blend_render_command_args blend;
     struct qu__clear_render_command_args clear;
     struct qu__draw_render_command_args draw;
 };
@@ -278,6 +285,11 @@ static void graphics__exec_rotate(struct qu__transform_render_command_args const
     priv.renderer->apply_transform(matrix);
 }
 
+static void graphics__exec_set_blend_mode(struct qu__blend_render_command_args const *args)
+{
+    priv.renderer->apply_blend_mode(args->mode);
+}
+
 static void graphics__exec_clear(struct qu__clear_render_command_args const *args)
 {
     if (priv.clear_color != args->color) {
@@ -376,6 +388,9 @@ static void graphics__execute_command(struct qu__render_command_info const *info
         break;
     case QU__RENDER_COMMAND_ROTATE:
         graphics__exec_rotate(&info->args.transform);
+        break;
+    case QU__RENDER_COMMAND_SET_BLEND_MODE:
+        graphics__exec_set_blend_mode(&info->args.blend);
         break;
     case QU__RENDER_COMMAND_CLEAR:
         graphics__exec_clear(&info->args.clear);
@@ -550,6 +565,7 @@ void qu__graphics_initialize(qu_params const *params)
     QU_HALT_IF(!priv.renderer->apply_clear_color);
     QU_HALT_IF(!priv.renderer->apply_draw_color);
     QU_HALT_IF(!priv.renderer->apply_vertex_format);
+    QU_HALT_IF(!priv.renderer->apply_blend_mode);
 
     QU_HALT_IF(!priv.renderer->exec_resize);
     QU_HALT_IF(!priv.renderer->exec_clear);
@@ -813,6 +829,16 @@ void qu__graphics_rotate(float degrees)
         .command = QU__RENDER_COMMAND_ROTATE,
         .args.transform = {
             .a = degrees,
+        },
+    });
+}
+
+void qu__graphics_set_blend_mode(qu_blend_mode mode)
+{
+    graphics__append_render_command(&(struct qu__render_command_info) {
+        .command = QU__RENDER_COMMAND_SET_BLEND_MODE,
+        .args.blend = {
+            .mode = mode,
         },
     });
 }
