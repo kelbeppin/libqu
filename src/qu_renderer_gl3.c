@@ -280,6 +280,25 @@ static GLenum const texture_swizzle_map[4][4] = {
     { GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA },
 };
 
+static GLenum const blend_factor_map[10] = {
+    GL_ZERO,
+    GL_ONE,
+    GL_SRC_COLOR,
+    GL_ONE_MINUS_SRC_COLOR,
+    GL_DST_COLOR,
+    GL_ONE_MINUS_DST_COLOR,
+    GL_SRC_ALPHA,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_DST_ALPHA,
+    GL_ONE_MINUS_DST_ALPHA,
+};
+
+static GLenum const blend_equation_map[3] = {
+    GL_FUNC_ADD,
+    GL_FUNC_SUBTRACT,
+    GL_FUNC_REVERSE_SUBTRACT,
+};
+
 //------------------------------------------------------------------------------
 
 struct gl3__program_info
@@ -353,6 +372,9 @@ struct qu__gl3_renderer_priv
     PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
     PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
     PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
+
+    PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
+    PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate;
 };
 
 static struct qu__gl3_renderer_priv priv;
@@ -410,6 +432,9 @@ static void load_gl_functions(void)
     priv.glFramebufferRenderbuffer = qu__core_get_gl_proc_address("glFramebufferRenderbuffer");
     priv.glFramebufferTexture2D = qu__core_get_gl_proc_address("glFramebufferTexture2D");
     priv.glRenderbufferStorage = qu__core_get_gl_proc_address("glRenderbufferStorage");
+
+    priv.glBlendFuncSeparate = qu__core_get_gl_proc_address("glBlendFuncSeparate");
+    priv.glBlendEquationSeparate = qu__core_get_gl_proc_address("glBlendEquationSeparate");
 }
 
 static GLuint load_shader(struct gl3__shader_desc const *desc)
@@ -684,7 +709,16 @@ static void gl3__apply_vertex_format(enum qu__vertex_format vertex_format)
 
 static void gl3__apply_blend_mode(qu_blend_mode mode)
 {
+    GLenum csf = blend_factor_map[mode.color_src_factor];
+    GLenum cdf = blend_factor_map[mode.color_dst_factor];
+    GLenum asf = blend_factor_map[mode.alpha_src_factor];
+    GLenum adf = blend_factor_map[mode.alpha_dst_factor];
 
+    GLenum ceq = blend_equation_map[mode.color_equation];
+    GLenum aeq = blend_equation_map[mode.alpha_equation];
+
+    _GL_CHECK(priv.glBlendFuncSeparate(csf, cdf, asf, adf));
+    _GL_CHECK(priv.glBlendEquationSeparate(ceq, aeq));
 }
 
 static void gl3__exec_resize(int width, int height)
