@@ -60,17 +60,12 @@ enum qu__render_command
     QU__RENDER_COMMAND_RESET_VIEW,
     QU__RENDER_COMMAND_PUSH_MATRIX,
     QU__RENDER_COMMAND_POP_MATRIX,
-    QU__RENDER_COMMAND_TRANSFORM,
+    QU__RENDER_COMMAND_TRANSLATE,
+    QU__RENDER_COMMAND_SCALE,
+    QU__RENDER_COMMAND_ROTATE,
     QU__RENDER_COMMAND_CLEAR,
     QU__RENDER_COMMAND_DRAW,
     QU__RENDER_COMMAND_SURFACE,
-};
-
-enum qu__transform
-{
-    QU__TRANSFORM_TRANSLATE,
-    QU__TRANSFORM_SCALE,
-    QU__TRANSFORM_ROTATE,
 };
 
 struct qu__resize_render_command_args
@@ -90,8 +85,8 @@ struct qu__set_view_render_command_args
 
 struct qu__transform_render_command_args
 {
-    enum qu__transform type;
-    float v[2];
+    float a;
+    float b;
 };
 
 struct qu__clear_render_command_args
@@ -244,23 +239,30 @@ static void graphics__exec_pop_matrix(void)
     }
 }
 
-static void graphics__exec_transform(struct qu__transform_render_command_args const *args)
+static void graphics__exec_translate(struct qu__transform_render_command_args const *args)
 {
     int index = priv.current_surface->modelview_index;
     qu_mat4 *matrix = &priv.current_surface->modelview[index];
 
-    switch (args->type) {
-    case QU__TRANSFORM_TRANSLATE:
-        qu_mat4_translate(matrix, args->v[0], args->v[1], 0.f);
-        break;
-    case QU__TRANSFORM_SCALE:
-        qu_mat4_scale(matrix, args->v[0], args->v[1], 1.f);
-        break;
-    case QU__TRANSFORM_ROTATE:
-        qu_mat4_rotate(matrix, QU_DEG2RAD(args->v[0]), 0.f, 0.f, 1.f);
-        break;
-    }
+    qu_mat4_translate(matrix, args->a, args->b, 0.f);
+    priv.renderer->apply_transform(matrix);
+}
 
+static void graphics__exec_scale(struct qu__transform_render_command_args const *args)
+{
+    int index = priv.current_surface->modelview_index;
+    qu_mat4 *matrix = &priv.current_surface->modelview[index];
+
+    qu_mat4_scale(matrix, args->a, args->b, 1.f);
+    priv.renderer->apply_transform(matrix);
+}
+
+static void graphics__exec_rotate(struct qu__transform_render_command_args const *args)
+{
+    int index = priv.current_surface->modelview_index;
+    qu_mat4 *matrix = &priv.current_surface->modelview[index];
+
+    qu_mat4_rotate(matrix, QU_DEG2RAD(args->a), 0.f, 0.f, 1.f);
     priv.renderer->apply_transform(matrix);
 }
 
@@ -363,8 +365,14 @@ static void graphics__execute_command(struct qu__render_command_info const *info
     case QU__RENDER_COMMAND_POP_MATRIX:
         graphics__exec_pop_matrix();
         break;
-    case QU__RENDER_COMMAND_TRANSFORM:
-        graphics__exec_transform(&info->args.transform);
+    case QU__RENDER_COMMAND_TRANSLATE:
+        graphics__exec_translate(&info->args.transform);
+        break;
+    case QU__RENDER_COMMAND_SCALE:
+        graphics__exec_scale(&info->args.transform);
+        break;
+    case QU__RENDER_COMMAND_ROTATE:
+        graphics__exec_rotate(&info->args.transform);
         break;
     case QU__RENDER_COMMAND_CLEAR:
         graphics__exec_clear(&info->args.clear);
@@ -854,10 +862,10 @@ void qu_pop_matrix(void)
 void qu_translate(float x, float y)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_TRANSFORM,
+        .command = QU__RENDER_COMMAND_TRANSLATE,
         .args.transform = {
-            .type = QU__TRANSFORM_TRANSLATE,
-            .v = { x, y },
+            .a = x,
+            .b = y,
         },
     });
 }
@@ -865,10 +873,10 @@ void qu_translate(float x, float y)
 void qu_scale(float x, float y)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_TRANSFORM,
+        .command = QU__RENDER_COMMAND_SCALE,
         .args.transform = {
-            .type = QU__TRANSFORM_SCALE,
-            .v = { x, y },
+            .a = x,
+            .b = y,
         },
     });
 }
@@ -876,10 +884,9 @@ void qu_scale(float x, float y)
 void qu_rotate(float degrees)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_TRANSFORM,
+        .command = QU__RENDER_COMMAND_ROTATE,
         .args.transform = {
-            .type = QU__TRANSFORM_ROTATE,
-            .v = { degrees },
+            .a = degrees,
         },
     });
 }
