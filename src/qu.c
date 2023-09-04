@@ -237,3 +237,28 @@ void qu_draw_subtexture(qu_texture texture, float x, float y, float w, float h, 
 {
     qu__graphics_draw_subtexture(texture.id, x, y, w, h, rx, ry, rw, rh);
 }
+
+qu_surface qu_create_surface(int width, int height)
+{
+    return (qu_surface) { .id = qu__graphics_create_surface(width, height) };
+}
+
+void qu_delete_surface(qu_surface surface)
+{
+    qu__graphics_delete_surface(surface.id);
+}
+
+void qu_set_surface(qu_surface surface)
+{
+    qu__graphics_set_surface(surface.id);
+}
+
+void qu_reset_surface(void)
+{
+    qu__graphics_reset_surface();
+}
+
+void qu_draw_surface(qu_surface surface, float x, float y, float w, float h)
+{
+    qu__graphics_draw_surface(surface.id, x, y, w, h);
+}

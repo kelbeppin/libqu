@@ -1150,7 +1150,7 @@ void qu__graphics_draw_subtexture(int32_t id, float x, float y, float w, float h
     });
 }
 
-qu_surface qu_create_surface(int width, int height)
+int32_t qu__graphics_create_surface(int width, int height)
 {
     struct qu__surface surface = {
         .texture = {
@@ -1166,29 +1166,29 @@ qu_surface qu_create_surface(int width, int height)
 
     priv.renderer->create_surface(&surface);
 
-    return (qu_surface) { qu_array_add(priv.surfaces, &surface) };
+    return qu_array_add(priv.surfaces, &surface);
 }
 
-void qu_delete_surface(qu_surface surface)
+void qu__graphics_delete_surface(int32_t id)
 {
-    qu_array_remove(priv.surfaces, surface.id);
+    qu_array_remove(priv.surfaces, id);
 }
 
-void qu_set_surface(qu_surface surface)
+void qu__graphics_set_surface(int32_t id)
 {
-    struct qu__surface *surface_p = qu_array_get(priv.surfaces, surface.id);
+    struct qu__surface *surface = qu_array_get(priv.surfaces, id);
 
-    if (!surface_p) {
+    if (!surface) {
         return;
     }
 
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_SET_SURFACE,
-        .args.surface.surface = surface_p,
+        .args.surface.surface = surface,
     });
 }
 
-void qu_reset_surface(void)
+void qu__graphics_reset_surface(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_SET_SURFACE,
@@ -1196,11 +1196,11 @@ void qu_reset_surface(void)
     });
 }
 
-void qu_draw_surface(qu_surface surface, float x, float y, float w, float h)
+void qu__graphics_draw_surface(int32_t id, float x, float y, float w, float h)
 {
-    struct qu__surface *surface_p = qu_array_get(priv.surfaces, surface.id);
+    struct qu__surface *surface = qu_array_get(priv.surfaces, id);
 
-    if (!surface_p) {
+    if (!surface) {
         return;
     }
 
@@ -1214,7 +1214,7 @@ void qu_draw_surface(qu_surface surface, float x, float y, float w, float h)
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_DRAW,
         .args.draw = {
-            .texture = &surface_p->texture,
+            .texture = &surface->texture,
             .color = QU_COLOR(255, 255, 255),
             .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
