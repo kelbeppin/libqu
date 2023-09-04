@@ -385,6 +385,13 @@ qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i position);
 int32_t qu__graphics_create_texture(int w, int h, int channels);
 void qu__graphics_update_texture(int32_t texture_id, int x, int y, int w, int h, uint8_t const *pixels);
 void qu__graphics_draw_text(int32_t texture_id, qu_color color, float const *data, int count);
+void qu__graphics_set_view(float x, float y, float w, float h, float rotation);
+void qu__graphics_reset_view(void);
+void qu__graphics_push_matrix(void);
+void qu__graphics_pop_matrix(void);
+void qu__graphics_translate(float x, float y);
+void qu__graphics_scale(float x, float y);
+void qu__graphics_rotate(float degrees);
 
 //------------------------------------------------------------------------------
 // Text

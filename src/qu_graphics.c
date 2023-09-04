@@ -824,7 +824,7 @@ void qu__graphics_draw_text(int32_t texture_id, qu_color color, float const *dat
 //------------------------------------------------------------------------------
 // API entries
 
-void qu_set_view(float x, float y, float w, float h, float rotation)
+void qu__graphics_set_view(float x, float y, float w, float h, float rotation)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_SET_VIEW,
@@ -838,28 +838,28 @@ void qu_set_view(float x, float y, float w, float h, float rotation)
     });
 }
 
-void qu_reset_view(void)
+void qu__graphics_reset_view(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_RESET_VIEW,
     });
 }
 
-void qu_push_matrix(void)
+void qu__graphics_push_matrix(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_PUSH_MATRIX,
     });
 }
 
-void qu_pop_matrix(void)
+void qu__graphics_pop_matrix(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_POP_MATRIX,
     });
 }
 
-void qu_translate(float x, float y)
+void qu__graphics_translate(float x, float y)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_TRANSLATE,
@@ -870,7 +870,7 @@ void qu_translate(float x, float y)
     });
 }
 
-void qu_scale(float x, float y)
+void qu__graphics_scale(float x, float y)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_SCALE,
@@ -881,7 +881,7 @@ void qu_scale(float x, float y)
     });
 }
 
-void qu_rotate(float degrees)
+void qu__graphics_rotate(float degrees)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_ROTATE,

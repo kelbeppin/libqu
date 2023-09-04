@@ -134,3 +134,41 @@ void qu_present(void)
     qu__graphics_swap();
     qu__core_present();
 }
+
+//------------------------------------------------------------------------------
+// Graphics
+
+void qu_set_view(float x, float y, float w, float h, float rotation)
+{
+    qu__graphics_set_view(x, y, w, h, rotation);
+}
+
+void qu_reset_view(void)
+{
+    qu__graphics_reset_view();
+}
+
+void qu_push_matrix(void)
+{
+    qu__graphics_push_matrix();
+}
+
+void qu_pop_matrix(void)
+{
+    qu__graphics_pop_matrix();
+}
+
+void qu_translate(float x, float y)
+{
+    qu__graphics_translate(x, y);
+}
+
+void qu_scale(float x, float y)
+{
+    qu__graphics_scale(x, y);
+}
+
+void qu_rotate(float degrees)
+{
+    qu__graphics_rotate(degrees);
+}
