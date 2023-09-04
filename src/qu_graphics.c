@@ -56,6 +56,7 @@ enum qu__render_command
 {
     QU__RENDER_COMMAND_NO_OP,
     QU__RENDER_COMMAND_RESIZE,
+    QU__RENDER_COMMAND_SET_SURFACE,
     QU__RENDER_COMMAND_SET_VIEW,
     QU__RENDER_COMMAND_RESET_VIEW,
     QU__RENDER_COMMAND_PUSH_MATRIX,
@@ -65,13 +66,17 @@ enum qu__render_command
     QU__RENDER_COMMAND_ROTATE,
     QU__RENDER_COMMAND_CLEAR,
     QU__RENDER_COMMAND_DRAW,
-    QU__RENDER_COMMAND_SURFACE,
 };
 
 struct qu__resize_render_command_args
 {
     int width;
     int height;
+};
+
+struct qu__surface_render_command_args
+{
+    struct qu__surface *surface;
 };
 
 struct qu__set_view_render_command_args
@@ -104,19 +109,14 @@ struct qu__draw_render_command_args
     unsigned int total_vertices;
 };
 
-struct qu__surface_render_command_args
-{
-    struct qu__surface *surface;
-};
-
 union qu__render_command_args
 {
     struct qu__resize_render_command_args resize;
+    struct qu__surface_render_command_args surface;
     struct qu__set_view_render_command_args view;
     struct qu__transform_render_command_args transform;
     struct qu__clear_render_command_args clear;
     struct qu__draw_render_command_args draw;
-    struct qu__surface_render_command_args surface;
 };
 
 struct qu__render_command_info
@@ -190,6 +190,18 @@ static void graphics__exec_resize(struct qu__resize_render_command_args const *a
         priv.renderer->apply_projection(&priv.display.projection);
         priv.renderer->exec_resize(args->width, args->height);
     }
+}
+
+static void graphics__exec_set_surface(struct qu__surface_render_command_args const *args)
+{
+    if (priv.current_surface == args->surface) {
+        return;
+    }
+
+    priv.renderer->apply_projection(&args->surface->projection);
+    priv.renderer->apply_surface(args->surface);
+
+    priv.current_surface = args->surface;
 }
 
 static void graphics__exec_set_view(struct qu__set_view_render_command_args const *args)
@@ -296,18 +308,6 @@ static void graphics__exec_draw(struct qu__draw_render_command_args const *args)
     priv.renderer->exec_draw(args->render_mode, args->first_vertex, args->total_vertices);
 }
 
-static void graphics__exec_surface(struct qu__surface_render_command_args const *args)
-{
-    if (priv.current_surface == args->surface) {
-        return;
-    }
-
-    priv.renderer->apply_projection(&args->surface->projection);
-    priv.renderer->apply_surface(args->surface);
-
-    priv.current_surface = args->surface;
-}
-
 //------------------------------------------------------------------------------
 // Command buffer
 
@@ -353,6 +353,9 @@ static void graphics__execute_command(struct qu__render_command_info const *info
     case QU__RENDER_COMMAND_RESIZE:
         graphics__exec_resize(&info->args.resize);
         break;
+    case QU__RENDER_COMMAND_SET_SURFACE:
+        graphics__exec_set_surface(&info->args.surface);
+        break;
     case QU__RENDER_COMMAND_SET_VIEW:
         graphics__exec_set_view(&info->args.view);
         break;
@@ -379,9 +382,6 @@ static void graphics__execute_command(struct qu__render_command_info const *info
         break;
     case QU__RENDER_COMMAND_DRAW:
         graphics__exec_draw(&info->args.draw);
-        break;
-    case QU__RENDER_COMMAND_SURFACE:
-        graphics__exec_surface(&info->args.surface);
         break;
     default:
         break;
@@ -472,7 +472,7 @@ static void graphics__update_canvas_coords(int w_display, int h_display)
 static void graphics__flush_canvas(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_SURFACE,
+        .command = QU__RENDER_COMMAND_SET_SURFACE,
         .args.surface.surface = &priv.display,
     });
 
@@ -622,7 +622,7 @@ void qu__graphics_initialize(qu_params const *params)
         priv.renderer->create_surface(&priv.canvas);
 
         graphics__append_render_command(&(struct qu__render_command_info) {
-            .command = QU__RENDER_COMMAND_SURFACE,
+            .command = QU__RENDER_COMMAND_SET_SURFACE,
             .args.surface.surface = &priv.canvas,
         });
 
@@ -671,7 +671,7 @@ void qu__graphics_swap(void)
 
     if (priv.canvas_enabled) {
         graphics__append_render_command(&(struct qu__render_command_info) {
-            .command = QU__RENDER_COMMAND_SURFACE,
+            .command = QU__RENDER_COMMAND_SET_SURFACE,
             .args.surface.surface = &priv.canvas,
         });
     }
@@ -1190,7 +1190,7 @@ void qu_set_surface(qu_surface surface)
     }
 
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_SURFACE,
+        .command = QU__RENDER_COMMAND_SET_SURFACE,
         .args.surface.surface = surface_p,
     });
 }
@@ -1198,7 +1198,7 @@ void qu_set_surface(qu_surface surface)
 void qu_reset_surface(void)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
-        .command = QU__RENDER_COMMAND_SURFACE,
+        .command = QU__RENDER_COMMAND_SET_SURFACE,
         .args.surface.surface = priv.canvas_enabled ? &priv.canvas : &priv.display,
     });
 }
