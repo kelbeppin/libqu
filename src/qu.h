@@ -405,6 +405,7 @@ void qu__graphics_draw_subtexture(int32_t id, float x, float y, float w, float h
 void qu__graphics_draw_text(int32_t id, qu_color color, float const *data, int count);
 int32_t qu__graphics_create_surface(int width, int height);
 void qu__graphics_delete_surface(int32_t id);
+void qu__graphics_set_surface_smooth(int32_t id, bool smooth);
 void qu__graphics_set_surface(int32_t id);
 void qu__graphics_reset_surface(void);
 void qu__graphics_draw_surface(int32_t id, float x, float y, float w, float h);

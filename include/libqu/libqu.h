@@ -860,6 +860,7 @@ QU_API void QU_CALL qu_draw_text_fmt(qu_font font, float x, float y, qu_color co
 
 QU_API qu_surface QU_CALL qu_create_surface(int width, int height);
 QU_API void QU_CALL qu_delete_surface(qu_surface surface);
+QU_API void QU_CALL qu_set_surface_smooth(qu_surface surface, bool smooth);
 QU_API void QU_CALL qu_set_surface(qu_surface surface);
 QU_API void QU_CALL qu_reset_surface(void);
 QU_API void QU_CALL qu_draw_surface(qu_surface surface, float x, float y, float w, float h);

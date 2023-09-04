@@ -248,6 +248,11 @@ void qu_delete_surface(qu_surface surface)
     qu__graphics_delete_surface(surface.id);
 }
 
+void qu_set_surface_smooth(qu_surface surface, bool smooth)
+{
+    qu__graphics_set_surface_smooth(surface.id, smooth);
+}
+
 void qu_set_surface(qu_surface surface)
 {
     qu__graphics_set_surface(surface.id);

@@ -1172,6 +1172,15 @@ void qu__graphics_delete_surface(int32_t id)
     qu_array_remove(priv.surfaces, id);
 }
 
+void qu__graphics_set_surface_smooth(int32_t id, bool smooth)
+{
+    struct qu__surface *surface = qu_array_get(priv.surfaces, id);
+
+    if (surface) {
+        priv.renderer->set_texture_smooth(&surface->texture, smooth);
+    }
+}
+
 void qu__graphics_set_surface(int32_t id)
 {
     struct qu__surface *surface = qu_array_get(priv.surfaces, id);
