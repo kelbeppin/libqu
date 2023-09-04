@@ -620,6 +620,7 @@ void qu__graphics_initialize(qu_params const *params)
         qu_mat4_identity(&priv.canvas.modelview[0]);
 
         priv.renderer->create_surface(&priv.canvas);
+        priv.renderer->set_texture_smooth(&priv.canvas.texture, params->canvas_smooth);
 
         graphics__append_render_command(&(struct qu__render_command_info) {
             .command = QU__RENDER_COMMAND_SET_SURFACE,
