@@ -392,6 +392,12 @@ void qu__graphics_pop_matrix(void);
 void qu__graphics_translate(float x, float y);
 void qu__graphics_scale(float x, float y);
 void qu__graphics_rotate(float degrees);
+void qu__graphics_clear(qu_color color);
+void qu__graphics_draw_point(float x, float y, qu_color color);
+void qu__graphics_draw_line(float ax, float ay, float bx, float by, qu_color color);
+void qu__graphics_draw_triangle(float ax, float ay, float bx, float by, float cx, float cy, qu_color outline, qu_color fill);
+void qu__graphics_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_color fill);
+void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, qu_color fill);
 
 //------------------------------------------------------------------------------
 // Text

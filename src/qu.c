@@ -172,3 +172,33 @@ void qu_rotate(float degrees)
 {
     qu__graphics_rotate(degrees);
 }
+
+void qu_clear(qu_color color)
+{
+    qu__graphics_clear(color);
+}
+
+void qu_draw_point(float x, float y, qu_color color)
+{
+    qu__graphics_draw_point(x, y, color);
+}
+
+void qu_draw_line(float ax, float ay, float bx, float by, qu_color color)
+{
+    qu__graphics_draw_line(ax, ay, bx, by, color);
+}
+
+void qu_draw_triangle(float ax, float ay, float bx, float by, float cx, float cy, qu_color outline, qu_color fill)
+{
+    qu__graphics_draw_triangle(ax, ay, bx, by, cx, cy, outline, fill);
+}
+
+void qu_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_color fill)
+{
+    qu__graphics_draw_rectangle(x, y, w, h, outline, fill);
+}
+
+void qu_draw_circle(float x, float y, float radius, qu_color outline, qu_color fill)
+{
+    qu__graphics_draw_circle(x, y, radius, outline, fill);
+}

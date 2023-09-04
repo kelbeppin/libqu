@@ -891,7 +891,7 @@ void qu__graphics_rotate(float degrees)
     });
 }
 
-void qu_clear(qu_color color)
+void qu__graphics_clear(qu_color color)
 {
     graphics__append_render_command(&(struct qu__render_command_info) {
         .command = QU__RENDER_COMMAND_CLEAR,
@@ -901,7 +901,7 @@ void qu_clear(qu_color color)
     });
 }
 
-void qu_draw_point(float x, float y, qu_color color)
+void qu__graphics_draw_point(float x, float y, qu_color color)
 {
     float const vertex[] = { x, y };
 
@@ -917,7 +917,7 @@ void qu_draw_point(float x, float y, qu_color color)
     });
 }
 
-void qu_draw_line(float ax, float ay, float bx, float by, qu_color color)
+void qu__graphics_draw_line(float ax, float ay, float bx, float by, qu_color color)
 {
     float const vertices[] = {
         ax, ay,
@@ -936,7 +936,7 @@ void qu_draw_line(float ax, float ay, float bx, float by, qu_color color)
     });
 }
 
-void qu_draw_triangle(float ax, float ay, float bx, float by, float cx, float cy, qu_color outline, qu_color fill)
+void qu__graphics_draw_triangle(float ax, float ay, float bx, float by, float cx, float cy, qu_color outline, qu_color fill)
 {
     int outline_alpha = (outline >> 24) & 255;
     int fill_alpha = (fill >> 24) & 255;
@@ -976,7 +976,7 @@ void qu_draw_triangle(float ax, float ay, float bx, float by, float cx, float cy
     }
 }
 
-void qu_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_color fill)
+void qu__graphics_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_color fill)
 {
     int outline_alpha = (outline >> 24) & 255;
     int fill_alpha = (fill >> 24) & 255;
@@ -1017,7 +1017,7 @@ void qu_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_
     }
 }
 
-void qu_draw_circle(float x, float y, float radius, qu_color outline, qu_color fill)
+void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, qu_color fill)
 {
     int outline_alpha = (outline >> 24) & 255;
     int fill_alpha = (fill >> 24) & 255;
