@@ -415,6 +415,9 @@ void qu__graphics_draw_surface(int32_t id, float x, float y, float w, float h);
 
 void qu_initialize_text(void);
 void qu_terminate_text(void);
+int32_t qu__text_load_font(qu_file *file, float pt);
+void qu__text_delete_font(int32_t id);
+void qu__text_draw(int32_t id, float x, float y, qu_color color, char const *text);
 
 //------------------------------------------------------------------------------
 // Audio

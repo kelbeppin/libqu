@@ -267,3 +267,54 @@ void qu_draw_surface(qu_surface surface, float x, float y, float w, float h)
 {
     qu__graphics_draw_surface(surface.id, x, y, w, h);
 }
+
+qu_font qu_load_font(char const *path, float pt)
+{
+    qu_file *file = qu_fopen(path);
+
+    if (!file) {
+        return (qu_font) { .id = 0 };
+    }
+
+    int32_t id = qu__text_load_font(file, pt);
+
+    if (id == 0) {
+        qu_fclose(file);
+    }
+
+    return (qu_font) { .id = id };
+}
+
+void qu_delete_font(qu_font font)
+{
+    qu__text_delete_font(font.id);
+}
+
+void qu_draw_text(qu_font font, float x, float y, qu_color color, char const *str)
+{
+    qu__text_draw(font.id, x, y, color, str);
+}
+
+void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const *fmt, ...)
+{
+    va_list ap;
+    char buffer[256];
+    char *heap = NULL;
+
+    va_start(ap, fmt);
+    int required = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+    va_end(ap);
+
+    if ((size_t) required >= sizeof(buffer)) {
+        heap = malloc(required + 1);
+
+        if (heap) {
+            va_start(ap, fmt);
+            vsnprintf(heap, required + 1, fmt, ap);
+            va_end(ap);
+        }
+    }
+
+    qu__text_draw(font.id, x, y, color, heap ? heap : buffer);
+    free(heap);
+}

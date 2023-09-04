@@ -390,7 +390,7 @@ void qu_terminate_text(void)
  * Loads font.
  * TODO: Weight is not implemented yet.
  */
-static int32_t load_font(qu_file *file, float pt)
+int32_t qu__text_load_font(qu_file *file, float pt)
 {
     int32_t index = get_font_index();
 
@@ -487,29 +487,12 @@ static int32_t load_font(qu_file *file, float pt)
     return index + 1;
 }
 
-qu_font qu_load_font(char const *path, float pt)
-{
-    qu_file *file = qu_fopen(path);
-
-    if (file) {
-        int32_t id = load_font(file, pt);
-
-        if (id == 0) {
-            qu_fclose(file);
-        }
-
-        return (qu_font) { id };
-    }
-
-    return (qu_font) { 0 };
-}
-
 /**
  * Delete a font.
  */
-void qu_delete_font(qu_font font)
+void qu__text_delete_font(int32_t id)
 {
-    int index = font.id - 1;
+    int index = id - 1;
 
     if (index < 0 || index >= impl.font_count) {
         return;
@@ -535,9 +518,9 @@ void qu_delete_font(qu_font font)
 /**
  * Draw the text using a specified font.
  */
-void qu_draw_text(qu_font font, float x, float y, qu_color color, char const *text)
+void qu__text_draw(int32_t id, float x, float y, qu_color color, char const *text)
 {
-    int index = font.id - 1;
+    int index = id - 1;
 
     if (index < 0 || index >= impl.font_count) {
         return;
@@ -621,28 +604,4 @@ void qu_draw_text(qu_font font, float x, float y, qu_color color, char const *te
     hb_buffer_destroy(buffer);
 
     qu__graphics_draw_text(fontp->atlas.texture_id, color, impl.vertex_buffer, 6 * quad_count);
-}
-
-void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const *fmt, ...)
-{
-    va_list ap;
-    char buffer[256];
-    char *heap = NULL;
-
-    va_start(ap, fmt);
-    int required = vsnprintf(buffer, sizeof(buffer), fmt, ap);
-    va_end(ap);
-
-    if ((size_t) required >= sizeof(buffer)) {
-        heap = malloc(required + 1);
-
-        if (heap) {
-            va_start(ap, fmt);
-            vsnprintf(heap, required + 1, fmt, ap);
-            va_end(ap);
-        }
-    }
-
-    qu_draw_text(font, x, y, color, heap ? heap : buffer);
-    free(heap);
 }
