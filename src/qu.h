@@ -370,9 +370,10 @@ struct qu__renderer_impl
     void (*destroy_surface)(struct qu__surface *surface);
 };
 
-extern struct qu__renderer_impl const qu__renderer_null;
+extern struct qu__renderer_impl const qu__renderer_es2;
 extern struct qu__renderer_impl const qu__renderer_gl1;
 extern struct qu__renderer_impl const qu__renderer_gl3;
+extern struct qu__renderer_impl const qu__renderer_null;
 
 void qu__graphics_initialize(qu_params const *params);
 void qu__graphics_terminate(void);

@@ -101,8 +101,7 @@ if(QU_USE_OPENGL)
 endif()
 
 if(QU_USE_OPENGL_ES2)
-    # TODO: implement
-    # target_sources(${PROJECT_NAME} PRIVATE qu_renderer_es2.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_renderer_es2.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_ES2)
     target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_GLESv2_LIBRARY})
 endif()
