@@ -523,6 +523,47 @@ static void update_uniforms(void)
     info->dirty_uniforms = 0;
 }
 
+static void surface_add_multisample_buffer(struct qu__surface *surface)
+{
+    GLsizei width = surface->texture.image.width;
+    GLsizei height = surface->texture.image.height;
+
+    GLuint ms_fbo;
+    GLuint ms_color;
+
+    _GL_CHECK(priv.glGenFramebuffers(1, &ms_fbo));
+    _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, ms_fbo));
+
+    _GL_CHECK(priv.glGenRenderbuffers(1, &ms_color));
+    _GL_CHECK(priv.glBindRenderbuffer(GL_RENDERBUFFER, ms_color));
+
+    _GL_CHECK(priv.glRenderbufferStorageMultisample(
+        GL_RENDERBUFFER, surface->sample_count, GL_RGBA8, width, height
+    ));
+
+    _GL_CHECK(priv.glFramebufferRenderbuffer(
+        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ms_color
+    ));
+
+    GLenum status = priv.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if (status != GL_FRAMEBUFFER_COMPLETE_EXT) {
+        QU_HALT("[TODO] FBO error handling.");
+    }
+
+    surface->priv[2] = ms_fbo;
+    surface->priv[3] = ms_color;
+}
+
+static void surface_remove_multisample_buffer(struct qu__surface *surface)
+{
+    GLuint ms_fbo = surface->priv[2];
+    GLuint ms_color = surface->priv[3];
+
+    _GL_CHECK(priv.glDeleteFramebuffers(1, &ms_fbo));
+    _GL_CHECK(priv.glDeleteRenderbuffers(1, &ms_color));
+}
+
 //------------------------------------------------------------------------------
 
 static bool gl3__query(qu_params const *params)
@@ -882,31 +923,7 @@ static void gl3__create_surface(struct qu__surface *surface)
     surface->sample_count = QU_MIN(max_samples, surface->sample_count);
 
     if (surface->sample_count > 1) {
-        GLuint ms_fbo;
-        GLuint ms_color;
-
-        _GL_CHECK(priv.glGenFramebuffers(1, &ms_fbo));
-        _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, ms_fbo));
-
-        _GL_CHECK(priv.glGenRenderbuffers(1, &ms_color));
-        _GL_CHECK(priv.glBindRenderbuffer(GL_RENDERBUFFER, ms_color));
-
-        _GL_CHECK(priv.glRenderbufferStorageMultisample(
-            GL_RENDERBUFFER, surface->sample_count, GL_RGBA8, width, height
-        ));
-
-        _GL_CHECK(priv.glFramebufferRenderbuffer(
-            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ms_color
-        ));
-
-        status = priv.glCheckFramebufferStatus(GL_FRAMEBUFFER);
-
-        if (status != GL_FRAMEBUFFER_COMPLETE) {
-            QU_HALT("[TODO] FBO error handling.");
-        }
-
-        surface->priv[2] = ms_fbo;
-        surface->priv[3] = ms_color;
+        surface_add_multisample_buffer(surface);
     }
 
     if (priv.bound_surface) {
@@ -925,11 +942,7 @@ static void gl3__create_surface(struct qu__surface *surface)
 static void gl3__destroy_surface(struct qu__surface *surface)
 {
     if (surface->sample_count > 1) {
-        GLuint ms_fbo = surface->priv[2];
-        GLuint ms_color = surface->priv[3];
-
-        _GL_CHECK(priv.glDeleteFramebuffers(1, &ms_fbo));
-        _GL_CHECK(priv.glDeleteRenderbuffers(1, &ms_color));
+        surface_remove_multisample_buffer(surface);
     }
 
     GLuint fbo = surface->priv[0];
@@ -939,6 +952,19 @@ static void gl3__destroy_surface(struct qu__surface *surface)
     _GL_CHECK(priv.glDeleteFramebuffers(1, &fbo));
     _GL_CHECK(priv.glDeleteRenderbuffers(1, &depth));
     _GL_CHECK(glDeleteTextures(1, &color));
+}
+
+static void gl3__set_surface_antialiasing_level(struct qu__surface *surface, int level)
+{
+    if (surface->sample_count > 1) {
+        surface_remove_multisample_buffer(surface);
+    }
+
+    surface->sample_count = level;
+
+    if (surface->sample_count > 1) {
+        surface_add_multisample_buffer(surface);
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -964,4 +990,5 @@ struct qu__renderer_impl const qu__renderer_gl3 = {
     .set_texture_smooth = gl3__set_texture_smooth,
     .create_surface = gl3__create_surface,
     .destroy_surface = gl3__destroy_surface,
+    .set_surface_antialiasing_level = gl3__set_surface_antialiasing_level,
 };

@@ -965,6 +965,7 @@ QU_API void QU_CALL qu_draw_subtexture(qu_texture texture, float x, float y, flo
 QU_API qu_surface QU_CALL qu_create_surface(int width, int height);
 QU_API void QU_CALL qu_delete_surface(qu_surface surface);
 QU_API void QU_CALL qu_set_surface_smooth(qu_surface surface, bool smooth);
+QU_API void QU_CALL qu_set_surface_antialiasing_level(qu_surface surface, int level);
 QU_API void QU_CALL qu_set_surface(qu_surface surface);
 QU_API void QU_CALL qu_reset_surface(void);
 QU_API void QU_CALL qu_draw_surface(qu_surface surface, float x, float y, float w, float h);

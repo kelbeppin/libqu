@@ -107,6 +107,10 @@ static void destroy_surface(struct qu__surface *surface)
 {
 }
 
+static void set_surface_antialiasing_level(struct qu__surface *surface, int level)
+{
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__renderer_impl const qu__renderer_null = {
@@ -130,4 +134,5 @@ struct qu__renderer_impl const qu__renderer_null = {
     .set_texture_smooth = set_texture_smooth,
     .create_surface = create_surface,
     .destroy_surface = destroy_surface,
+    .set_surface_antialiasing_level = set_surface_antialiasing_level,
 };

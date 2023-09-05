@@ -262,6 +262,11 @@ void qu_set_surface_smooth(qu_surface surface, bool smooth)
     qu__graphics_set_surface_smooth(surface.id, smooth);
 }
 
+void qu_set_surface_antialiasing_level(qu_surface surface, int level)
+{
+    qu__graphics_set_surface_antialiasing_level(surface.id, level);
+}
+
 void qu_set_surface(qu_surface surface)
 {
     qu__graphics_set_surface(surface.id);

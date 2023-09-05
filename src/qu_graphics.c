@@ -577,6 +577,7 @@ void qu__graphics_initialize(qu_params const *params)
 
     QU_HALT_IF(!priv.renderer->create_surface);
     QU_HALT_IF(!priv.renderer->destroy_surface);
+    QU_HALT_IF(!priv.renderer->set_surface_antialiasing_level);
 
     priv.renderer->initialize(params);
 
@@ -1232,6 +1233,15 @@ void qu__graphics_set_surface_smooth(int32_t id, bool smooth)
 
     if (surface) {
         priv.renderer->set_texture_smooth(&surface->texture, smooth);
+    }
+}
+
+void qu__graphics_set_surface_antialiasing_level(int32_t id, int level)
+{
+    struct qu__surface *surface = qu_array_get(priv.surfaces, id);
+
+    if (surface) {
+        priv.renderer->set_surface_antialiasing_level(&surface, level);
     }
 }
 

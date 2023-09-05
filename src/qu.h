@@ -373,6 +373,7 @@ struct qu__renderer_impl
 
     void (*create_surface)(struct qu__surface *surface);
     void (*destroy_surface)(struct qu__surface *surface);
+    void (*set_surface_antialiasing_level)(struct qu__surface *surface, int level);
 };
 
 extern struct qu__renderer_impl const qu__renderer_es2;
@@ -412,6 +413,7 @@ void qu__graphics_draw_text(int32_t id, qu_color color, float const *data, int c
 int32_t qu__graphics_create_surface(int width, int height);
 void qu__graphics_delete_surface(int32_t id);
 void qu__graphics_set_surface_smooth(int32_t id, bool smooth);
+void qu__graphics_set_surface_antialiasing_level(int32_t id, int level);
 void qu__graphics_set_surface(int32_t id);
 void qu__graphics_reset_surface(void);
 void qu__graphics_draw_surface(int32_t id, float x, float y, float w, float h);
