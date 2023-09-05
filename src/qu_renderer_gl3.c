@@ -364,6 +364,7 @@ struct qu__gl3_renderer_priv
 
     PFNGLBINDFRAMEBUFFERPROC glBindFramebuffer;
     PFNGLBINDRENDERBUFFERPROC glBindRenderbuffer;
+    PFNGLBLITFRAMEBUFFERPROC glBlitFramebuffer;
     PFNGLCHECKFRAMEBUFFERSTATUSPROC glCheckFramebufferStatus;
     PFNGLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers;
     PFNGLDELETERENDERBUFFERSPROC glDeleteRenderbuffers;
@@ -372,6 +373,7 @@ struct qu__gl3_renderer_priv
     PFNGLFRAMEBUFFERRENDERBUFFERPROC glFramebufferRenderbuffer;
     PFNGLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D;
     PFNGLRENDERBUFFERSTORAGEPROC glRenderbufferStorage;
+    PFNGLRENDERBUFFERSTORAGEMULTISAMPLEPROC glRenderbufferStorageMultisample;
 
     PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
     PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate;
@@ -424,6 +426,7 @@ static void load_gl_functions(void)
 
     priv.glBindFramebuffer = qu__core_get_gl_proc_address("glBindFramebuffer");
     priv.glBindRenderbuffer = qu__core_get_gl_proc_address("glBindRenderbuffer");
+    priv.glBlitFramebuffer = qu__core_get_gl_proc_address("glBlitFramebuffer");
     priv.glCheckFramebufferStatus = qu__core_get_gl_proc_address("glCheckFramebufferStatus");
     priv.glDeleteFramebuffers = qu__core_get_gl_proc_address("glDeleteFramebuffers");
     priv.glDeleteRenderbuffers = qu__core_get_gl_proc_address("glDeleteRenderbuffers");
@@ -432,6 +435,7 @@ static void load_gl_functions(void)
     priv.glFramebufferRenderbuffer = qu__core_get_gl_proc_address("glFramebufferRenderbuffer");
     priv.glFramebufferTexture2D = qu__core_get_gl_proc_address("glFramebufferTexture2D");
     priv.glRenderbufferStorage = qu__core_get_gl_proc_address("glRenderbufferStorage");
+    priv.glRenderbufferStorageMultisample = qu__core_get_gl_proc_address("glRenderbufferStorageMultisample");
 
     priv.glBlendFuncSeparate = qu__core_get_gl_proc_address("glBlendFuncSeparate");
     priv.glBlendEquationSeparate = qu__core_get_gl_proc_address("glBlendEquationSeparate");
@@ -649,6 +653,24 @@ static void gl3__apply_transform(qu_mat4 const *transform)
 
 static void gl3__apply_surface(struct qu__surface const *surface)
 {
+    if (priv.bound_surface && priv.bound_surface->sample_count > 1) {
+        GLuint fbo = priv.bound_surface->priv[0];
+        GLuint ms_fbo = priv.bound_surface->priv[2];
+
+        _GL_CHECK(priv.glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo));
+        _GL_CHECK(priv.glBindFramebuffer(GL_READ_FRAMEBUFFER, ms_fbo));
+
+        GLsizei width = priv.bound_surface->texture.image.width;
+        GLsizei height = priv.bound_surface->texture.image.height;
+
+        _GL_CHECK(priv.glBlitFramebuffer(
+            0, 0, width, height,
+            0, 0, width, height,
+            GL_COLOR_BUFFER_BIT,
+            GL_NEAREST
+        ));
+    }
+
     if (priv.bound_surface == surface) {
         return;
     }
@@ -656,7 +678,12 @@ static void gl3__apply_surface(struct qu__surface const *surface)
     GLsizei width = surface->texture.image.width;
     GLsizei height = surface->texture.image.height;
 
-    _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, surface->priv[0]));
+    if (surface->sample_count > 1) {
+        _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, surface->priv[2]));
+    } else {
+        _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, surface->priv[0]));
+    }
+
     _GL_CHECK(glViewport(0, 0, width, height));
 
     priv.bound_surface = surface;
@@ -851,6 +878,36 @@ static void gl3__create_surface(struct qu__surface *surface)
     surface->priv[1] = depth;
     surface->texture.priv[0] = color;
 
+    surface->sample_count = QU_MAX(1, surface->sample_count);
+
+    if (surface->sample_count > 1) {
+        GLuint ms_fbo;
+        GLuint ms_color;
+
+        _GL_CHECK(priv.glGenFramebuffers(1, &ms_fbo));
+        _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, ms_fbo));
+
+        _GL_CHECK(priv.glGenRenderbuffers(1, &ms_color));
+        _GL_CHECK(priv.glBindRenderbuffer(GL_RENDERBUFFER, ms_color));
+
+        _GL_CHECK(priv.glRenderbufferStorageMultisample(
+            GL_RENDERBUFFER, surface->sample_count, GL_RGBA8, width, height
+        ));
+
+        _GL_CHECK(priv.glFramebufferRenderbuffer(
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ms_color
+        ));
+
+        status = priv.glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+        if (status != GL_FRAMEBUFFER_COMPLETE) {
+            QU_HALT("[TODO] FBO error handling.");
+        }
+
+        surface->priv[2] = ms_fbo;
+        surface->priv[3] = ms_color;
+    }
+
     if (priv.bound_surface) {
         _GL_CHECK(priv.glBindFramebuffer(GL_FRAMEBUFFER, priv.bound_surface->priv[0]));
     } else {
@@ -866,6 +923,14 @@ static void gl3__create_surface(struct qu__surface *surface)
 
 static void gl3__destroy_surface(struct qu__surface *surface)
 {
+    if (surface->sample_count > 1) {
+        GLuint ms_fbo = surface->priv[2];
+        GLuint ms_color = surface->priv[3];
+
+        _GL_CHECK(priv.glDeleteFramebuffers(1, &ms_fbo));
+        _GL_CHECK(priv.glDeleteRenderbuffers(1, &ms_color));
+    }
+
     GLuint fbo = surface->priv[0];
     GLuint depth = surface->priv[1];
     GLuint color = surface->texture.priv[0];

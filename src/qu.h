@@ -339,6 +339,8 @@ struct qu__surface
     qu_mat4 modelview[32];
     int modelview_index;
 
+    int sample_count;
+
     uintptr_t priv[4];
 };
 
