@@ -64,6 +64,10 @@ void qu_initialize(qu_params const *user_params)
         qu.params.display_height = 480;
     }
 
+    if (!qu.params.canvas_antialiasing_level) {
+        qu.params.canvas_antialiasing_level = qu.params.antialiasing_level;
+    }
+
     if (!qu.params.canvas_width || !qu.params.canvas_height) {
         qu.params.canvas_width = qu.params.display_width;
         qu.params.canvas_height = qu.params.display_height;

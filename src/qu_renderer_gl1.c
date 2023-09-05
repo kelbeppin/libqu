@@ -493,7 +493,8 @@ static void gl1__create_surface(struct qu__surface *surface)
     surface->priv[1] = depth;
     surface->texture.priv[0] = color;
 
-    surface->sample_count = priv.no_ms_surfaces ? 1 : QU_MAX(1, surface->sample_count);
+    int max_samples = priv.no_ms_surfaces ? 1 : qu__core_get_gl_multisample_samples();
+    surface->sample_count = QU_MIN(max_samples, surface->sample_count);
 
     if (surface->sample_count > 1) {
         GLuint ms_fbo;

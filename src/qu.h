@@ -248,6 +248,7 @@ struct qu__core
 
     bool (*gl_check_extension)(char const *name);
     void *(*gl_proc_address)(char const *name);
+    int (*get_gl_multisample_samples)(void);
 
     bool (*is_joystick_connected)(int joystick);
     char const *(*get_joystick_id)(int joystick);
@@ -288,6 +289,7 @@ bool qu__core_process(void);
 void qu__core_present(void);
 enum qu__renderer qu__core_get_renderer(void);
 void *qu__core_get_gl_proc_address(char const *name);
+int qu__core_get_gl_multisample_samples(void);
 void qu__core_on_key_pressed(qu_key key);
 void qu__core_on_key_released(qu_key key);
 void qu__core_on_mouse_button_pressed(qu_mouse_button button);

@@ -367,6 +367,7 @@ int main(int argc, char *argv[])
     app.camera.z = 512.f;
 
     qu_initialize(&(qu_params) {
+        .antialiasing_level = 8,
         .display_width = 512,
         .display_height = 512,
         .enable_canvas = true,

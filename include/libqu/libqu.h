@@ -177,11 +177,14 @@ typedef struct qu_params
 {
     char const *title;
     
+    int antialiasing_level;
+
     int display_width;
     int display_height;
 
     bool enable_canvas;
     bool canvas_smooth;
+    int canvas_antialiasing_level;
     int canvas_width;
     int canvas_height;
 } qu_params;

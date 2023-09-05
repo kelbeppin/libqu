@@ -170,6 +170,11 @@ void *qu__core_get_gl_proc_address(char const *name)
     return priv.impl->gl_proc_address(name);
 }
 
+int qu__core_get_gl_multisample_samples(void)
+{
+    return priv.impl->get_gl_multisample_samples();
+}
+
 void qu__core_on_key_pressed(qu_key key)
 {
     switch (priv.keyboard.keys[key]) {

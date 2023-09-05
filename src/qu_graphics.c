@@ -630,6 +630,7 @@ void qu__graphics_initialize(qu_params const *params)
                 .image.width = params->display_width,
                 .image.height = params->display_height,
             },
+            .sample_count = params->canvas_antialiasing_level,
         };
 
         qu_mat4_ortho(&priv.canvas.projection, 0.f, params->canvas_width, params->canvas_height, 0.f);

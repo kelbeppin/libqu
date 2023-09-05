@@ -64,6 +64,7 @@ static struct
     BOOL        key_autorepeat;
     UINT        mouse_button_ordinal;
     UINT        mouse_buttons;
+    int         gl_samples;
 } dpy;
 
 //------------------------------------------------------------------------------
@@ -231,7 +232,13 @@ static int choose_pixel_format(HDC dc)
         }
     }
 
-    return formats[(best_format < 0) ? 0 : best_format];
+    if (best_format == -1) {
+        dpy.gl_samples = 1;
+        return formats[0];
+    }
+
+    dpy.gl_samples = best_samples;
+    return formats[best_format];
 }
 
 static int init_wgl_context(HWND window)
@@ -694,6 +701,11 @@ static void *gl_proc_address(char const *name)
     return (void *) wglGetProcAddress(name);
 }
 
+static int get_gl_multisample_samples(void)
+{
+    return dpy.gl_samples;
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__core const qu__core_win32 = {
@@ -704,4 +716,5 @@ struct qu__core const qu__core_win32 = {
     .get_renderer = get_renderer,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
+    .get_gl_multisample_samples = get_gl_multisample_samples,
 };
