@@ -137,9 +137,7 @@ struct qu__gl1_renderer_priv
     GLuint bound_texture;
     struct qu__surface *bound_surface;
     float const *vertex_data[QU__TOTAL_VERTEX_FORMATS];
-    int w_display;
-    int h_display;
-
+    
     bool no_ms_surfaces;
 
     PFNGLBINDFRAMEBUFFEREXTPROC glBindFramebufferEXT;
@@ -383,9 +381,6 @@ static void gl1__apply_blend_mode(qu_blend_mode mode)
 static void gl1__exec_resize(int width, int height)
 {
     _GL_CHECK(glViewport(0, 0, width, height));
-
-    priv.w_display = width;
-    priv.h_display = height;
 }
 
 static void gl1__exec_clear(void)
