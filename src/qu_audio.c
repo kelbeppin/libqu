@@ -122,17 +122,17 @@ int32_t qu__audio_loop_music(int32_t id)
     return priv.impl->loop_music(id);
 }
 
-void qu__audio_pause_stream(int32_t id)
+void qu__audio_pause_voice(int32_t id)
 {
-    priv.impl->pause_stream(id);
+    priv.impl->pause_voice(id);
 }
 
-void qu__audio_unpause_stream(int32_t id)
+void qu__audio_unpause_voice(int32_t id)
 {
-    priv.impl->unpause_stream(id);
+    priv.impl->unpause_voice(id);
 }
 
-void qu__audio_stop_stream(int32_t id)
+void qu__audio_stop_voice(int32_t id)
 {
-    priv.impl->stop_stream(id);
+    priv.impl->stop_voice(id);
 }

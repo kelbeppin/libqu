@@ -1003,12 +1003,12 @@ typedef struct qu_music
 } qu_music;
 
 /**
- * \brief Audio stream handle.
+ * \brief Voice handle.
  */
-typedef struct qu_stream
+typedef struct qu_voice
 {
     int32_t id;
-} qu_stream;
+} qu_voice;
 
 /**
  * Set master volume.
@@ -1024,24 +1024,24 @@ QU_API qu_sound QU_CALL qu_load_sound(char const *path);
 QU_API void QU_CALL qu_delete_sound(qu_sound sound);
 
 // Play sound and get sound stream.
-QU_API qu_stream QU_CALL qu_play_sound(qu_sound sound);
+QU_API qu_voice QU_CALL qu_play_sound(qu_sound sound);
 
 // Loop sound and get sound stream.
-QU_API qu_stream QU_CALL qu_loop_sound(qu_sound sound);
+QU_API qu_voice QU_CALL qu_loop_sound(qu_sound sound);
 
 QU_API qu_music QU_CALL qu_open_music(char const *path);
 QU_API void QU_CALL qu_close_music(qu_music music);
-QU_API qu_stream QU_CALL qu_play_music(qu_music music);
-QU_API qu_stream QU_CALL qu_loop_music(qu_music music);
+QU_API qu_voice QU_CALL qu_play_music(qu_music music);
+QU_API qu_voice QU_CALL qu_loop_music(qu_music music);
 
-// Pause sound stream.
-QU_API void QU_CALL qu_pause_stream(qu_stream stream);
+// Pause voice.
+QU_API void QU_CALL qu_pause_voice(qu_voice voice);
 
-// Unpause sound stream.
-QU_API void QU_CALL qu_unpause_stream(qu_stream stream);
+// Unpause voice.
+QU_API void QU_CALL qu_unpause_voice(qu_voice voice);
 
-// Stop sound stream. The stream is lost after that.
-QU_API void QU_CALL qu_stop_stream(qu_stream stream);
+// Stop voice. The voice is lost after that.
+QU_API void QU_CALL qu_stop_voice(qu_voice voice);
 
 /**@}*/
 

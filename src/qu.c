@@ -361,14 +361,14 @@ void qu_delete_sound(qu_sound sound)
     qu__audio_delete_sound(sound.id);
 }
 
-qu_stream qu_play_sound(qu_sound sound)
+qu_voice qu_play_sound(qu_sound sound)
 {
-    return (qu_stream) { qu__audio_play_sound(sound.id) };
+    return (qu_voice) { qu__audio_play_sound(sound.id) };
 }
 
-qu_stream qu_loop_sound(qu_sound sound)
+qu_voice qu_loop_sound(qu_sound sound)
 {
-    return (qu_stream) { qu__audio_loop_sound(sound.id) };
+    return (qu_voice) { qu__audio_loop_sound(sound.id) };
 }
 
 qu_music qu_open_music(char const *path)
@@ -393,27 +393,27 @@ void qu_close_music(qu_music music)
     qu__audio_close_music(music.id);
 }
 
-qu_stream qu_play_music(qu_music music)
+qu_voice qu_play_music(qu_music music)
 {
-    return (qu_stream) { qu__audio_play_music(music.id) };
+    return (qu_voice) { qu__audio_play_music(music.id) };
 }
 
-qu_stream qu_loop_music(qu_music music)
+qu_voice qu_loop_music(qu_music music)
 {
-    return (qu_stream) { qu__audio_loop_music(music.id) };
+    return (qu_voice) { qu__audio_loop_music(music.id) };
 }
 
-void qu_pause_stream(qu_stream stream)
+void qu_pause_voice(qu_voice voice)
 {
-    qu__audio_pause_stream(stream.id);
+    qu__audio_pause_voice(voice.id);
 }
 
-void qu_unpause_stream(qu_stream stream)
+void qu_unpause_voice(qu_voice voice)
 {
-    qu__audio_unpause_stream(stream.id);
+    qu__audio_unpause_voice(voice.id);
 }
 
-void qu_stop_stream(qu_stream stream)
+void qu_stop_voice(qu_voice voice)
 {
-    qu__audio_stop_stream(stream.id);
+    qu__audio_stop_voice(voice.id);
 }

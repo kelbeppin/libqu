@@ -4,8 +4,8 @@
 static qu_sound fanfare;
 static qu_sound negative;
 static qu_music dungeon;
-static qu_stream stream;
-static qu_stream music_stream;
+static qu_voice stream;
+static qu_voice music_stream;
 static bool paused;
 
 static void on_key_pressed(qu_key key)
@@ -17,10 +17,10 @@ static void on_key_pressed(qu_key key)
     case QU_KEY_ENTER:
         if (stream.id) {
             if (paused) {
-                qu_unpause_stream(stream);
+                qu_unpause_voice(stream);
                 paused = false;
             } else {
-                qu_pause_stream(stream);
+                qu_pause_voice(stream);
                 paused = true;
             }
         } else {
@@ -28,14 +28,14 @@ static void on_key_pressed(qu_key key)
         }
         break;
     case QU_KEY_Z:
-        qu_stop_stream(stream);
+        qu_stop_voice(stream);
         stream.id = 0;
         break;
     case QU_KEY_M:
         music_stream = qu_loop_music(dungeon);
         break;
     case QU_KEY_X:
-        qu_stop_stream(music_stream);
+        qu_stop_voice(music_stream);
         break;
     default:
         break;

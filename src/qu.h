@@ -448,9 +448,9 @@ struct qu__audio
     int32_t (*play_music)(int32_t music_id);
     int32_t (*loop_music)(int32_t music_id);
 
-    void (*pause_stream)(int32_t stream_id);
-    void (*unpause_stream)(int32_t stream_id);
-    void (*stop_stream)(int32_t stream_id);
+    void (*pause_voice)(int32_t voice_id);
+    void (*unpause_voice)(int32_t voice_id);
+    void (*stop_voice)(int32_t voice_id);
 };
 
 extern struct qu__audio const qu__audio_null;
@@ -471,9 +471,9 @@ void qu__audio_close_music(int32_t id);
 int32_t qu__audio_play_music(int32_t id);
 int32_t qu__audio_loop_music(int32_t id);
 
-void qu__audio_pause_stream(int32_t id);
-void qu__audio_unpause_stream(int32_t id);
-void qu__audio_stop_stream(int32_t id);
+void qu__audio_pause_voice(int32_t id);
+void qu__audio_unpause_voice(int32_t id);
+void qu__audio_stop_voice(int32_t id);
 
 //------------------------------------------------------------------------------
 

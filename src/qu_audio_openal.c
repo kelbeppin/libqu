@@ -720,7 +720,7 @@ struct qu__audio const qu__audio_openal = {
     .play_music = play_music,
     .loop_music = loop_music,
 #endif
-    .pause_stream = pause_stream,
-    .unpause_stream = unpause_stream,
-    .stop_stream = stop_stream,
+    .pause_voice = pause_stream,
+    .unpause_voice = unpause_stream,
+    .stop_voice = stop_stream,
 };
