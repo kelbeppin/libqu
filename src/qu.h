@@ -164,7 +164,7 @@ size_t qu_file_size(qu_file *file);
 char const *qu_file_repr(qu_file *file);
 
 //------------------------------------------------------------------------------
-// Image loader
+// Image
 
 struct qu__image
 {
@@ -177,10 +177,6 @@ struct qu__image
 void qu__image_create(struct qu__image *image, unsigned char *fill);
 void qu__image_load(struct qu__image *image, qu_file *file);
 void qu__image_delete(struct qu__image *image);
-
-typedef struct qu__image qu_image;
-qu_image *qu_load_image(qu_file *file);
-void qu_delete_image(qu_image *image);
 
 //------------------------------------------------------------------------------
 // Sound reader

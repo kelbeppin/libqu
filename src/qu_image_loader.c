@@ -140,29 +140,3 @@ void qu__image_delete(struct qu__image *image)
     image->channels = 0;
     image->pixels = NULL;
 }
-
-//------------------------------------------------------------------------------
-
-qu_image *qu_load_image(qu_file *file)
-{
-    qu_image *image = malloc(sizeof(qu_image));
-
-    if (!image) {
-        return NULL;
-    }
-
-    qu__image_load(image, file);
-
-    if (!image->pixels) {
-        free(image);
-        return NULL;
-    }
-
-    return image;
-}
-
-void qu_delete_image(qu_image *image)
-{
-    qu__image_delete(image);
-    free(image);
-}
