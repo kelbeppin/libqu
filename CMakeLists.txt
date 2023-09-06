@@ -11,15 +11,18 @@ endif()
 
 #-------------------------------------------------------------------------------
 
-set(QU_VERSION_REGEX "#define QU_VERSION[ \t]+\"(.+)\"")
+# Stupid CMake doesn't support non-capturing groups
+# set(QU_VERSION_REGEX "#define QU_VERSION[ \t]+\"([0-9.]+)(?:\-([0-9\.A-z]+)?)\"")
+set(QU_VERSION_REGEX "#define QU_VERSION[ \t]+\"([0-9.]+)\-?([0-9\.A-z]+)?\"")
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/include/libqu/libqu.h"
-    QU_VERSION_STRING REGEX ${QU_VERSION_REGEX})
+    QU_VERSION_LINE REGEX ${QU_VERSION_REGEX})
 
-string(REGEX REPLACE ${QU_VERSION_REGEX} "\\1" QU_VERSION_STRING "${QU_VERSION_STRING}")
+string(REGEX REPLACE ${QU_VERSION_REGEX} "\\1" QU_VERSION_STRING "${QU_VERSION_LINE}")
+string(REGEX REPLACE ${QU_VERSION_REGEX} "\\2" QU_VERSION_SUFFIX "${QU_VERSION_LINE}")
 
 project(libqu
-    VERSION ${QU_VERSION_STRING}
+    VERSION ${QU_VERSION_STRING} # Stupid CMake doesn't support version suffixes
     DESCRIPTION "2D game library for C language")
 
 #-------------------------------------------------------------------------------
