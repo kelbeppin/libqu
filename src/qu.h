@@ -460,6 +460,21 @@ extern struct qu__audio const qu__audio_xaudio2;
 void qu__audio_initialize(qu_params const *params);
 void qu__audio_terminate(void);
 
+void qu__audio_set_master_volume(float volume);
+int32_t qu__audio_load_sound(qu_file *file);
+void qu__audio_delete_sound(int32_t id);
+int32_t qu__audio_play_sound(int32_t id);
+int32_t qu__audio_loop_sound(int32_t id);
+
+int32_t qu__audio_open_music(qu_file *file);
+void qu__audio_close_music(int32_t id);
+int32_t qu__audio_play_music(int32_t id);
+int32_t qu__audio_loop_music(int32_t id);
+
+void qu__audio_pause_stream(int32_t id);
+void qu__audio_unpause_stream(int32_t id);
+void qu__audio_stop_stream(int32_t id);
+
 //------------------------------------------------------------------------------
 
 #ifdef __cplusplus

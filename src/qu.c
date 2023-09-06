@@ -332,3 +332,88 @@ void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const
     qu__text_draw(font.id, x, y, color, heap ? heap : buffer);
     free(heap);
 }
+
+//------------------------------------------------------------------------------
+// Audio API
+
+void qu_set_master_volume(float volume)
+{
+    qu__audio_set_master_volume(volume);
+}
+
+qu_sound qu_load_sound(char const *path)
+{
+    qu_file *file = qu_fopen(path);
+
+    if (!file) {
+        return (qu_sound) { 0 };
+    }
+
+    int32_t id = qu__audio_load_sound(file);
+
+    qu_fclose(file);
+
+    return (qu_sound) { id };
+}
+
+void qu_delete_sound(qu_sound sound)
+{
+    qu__audio_delete_sound(sound.id);
+}
+
+qu_stream qu_play_sound(qu_sound sound)
+{
+    return (qu_stream) { qu__audio_play_sound(sound.id) };
+}
+
+qu_stream qu_loop_sound(qu_sound sound)
+{
+    return (qu_stream) { qu__audio_loop_sound(sound.id) };
+}
+
+qu_music qu_open_music(char const *path)
+{
+    qu_file *file = qu_fopen(path);
+
+    if (!file) {
+        return (qu_music) { 0 };
+    }
+
+    int32_t id = qu__audio_open_music(file);
+        
+    if (!id) {
+        qu_fclose(file);
+    }
+
+    return (qu_music) { id };
+}
+
+void qu_close_music(qu_music music)
+{
+    qu__audio_close_music(music.id);
+}
+
+qu_stream qu_play_music(qu_music music)
+{
+    return (qu_stream) { qu__audio_play_music(music.id) };
+}
+
+qu_stream qu_loop_music(qu_music music)
+{
+    return (qu_stream) { qu__audio_loop_music(music.id) };
+}
+
+void qu_pause_stream(qu_stream stream)
+{
+    qu__audio_pause_stream(stream.id);
+}
+
+void qu_unpause_stream(qu_stream stream)
+{
+    qu__audio_unpause_stream(stream.id);
+}
+
+void qu_stop_stream(qu_stream stream)
+{
+    qu__audio_stop_stream(stream.id);
+}
