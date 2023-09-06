@@ -61,11 +61,28 @@ void qu__audio_initialize(qu_params const *params)
     for (int i = 0; i < audio_impl_count; i++) {
         priv.impl = supported_audio_impl_list[i];
 
+        QU_HALT_IF(!priv.impl->query);
+
         if (priv.impl->query(params)) {
             QU_DEBUG("Selected audio implementation #%d.\n", i);
             break;
         }
     }
+
+    QU_HALT_IF(!priv.impl->initialize);
+    QU_HALT_IF(!priv.impl->terminate);
+    QU_HALT_IF(!priv.impl->set_master_volume);
+    QU_HALT_IF(!priv.impl->load_sound);
+    QU_HALT_IF(!priv.impl->delete_sound);
+    QU_HALT_IF(!priv.impl->play_sound);
+    QU_HALT_IF(!priv.impl->loop_sound);
+    QU_HALT_IF(!priv.impl->open_music);
+    QU_HALT_IF(!priv.impl->close_music);
+    QU_HALT_IF(!priv.impl->play_music);
+    QU_HALT_IF(!priv.impl->loop_music);
+    QU_HALT_IF(!priv.impl->pause_voice);
+    QU_HALT_IF(!priv.impl->unpause_voice);
+    QU_HALT_IF(!priv.impl->stop_voice);
 
     priv.impl->initialize(params);
 }
