@@ -28,7 +28,7 @@ project(libqu
 #-------------------------------------------------------------------------------
 
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
-option(QU_BUILD_TESTS "Build tests" OFF)
+option(QU_BUILD_SAMPLES "Build samples" OFF)
 option(QU_USE_ASAN "Use AddressSanitizer" OFF)
 
 #-------------------------------------------------------------------------------
@@ -311,7 +311,6 @@ include(CPack)
 
 #-------------------------------------------------------------------------------
 
-if(QU_BUILD_TESTS)
-    add_subdirectory(tests)
+if(QU_BUILD_SAMPLES)
+    add_subdirectory(samples)
 endif()
-

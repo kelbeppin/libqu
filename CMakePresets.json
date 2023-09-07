@@ -8,7 +8,7 @@
       "binaryDir": "${sourceDir}/out/build/${presetName}",
       "installDir": "${sourceDir}/out/install/${presetName}",
       "cacheVariables": {
-        "QU_BUILD_TESTS": true
+        "QU_BUILD_SAMPLES": true
       }
     },
     {

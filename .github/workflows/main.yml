@@ -61,7 +61,7 @@ jobs:
 
     - name: Build
       run: |
-        cmake -B build -G "Ninja Multi-Config" ${{ matrix.config.flags }} ${{ matrix.compiler.flags }}
+        cmake -B build -G "Ninja Multi-Config" ${{ matrix.config.flags }} ${{ matrix.compiler.flags }} -DQU_BUILD_SAMPLES=1
         cmake --build build --parallel 4 --config Debug
         cmake --build build --parallel 4 --config Release
 
