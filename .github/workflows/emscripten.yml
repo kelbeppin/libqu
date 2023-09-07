@@ -1,0 +1,50 @@
+
+name: Emscripten
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
+  CPM_USE_NAMED_CACHE_DIRECTORIES: TRUE
+
+jobs:
+  build:
+    name: emscripten
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - uses: actions/cache@v3
+      id: cache-cpm
+      with:
+        path: '**/cpm_modules'
+        key: emscripten-cpm-modules-${{ hashFiles('**/CMakeLists.txt') }}
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get -y update
+        sudo apt-get -y install ninja-build emscripten
+
+    - name: Build
+      run: |
+        emcmake cmake -B build -G "Ninja Multi-Config" -DQU_BUILD_SAMPLES=1
+        cmake --build build --parallel 4 --config Debug
+        cmake --build build --parallel 4 --config Release
+
+    - name: Pack
+      shell: bash
+      run: |
+        cmake --install build --config Debug --prefix install-debug
+        7z a libqu-emscripten-debug.zip install-debug/*
+        cmake --install build --config Release --prefix install-release
+        7z a libqu-emscripten-release.zip install-release/*
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: libqu-emscripten
+        path: libqu-*.zip
+
