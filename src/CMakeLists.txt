@@ -49,7 +49,15 @@ set_target_properties(${PROJECT_NAME}
 
 #-------------------------------------------------------------------------------
 
-if(QU_OS_WINDOWS)
+if(BUILD_SHARED_LIBS)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_SHARED)
+endif()
+
+if(MATH_LIBRARY)
+    target_link_libraries(${PROJECT_NAME} PUBLIC ${MATH_LIBRARY})
+endif()
+
+if(QU_WIN32)
     target_sources(${PROJECT_NAME} PRIVATE
         qu_audio_xaudio2.cpp
         qu_core_win32.c
@@ -60,32 +68,21 @@ if(QU_OS_WINDOWS)
     target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi XInput)
 endif()
 
-if(QU_OS_LINUX)
-    target_sources(${PROJECT_NAME} PRIVATE
-        qu_core_x11.c
-        qu_joystick_linux.c
-        qu_platform_posix.c)
-
+if(QU_LINUX)
+    target_sources(${PROJECT_NAME} PRIVATE qu_joystick_linux.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_LINUX)
-    target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
-    target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GLX ${X11_LIBRARIES})
 endif()
 
-if(QU_OS_EMSCRIPTEN)
-    target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c qu_platform_posix.c)
+if(QU_EMSCRIPTEN)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_EMSCRIPTEN)
     target_compile_options(${PROJECT_NAME} PUBLIC -sUSE_SDL)
     target_link_options(${PROJECT_NAME} PUBLIC -sINITIAL_MEMORY=536870912 -sPTHREAD_POOL_SIZE=4)
 endif()
 
-#-------------------------------------------------------------------------------
-
-if(BUILD_SHARED_LIBS)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_SHARED)
-endif()
-
-if(MATH_LIBRARY)
-    target_link_libraries(${PROJECT_NAME} PUBLIC ${MATH_LIBRARY})
+if(QU_POSIX)
+    target_sources(${PROJECT_NAME} PRIVATE qu_platform_posix.c)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_POSIX)
 endif()
 
 if(QU_USE_OPENAL)
@@ -94,21 +91,35 @@ if(QU_USE_OPENAL)
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL::OpenAL)
 endif()
 
-if(QU_USE_OPENGL)
+if(QU_USE_GL)
     target_sources(${PROJECT_NAME} PRIVATE qu_renderer_gl1.c qu_renderer_gl3.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_GL)
     target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GL)
 endif()
 
-if(QU_USE_OPENGL_ES2)
+if(QU_USE_ES2)
     target_sources(${PROJECT_NAME} PRIVATE qu_renderer_es2.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_ES2)
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_GLESv2_LIBRARY})
+
+    if(NOT QU_EMSCRIPTEN)
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${OPENGL_GLESv2_LIBRARY})
+    endif()
+endif()
+
+if(QU_USE_X11)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_x11.c)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_X11)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${X11_LIBRARIES})
+
+    if(QU_USE_GL OR QU_USE_ES2)
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GLX)
+    endif()
 endif()
 
 #-------------------------------------------------------------------------------
 
-if(QU_COMPILER_MSVC)
+if(QU_MSVC)
     target_compile_definitions(${PROJECT_NAME}
         PRIVATE
             _CRT_SECURE_NO_WARNINGS)
@@ -125,7 +136,7 @@ if(QU_COMPILER_MSVC)
     endif()
 endif()
 
-if(QU_COMPILER_CLANG OR QU_COMPILER_GNU)
+if(QU_CLANG OR QU_GCC)
     target_compile_options(${PROJECT_NAME}
         PRIVATE
             -Wall

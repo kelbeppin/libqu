@@ -44,28 +44,32 @@ endif()
 # Detect the target platform
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-    set(QU_OS_WINDOWS 1)
+    set(QU_WIN32 1)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    set(QU_OS_LINUX 1)
+    set(QU_LINUX 1)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
-    set(QU_OS_EMSCRIPTEN 1)
+    set(QU_EMSCRIPTEN 1)
 else()
     message(FATAL_ERROR "This system is not supported by ${PROJECT_NAME}: ${CMAKE_SYSTEM_NAME}.")
+endif()
+
+if(QU_LINUX OR QU_EMSCRIPTEN)
+    set(QU_POSIX 1)
 endif()
 
 #-------------------------------------------------------------------------------
 # Detect the compiler
 
 if(MSVC)
-    set(QU_COMPILER_MSVC 1)
+    set(QU_MSVC 1)
 
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-        set(QU_COMPILER_CLANG_CL 1)
+        set(QU_CLANG_CL 1)
     endif()
 elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
-    set(QU_COMPILER_CLANG 1)
+    set(QU_CLANG 1)
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU")
-    set(QU_COMPILER_GNU 1)
+    set(QU_GCC 1)
 else()
     message(WARNING "This compiler is not supported by ${PROJECT_NAME}: ${CMAKE_C_COMPILER_ID}.")
 endif()
@@ -73,20 +77,17 @@ endif()
 #-------------------------------------------------------------------------------
 # Set USE flags
 
-if(QU_OS_WINDOWS OR QU_OS_LINUX)
-    set(QU_USE_OPENGL 1)
-else()
-    set(QU_USE_OPENGL 0)
+if(QU_WIN32 OR QU_LINUX)
+    set(QU_USE_GL 1)
 endif()
 
-if(QU_OS_EMSCRIPTEN)
-    set(QU_USE_OPENGL_ES2 1)
-else()
-    set(QU_USE_OPENGL_ES2 0)
+if(QU_EMSCRIPTEN)
+    set(QU_USE_ES2 1)
 endif()
 
-if(QU_OS_LINUX OR QU_OS_EMSCRIPTEN)
+if(QU_LINUX)
     set(QU_USE_OPENAL 1)
+    set(QU_USE_X11 1)
 endif()
 
 #-------------------------------------------------------------------------------
@@ -94,7 +95,7 @@ endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE 1)
 
-if(QU_OS_EMSCRIPTEN)
+if(QU_EMSCRIPTEN)
     add_compile_options(-pthread -Wno-cast-function-type-strict)
     add_link_options(-pthread)
 endif()
@@ -134,19 +135,21 @@ find_package(Threads REQUIRED)
 #-----------------------------------------------------------
 # X11
 
-if(QU_OS_LINUX)
+if(QU_USE_X11)
     find_package(X11 REQUIRED) # X11_INCLUDE_DIR, X11_LIBRARIES
 endif()
 
 #-----------------------------------------------------------
 # OpenGL & OpenGL ES
 
-if(QU_USE_OPENGL)
+if(QU_USE_GL)
     find_package(OpenGL REQUIRED)
 endif()
 
-if(QU_USE_OPENGL_ES2)
-    find_library(OPENGL_GLESv2_LIBRARY GLESv2 REQUIRED)
+if(QU_USE_ES2)
+    if(NOT QU_EMSCRIPTEN)
+        find_library(OPENGL_GLESv2_LIBRARY GLESv2 REQUIRED)
+    endif()
 endif()
 
 #-----------------------------------------------------------
