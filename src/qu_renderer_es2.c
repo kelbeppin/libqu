@@ -115,7 +115,7 @@ static void set_surface_antialiasing_level(struct qu__surface *surface, int leve
 
 //------------------------------------------------------------------------------
 
-struct qu__renderer_impl const qu__renderer_null = {
+struct qu__renderer_impl const qu__renderer_es2 = {
     .query = query,
     .initialize = initialize,
     .terminate = terminate,
