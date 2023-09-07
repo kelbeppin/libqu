@@ -1241,7 +1241,7 @@ void qu__graphics_set_surface_antialiasing_level(int32_t id, int level)
     struct qu__surface *surface = qu_array_get(priv.surfaces, id);
 
     if (surface) {
-        priv.renderer->set_surface_antialiasing_level(&surface, level);
+        priv.renderer->set_surface_antialiasing_level(surface, level);
     }
 }
 
