@@ -23,7 +23,7 @@ jobs:
 
     - uses: actions/upload-pages-artifact@v1
       with:
-        path: "docs/site_/html/"
+        path: "docs/_site/html/"
   
   deploy:
     needs: build
