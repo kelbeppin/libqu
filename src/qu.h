@@ -245,15 +245,6 @@ struct qu__core
     bool (*gl_check_extension)(char const *name);
     void *(*gl_proc_address)(char const *name);
     int (*get_gl_multisample_samples)(void);
-
-    bool (*is_joystick_connected)(int joystick);
-    char const *(*get_joystick_id)(int joystick);
-    int (*get_joystick_button_count)(int joystick);
-    int (*get_joystick_axis_count)(int joystick);
-    char const *(*get_joystick_button_id)(int joystick, int button);
-    char const *(*get_joystick_axis_id)(int joystick, int axis);
-    bool (*is_joystick_button_pressed)(int joystick, int button);
-    float (*get_joystick_axis_value)(int joystick, int axis);
 };
 
 extern struct qu__core const qu__core_emscripten;
