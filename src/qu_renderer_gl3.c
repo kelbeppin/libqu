@@ -96,14 +96,6 @@ enum gl3__shader
     GL3__TOTAL_SHADERS,
 };
 
-enum gl3__program
-{
-    GL3__PROGRAM_SHAPE,
-    GL3__PROGRAM_TEXTURE,
-    GL3__PROGRAM_CANVAS,
-    GL3__TOTAL_PROGRAMS,
-};
-
 enum gl3__uniform
 {
     GL3__UNIFORM_PROJECTION,
@@ -135,7 +127,6 @@ struct gl3__vertex_format_desc
 {
     unsigned int attributes;
     unsigned int stride;
-    enum gl3__program program;
 };
 
 static char const *s_attributes[QU__TOTAL_VERTEX_ATTRIBUTES] = {
@@ -211,20 +202,15 @@ static struct gl3__shader_desc const s_shaders[GL3__TOTAL_SHADERS] = {
     },
 };
 
-static struct gl3__program_desc const s_programs[GL3__TOTAL_PROGRAMS] = {
-    [GL3__PROGRAM_SHAPE] = {
-        .name = "PROGRAM_SHAPE",
+static struct gl3__program_desc const s_programs[QU__TOTAL_BRUSHES] = {
+    [QU__BRUSH_SOLID] = {
+        .name = "BRUSH_SOLID",
         .vert = GL3__SHADER_VERTEX,
         .frag = GL3__SHADER_SOLID,
     },
-    [GL3__PROGRAM_TEXTURE] = {
-        .name = "PROGRAM_TEXTURE",
+    [QU__BRUSH_TEXTURED] = {
+        .name = "BRUSH_TEXTURED",
         .vert = GL3__SHADER_VERTEX,
-        .frag = GL3__SHADER_TEXTURED,
-    },
-    [GL3__PROGRAM_CANVAS] = {
-        .name = "PROGRAM_CANVAS",
-        .vert = GL3__SHADER_CANVAS,
         .frag = GL3__SHADER_TEXTURED,
     },
 };
@@ -245,12 +231,10 @@ static struct gl3__vertex_format_desc const s_vertex_formats[QU__TOTAL_VERTEX_FO
     [QU__VERTEX_FORMAT_SOLID] = {
         .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION),
         .stride = 2,
-        .program = GL3__PROGRAM_SHAPE,
     },
     [QU__VERTEX_FORMAT_TEXTURED] = {
         .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION) | (1 << QU__VERTEX_ATTRIBUTE_TEXCOORD),
         .stride = 4,
-        .program = GL3__PROGRAM_TEXTURE,
     },
 };
 
@@ -319,9 +303,9 @@ struct qu__gl3_renderer_priv
 {
     struct qu__texture const *bound_texture;
     struct qu__surface const *bound_surface;
-    enum gl3__program used_program;
+    enum qu__brush used_program;
 
-    struct gl3__program_info programs[GL3__TOTAL_PROGRAMS];
+    struct gl3__program_info programs[QU__TOTAL_BRUSHES];
     struct gl3__vertex_format_info vertex_formats[QU__TOTAL_VERTEX_FORMATS];
 
     qu_mat4 projection;
@@ -591,7 +575,7 @@ static void gl3__initialize(qu_params const *params)
         shaders[i] = load_shader(&s_shaders[i]);
     }
 
-    for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         GLuint vs = shaders[s_programs[i].vert];
         GLuint fs = shaders[s_programs[i].frag];
 
@@ -633,7 +617,7 @@ static void gl3__terminate(void)
         priv.glDeleteBuffers(1, &priv.vertex_formats[i].buffer);
     }
 
-    for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         priv.glDeleteProgram(priv.programs[i].id);
     }
 
@@ -674,7 +658,7 @@ static void gl3__apply_projection(qu_mat4 const *projection)
 {
     qu_mat4_copy(&priv.projection, projection);
 
-    for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << GL3__UNIFORM_PROJECTION);
     }
 
@@ -685,7 +669,7 @@ static void gl3__apply_transform(qu_mat4 const *transform)
 {
     qu_mat4_copy(&priv.modelview, transform);
     
-    for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << GL3__UNIFORM_MODELVIEW);
     }
 
@@ -752,9 +736,21 @@ static void gl3__apply_draw_color(qu_color color)
 {
     color_conv(priv.color, color);
     
-    for (int i = 0; i < GL3__TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << GL3__UNIFORM_COLOR);
     }
+
+    update_uniforms();
+}
+
+static void gl3__apply_brush(enum qu__brush brush)
+{
+    if (priv.used_program == brush) {
+        return;
+    }
+
+    _GL_CHECK(priv.glUseProgram(priv.programs[brush].id));
+    priv.used_program = brush;
 
     update_uniforms();
 }
@@ -764,15 +760,6 @@ static void gl3__apply_vertex_format(enum qu__vertex_format vertex_format)
     struct gl3__vertex_format_info *info = &priv.vertex_formats[vertex_format];
 
     _GL_CHECK(priv.glBindVertexArray(info->array));
-
-    GLuint program = s_vertex_formats[vertex_format].program;
-
-    if (priv.used_program != program) {
-        priv.used_program = program;
-
-        _GL_CHECK(priv.glUseProgram(priv.programs[program].id));
-        update_uniforms();
-    }
 }
 
 static void gl3__apply_blend_mode(qu_blend_mode mode)
@@ -980,6 +967,7 @@ struct qu__renderer_impl const qu__renderer_gl3 = {
     .apply_texture = gl3__apply_texture,
     .apply_clear_color = gl3__apply_clear_color,
     .apply_draw_color = gl3__apply_draw_color,
+    .apply_brush = gl3__apply_brush,
     .apply_vertex_format = gl3__apply_vertex_format,
     .apply_blend_mode = gl3__apply_blend_mode,
     .exec_resize = gl3__exec_resize,

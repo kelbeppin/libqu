@@ -382,6 +382,10 @@ static void gl1__apply_draw_color(qu_color color)
     _GL_CHECK(glColor4fv(v));
 }
 
+static void gl1__apply_brush(enum qu__brush brush)
+{
+}
+
 static void gl1__apply_vertex_format(enum qu__vertex_format vertex_format)
 {
     switch (vertex_format) {
@@ -591,6 +595,7 @@ struct qu__renderer_impl const qu__renderer_gl1 = {
     .apply_texture = gl1__apply_texture,
     .apply_clear_color = gl1__apply_clear_color,
     .apply_draw_color = gl1__apply_draw_color,
+    .apply_brush = gl1__apply_brush,
     .apply_vertex_format = gl1__apply_vertex_format,
     .apply_blend_mode = gl1__apply_blend_mode,
     .exec_resize = gl1__exec_resize,

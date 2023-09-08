@@ -314,6 +314,13 @@ enum qu__vertex_format
     QU__TOTAL_VERTEX_FORMATS,
 };
 
+enum qu__brush
+{
+    QU__BRUSH_SOLID, // single color
+    QU__BRUSH_TEXTURED, // textured
+    QU__TOTAL_BRUSHES,
+};
+
 struct qu__texture
 {
     struct qu__image image;
@@ -347,6 +354,7 @@ struct qu__renderer_impl
     void (*apply_texture)(struct qu__texture const *texture);
     void (*apply_clear_color)(qu_color clear_color);
     void (*apply_draw_color)(qu_color draw_color);
+    void (*apply_brush)(enum qu__brush brush);
     void (*apply_vertex_format)(enum qu__vertex_format vertex_format);
     void (*apply_blend_mode)(qu_blend_mode mode);
 

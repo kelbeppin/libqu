@@ -109,6 +109,7 @@ struct qu__draw_render_command_args
 {
     struct qu__texture *texture;
     qu_color color;
+    enum qu__brush brush;
     enum qu__vertex_format vertex_format;
     enum qu__render_mode render_mode;
     unsigned int first_vertex;
@@ -159,6 +160,7 @@ struct qu__graphics_priv
 
     qu_color clear_color;
     qu_color draw_color;
+    enum qu__brush brush;
     enum qu__vertex_format vertex_format;
 
     struct qu__surface display;
@@ -310,6 +312,11 @@ static void graphics__exec_draw(struct qu__draw_render_command_args const *args)
     if (priv.draw_color != args->color) {
         priv.draw_color = args->color;
         priv.renderer->apply_draw_color(priv.draw_color);
+    }
+
+    if (priv.brush != args->brush) {
+        priv.brush = args->brush;
+        priv.renderer->apply_brush(priv.brush);
     }
 
     if (priv.vertex_format != args->vertex_format) {
@@ -508,6 +515,7 @@ static void graphics__flush_canvas(void)
         .args.draw = {
             .texture = &priv.canvas.texture,
             .color = QU_COLOR(255, 255, 255),
+            .brush = QU__BRUSH_TEXTURED,
             .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, vertices, 16),
@@ -564,6 +572,7 @@ void qu__graphics_initialize(qu_params const *params)
     QU_HALT_IF(!priv.renderer->apply_texture);
     QU_HALT_IF(!priv.renderer->apply_clear_color);
     QU_HALT_IF(!priv.renderer->apply_draw_color);
+    QU_HALT_IF(!priv.renderer->apply_brush);
     QU_HALT_IF(!priv.renderer->apply_vertex_format);
     QU_HALT_IF(!priv.renderer->apply_blend_mode);
 
@@ -598,6 +607,9 @@ void qu__graphics_initialize(qu_params const *params)
 
     priv.clear_color = QU_COLOR(0, 0, 0);
     priv.draw_color = QU_COLOR(255, 255, 255);
+
+    priv.brush = -1;
+    priv.vertex_format = -1;
 
     priv.renderer->apply_clear_color(priv.clear_color);
     priv.renderer->apply_draw_color(priv.draw_color);
@@ -890,8 +902,9 @@ void qu__graphics_draw_point(float x, float y, qu_color color)
         .command = QU__RENDER_COMMAND_DRAW,
         .args.draw = {
             .color = color,
-            .render_mode = QU__RENDER_MODE_POINTS,
+            .brush = QU__BRUSH_SOLID,
             .vertex_format = QU__VERTEX_FORMAT_SOLID,
+            .render_mode = QU__RENDER_MODE_POINTS,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_SOLID, vertex, 2),
             .total_vertices = 1,
         },
@@ -909,8 +922,9 @@ void qu__graphics_draw_line(float ax, float ay, float bx, float by, qu_color col
         .command = QU__RENDER_COMMAND_DRAW,
         .args.draw = {
             .color = color,
-            .render_mode = QU__RENDER_MODE_LINES,
+            .brush = QU__BRUSH_SOLID,
             .vertex_format = QU__VERTEX_FORMAT_SOLID,
+            .render_mode = QU__RENDER_MODE_LINES,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_SOLID, vertices, 4),
             .total_vertices = 2,
         },
@@ -935,8 +949,9 @@ void qu__graphics_draw_triangle(float ax, float ay, float bx, float by, float cx
             .command = QU__RENDER_COMMAND_DRAW,
             .args.draw = {
                 .color = fill,
-                .render_mode = QU__RENDER_MODE_TRIANGLES,
+                .brush = QU__BRUSH_SOLID,
                 .vertex_format = QU__VERTEX_FORMAT_SOLID,
+                .render_mode = QU__RENDER_MODE_TRIANGLES,
                 .first_vertex = first_vertex,
                 .total_vertices = 3,
             },
@@ -948,8 +963,9 @@ void qu__graphics_draw_triangle(float ax, float ay, float bx, float by, float cx
             .command = QU__RENDER_COMMAND_DRAW,
             .args.draw = {
                 .color = outline,
-                .render_mode = QU__RENDER_MODE_LINE_LOOP,
+                .brush = QU__BRUSH_SOLID,
                 .vertex_format = QU__VERTEX_FORMAT_SOLID,
+                .render_mode = QU__RENDER_MODE_LINE_LOOP,
                 .first_vertex = first_vertex,
                 .total_vertices = 3,
             },
@@ -976,8 +992,9 @@ void qu__graphics_draw_rectangle(float x, float y, float w, float h, qu_color ou
             .command = QU__RENDER_COMMAND_DRAW,
             .args.draw = {
                 .color = fill,
-                .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
+                .brush = QU__BRUSH_SOLID,
                 .vertex_format = QU__VERTEX_FORMAT_SOLID,
+                .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
                 .first_vertex = first_vertex,
                 .total_vertices = 4,
             },
@@ -989,8 +1006,9 @@ void qu__graphics_draw_rectangle(float x, float y, float w, float h, qu_color ou
             .command = QU__RENDER_COMMAND_DRAW,
             .args.draw = {
                 .color = outline,
-                .render_mode = QU__RENDER_MODE_LINE_LOOP,
+                .brush = QU__BRUSH_SOLID,
                 .vertex_format = QU__VERTEX_FORMAT_SOLID,
+                .render_mode = QU__RENDER_MODE_LINE_LOOP,
                 .first_vertex = first_vertex,
                 .total_vertices = 4,
             },
@@ -1021,8 +1039,9 @@ void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, 
             .command = QU__RENDER_COMMAND_DRAW,
             .args.draw = {
                 .color = fill,
-                .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
+                .brush = QU__BRUSH_SOLID,
                 .vertex_format = QU__VERTEX_FORMAT_SOLID,
+                .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
                 .first_vertex = first_vertex,
                 .total_vertices = total_vertices,
             },
@@ -1034,8 +1053,9 @@ void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, 
             .command = QU__RENDER_COMMAND_DRAW,
             .args.draw = {
                 .color = outline,
-                .render_mode = QU__RENDER_MODE_LINE_LOOP,
+                .brush = QU__BRUSH_SOLID,
                 .vertex_format = QU__VERTEX_FORMAT_SOLID,
+                .render_mode = QU__RENDER_MODE_LINE_LOOP,
                 .first_vertex = first_vertex,
                 .total_vertices = total_vertices,
             },
@@ -1141,8 +1161,9 @@ void qu__graphics_draw_texture(int32_t id, float x, float y, float w, float h)
         .args.draw = {
             .texture = texture,
             .color = QU_COLOR(255, 255, 255),
-            .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
+            .brush = QU__BRUSH_TEXTURED,
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
+            .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, vertices, 16),
             .total_vertices = 4,
         },
@@ -1174,8 +1195,9 @@ void qu__graphics_draw_subtexture(int32_t id, float x, float y, float w, float h
         .args.draw = {
             .texture = texture,
             .color = QU_COLOR(255, 255, 255),
-            .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
+            .brush = QU__BRUSH_TEXTURED,
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
+            .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, vertices, 16),
             .total_vertices = 4,
         },
@@ -1195,8 +1217,9 @@ void qu__graphics_draw_text(int32_t id, qu_color color, float const *data, int c
         .args.draw = {
             .texture = texture,
             .color = color,
-            .render_mode = QU__RENDER_MODE_TRIANGLES,
+            .brush = QU__BRUSH_TEXTURED,
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
+            .render_mode = QU__RENDER_MODE_TRIANGLES,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, data, count * 4),
             .total_vertices = count,
         },
@@ -1287,8 +1310,9 @@ void qu__graphics_draw_surface(int32_t id, float x, float y, float w, float h)
         .args.draw = {
             .texture = &surface->texture,
             .color = QU_COLOR(255, 255, 255),
-            .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
+            .brush = QU__BRUSH_TEXTURED,
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
+            .render_mode = QU__RENDER_MODE_TRIANGLE_FAN,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, vertices, 16),
             .total_vertices = 4,
         },

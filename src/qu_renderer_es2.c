@@ -95,14 +95,6 @@ enum shader
     TOTAL_SHADERS,
 };
 
-enum program
-{
-    PROGRAM_NONE = -1,
-    PROGRAM_SHAPE,
-    PROGRAM_TEXTURE,
-    TOTAL_PROGRAMS,
-};
-
 enum uniform
 {
     UNIFORM_PROJECTION,
@@ -137,7 +129,6 @@ struct vertex_format_desc
 {
     unsigned int attributes;
     unsigned int stride;
-    enum program program;
 };
 
 //------------------------------------------------------------------------------
@@ -194,14 +185,14 @@ static struct shader_desc const shader_desc[TOTAL_SHADERS] = {
     },
 };
 
-static struct program_desc const program_desc[TOTAL_PROGRAMS] = {
-    [PROGRAM_SHAPE] = {
-        .name = "PROGRAM_SHAPE",
+static struct program_desc const program_desc[QU__TOTAL_BRUSHES] = {
+    [QU__BRUSH_SOLID] = {
+        .name = "BRUSH_SOLID",
         .vert = SHADER_VERTEX,
         .frag = SHADER_SOLID,
     },
-    [PROGRAM_TEXTURE] = {
-        .name = "PROGRAM_TEXTURE",
+    [QU__BRUSH_TEXTURED] = {
+        .name = "BRUSH_TEXTURED",
         .vert = SHADER_VERTEX,
         .frag = SHADER_TEXTURED,
     },
@@ -223,12 +214,10 @@ static struct vertex_format_desc const vertex_format_desc[QU__TOTAL_VERTEX_FORMA
     [QU__VERTEX_FORMAT_SOLID] = {
         .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION),
         .stride = 2,
-        .program = PROGRAM_SHAPE,
     },
     [QU__VERTEX_FORMAT_TEXTURED] = {
         .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION) | (1 << QU__VERTEX_ATTRIBUTE_TEXCOORD),
         .stride = 4,
-        .program = PROGRAM_TEXTURE,
     },
 };
 
@@ -290,9 +279,9 @@ struct priv
 {
     struct qu__texture const *bound_texture;
     struct qu__surface const *bound_surface;
-    enum program used_program;
+    enum qu__brush used_program;
 
-    struct program_info programs[TOTAL_PROGRAMS];
+    struct program_info programs[QU__TOTAL_BRUSHES];
     struct vertex_format_info vertex_formats[QU__TOTAL_VERTEX_FORMATS];
 
     qu_mat4 projection;
@@ -398,7 +387,7 @@ static GLuint build_program(char const *name, GLuint vs, GLuint fs)
 
 static void update_uniforms(void)
 {
-    if (priv.used_program == PROGRAM_NONE) {
+    if (priv.used_program == -1) {
         return;
     }
 
@@ -612,7 +601,7 @@ static void es2_initialize(qu_params const *params)
         shaders[i] = load_shader(&shader_desc[i]);
     }
 
-    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         GLuint vs = shaders[program_desc[i].vert];
         GLuint fs = shaders[program_desc[i].frag];
 
@@ -627,7 +616,7 @@ static void es2_initialize(qu_params const *params)
         CHECK_GL(glDeleteShader(shaders[i]));
     }
 
-    priv.used_program = PROGRAM_NONE;
+    priv.used_program = -1;
 
     for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
         struct vertex_format_info *info = &priv.vertex_formats[i];
@@ -645,7 +634,7 @@ static void es2_terminate(void)
         priv.vertex_format_terminate(i);
     }
 
-    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         CHECK_GL(glDeleteProgram(priv.programs[i].id));
     }
 
@@ -673,7 +662,7 @@ static void es2_apply_projection(qu_mat4 const *projection)
 {
     qu_mat4_copy(&priv.projection, projection);
 
-    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << UNIFORM_PROJECTION);
     }
 
@@ -684,7 +673,7 @@ static void es2_apply_transform(qu_mat4 const *transform)
 {
     qu_mat4_copy(&priv.modelview, transform);
     
-    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << UNIFORM_MODELVIEW);
     }
 
@@ -737,9 +726,21 @@ static void es2_apply_draw_color(qu_color color)
 {
     color_conv(priv.color, color);
     
-    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << UNIFORM_COLOR);
     }
+
+    update_uniforms();
+}
+
+static void es2_apply_brush(enum qu__brush brush)
+{
+    if (priv.used_program == brush) {
+        return;
+    }
+
+    CHECK_GL(glUseProgram(priv.programs[brush].id));
+    priv.used_program = brush;
 
     update_uniforms();
 }
@@ -751,17 +752,6 @@ static void es2_apply_vertex_format(enum qu__vertex_format format)
     CHECK_GL(glBindBuffer(GL_ARRAY_BUFFER, info->buffer));
 
     priv.vertex_format_apply(format);
-
-    enum program program = vertex_format_desc[format].program;
-
-    if (priv.used_program == program) {
-        return;
-    }
-
-    CHECK_GL(glUseProgram(priv.programs[program].id));
-    priv.used_program = program;
-
-    update_uniforms();
 }
 
 static void es2_apply_blend_mode(qu_blend_mode mode)
@@ -957,6 +947,7 @@ struct qu__renderer_impl const qu__renderer_es2 = {
     .apply_texture = es2_apply_texture,
     .apply_clear_color = es2_apply_clear_color,
     .apply_draw_color = es2_apply_draw_color,
+    .apply_brush = es2_apply_brush,
     .apply_vertex_format = es2_apply_vertex_format,
     .apply_blend_mode = es2_apply_blend_mode,
     .exec_resize = es2_exec_resize,
