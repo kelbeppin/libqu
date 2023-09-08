@@ -102,6 +102,15 @@ void qu__core_initialize(qu_params const *params)
         // }
     }
 
+    QU_HALT_IF(!priv.impl->initialize);
+    QU_HALT_IF(!priv.impl->terminate);
+    QU_HALT_IF(!priv.impl->process);
+    QU_HALT_IF(!priv.impl->present);
+    QU_HALT_IF(!priv.impl->get_renderer);
+    QU_HALT_IF(!priv.impl->gl_check_extension);
+    QU_HALT_IF(!priv.impl->gl_proc_address);
+    QU_HALT_IF(!priv.impl->get_gl_multisample_samples);
+
     for (int i = 0; i < joystick_impl_count; i++) {
         priv.joystick = supported_joystick_impl_list[i];
 
@@ -109,6 +118,18 @@ void qu__core_initialize(qu_params const *params)
             break;
         // }
     }
+
+    QU_HALT_IF(!priv.joystick->initialize);
+    QU_HALT_IF(!priv.joystick->terminate);
+    QU_HALT_IF(!priv.joystick->process);
+    QU_HALT_IF(!priv.joystick->is_connected);
+    QU_HALT_IF(!priv.joystick->get_name);
+    QU_HALT_IF(!priv.joystick->get_button_count);
+    QU_HALT_IF(!priv.joystick->get_axis_count);
+    QU_HALT_IF(!priv.joystick->get_button_name);
+    QU_HALT_IF(!priv.joystick->get_axis_name);
+    QU_HALT_IF(!priv.joystick->is_button_pressed);
+    QU_HALT_IF(!priv.joystick->get_axis_value);
 
 	priv.impl->initialize(params);
     priv.joystick->initialize(params);
