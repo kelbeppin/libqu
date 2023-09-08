@@ -81,13 +81,16 @@ if(QU_WIN32 OR QU_LINUX)
     set(QU_USE_GL 1)
 endif()
 
+if(QU_LINUX)
+    set(QU_USE_X11 1)
+endif()
+
 if(QU_EMSCRIPTEN)
     set(QU_USE_ES2 1)
 endif()
 
-if(QU_LINUX)
+if(QU_LINUX OR QU_EMSCRIPTEN)
     set(QU_USE_OPENAL 1)
-    set(QU_USE_X11 1)
 endif()
 
 #-------------------------------------------------------------------------------
@@ -147,24 +150,18 @@ if(QU_USE_GL)
 endif()
 
 if(QU_USE_ES2)
-    if(NOT QU_EMSCRIPTEN)
+    if(QU_EMSCRIPTEN)
+        set(OPENGL_GLESv2_LIBRARY "")
+    else()
         find_library(OPENGL_GLESv2_LIBRARY GLESv2 REQUIRED)
     endif()
 endif()
 
 #-----------------------------------------------------------
-# OpenAL-soft
+# OpenAL-soft [should be installed externally]
 
 if(QU_USE_OPENAL)
-    CPMAddPackage(NAME OpenAL
-        VERSION 1.22.2
-        OPTIONS
-            "ALSOFT_UTILS OFF"
-            "ALSOFT_EXAMPLES OFF"
-            "ALSOFT_BUILD_IMPORT_LIB OFF"
-        URL https://openal-soft.org/openal-releases/openal-soft-1.22.2.tar.bz2
-        URL_HASH SHA256=ae94cc95cda76b7cc6e92e38c2531af82148e76d3d88ce996e2928a1ea7c3d20
-        EXCLUDE_FROM_ALL ON)
+    find_package(OpenAL REQUIRED)
 endif()
 
 #-----------------------------------------------------------
@@ -277,24 +274,8 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}-config-version.cmake"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 
-# Install OpenAL shared library alongside libqu if it was built here.
-if(QU_USE_OPENAL AND TARGET OpenAL)
-    get_target_property(OPENAL_TYPE OpenAL TYPE)
-
-    if(${OPENAL_TYPE} STREQUAL "SHARED_LIBRARY")
-        install(TARGETS OpenAL
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    endif()
-endif()
-
 # Install static dependencies.
 if(QU_STATIC)
-    if(QU_USE_OPENAL AND TARGET OpenAL)
-        install(TARGETS OpenAL
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
-
     install(
         TARGETS
             freetype

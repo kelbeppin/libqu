@@ -57,7 +57,7 @@ jobs:
 
     - name: Install dependencies
       if: matrix.os.name == 'linux'
-      run: sudo apt-get -y install ninja-build libgl1-mesa-dev libgles2-mesa-dev xorg-dev
+      run: sudo apt-get -y install ninja-build libgl1-mesa-dev libgles2-mesa-dev xorg-dev libopenal-dev
 
     - name: Build
       run: |
