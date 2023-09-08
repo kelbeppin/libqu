@@ -281,6 +281,7 @@ struct program_info
 
 struct vertex_format_info
 {
+    GLuint array;
     GLuint buffer;
     GLuint buffer_size;
 };
@@ -297,6 +298,15 @@ struct priv
     qu_mat4 projection;
     qu_mat4 modelview;
     GLfloat color[4];
+
+    void (*vertex_format_initialize)(enum qu__vertex_format);
+    void (*vertex_format_terminate)(enum qu__vertex_format);
+    void (*vertex_format_update)(enum qu__vertex_format);
+    void (*vertex_format_apply)(enum qu__vertex_format);
+
+    PFNGLBINDVERTEXARRAYOESPROC glBindVertexArrayOES;
+    PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArraysOES;
+    PFNGLGENVERTEXARRAYSOESPROC glGenVertexArraysOES;
 };
 
 //------------------------------------------------------------------------------
@@ -311,6 +321,26 @@ static void color_conv(GLfloat *dst, qu_color color)
     dst[1] = ((color >> 0x08) & 0xFF) / 255.f;
     dst[2] = ((color >> 0x00) & 0xFF) / 255.f;
     dst[3] = ((color >> 0x18) & 0xFF) / 255.f;
+}
+
+static bool check_extension(char const *extension)
+{
+    char *extensions = qu_strdup((char const *) glGetString(GL_EXTENSIONS));
+    char *token = strtok(extensions, " ");
+    bool found = false;
+
+    while (token) {
+        if (strcmp(token, extension) == 0) {
+            found = true;
+            break;
+        }
+
+        token = strtok(NULL, " ");
+    }
+
+    free(extensions);
+
+    return found;
 }
 
 static GLuint load_shader(struct shader_desc const *desc)
@@ -387,6 +417,87 @@ static void update_uniforms(void)
     }
 
     info->dirty_uniforms = 0;
+}
+
+static void vertex_format_initialize(enum qu__vertex_format format)
+{
+}
+
+static void vertex_format_terminate(enum qu__vertex_format format)
+{
+}
+
+static void vertex_format_update(enum qu__vertex_format format)
+{
+}
+
+static void vertex_format_apply(enum qu__vertex_format format)
+{
+    struct vertex_format_info *info = &priv.vertex_formats[format];
+    struct vertex_format_desc const *desc = &vertex_format_desc[format];
+
+    unsigned int offset = 0;
+
+    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+        if (desc->attributes & (1 << i)) {
+            GLsizei size = vertex_attribute_desc[i].size;
+            GLsizei stride = sizeof(float) * desc->stride;
+
+            CHECK_GL(glEnableVertexAttribArray(i));
+            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
+            offset += sizeof(float) * size;
+        } else {
+            CHECK_GL(glDisableVertexAttribArray(i));
+        }
+    }
+}
+
+static void vao_vertex_format_initialize(enum qu__vertex_format format)
+{
+    struct vertex_format_info *info = &priv.vertex_formats[format];
+    struct vertex_format_desc const *desc = &vertex_format_desc[format];
+
+    CHECK_GL(priv.glGenVertexArraysOES(1, &info->array));
+    CHECK_GL(priv.glBindVertexArrayOES(info->array));
+
+    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+        if (desc->attributes & (1 << i)) {
+            CHECK_GL(glEnableVertexAttribArray(i));
+        }
+    }
+}
+
+static void vao_vertex_format_terminate(enum qu__vertex_format format)
+{
+    struct vertex_format_info *info = &priv.vertex_formats[format];
+
+    CHECK_GL(priv.glDeleteVertexArraysOES(1, &info->array));
+}
+
+static void vao_vertex_format_update(enum qu__vertex_format format)
+{
+    struct vertex_format_info *info = &priv.vertex_formats[format];
+    struct vertex_format_desc const *desc = &vertex_format_desc[format];
+
+    CHECK_GL(priv.glBindVertexArrayOES(info->array));
+
+    unsigned int offset = 0;
+
+    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+        if (desc->attributes & (1 << i)) {
+            GLsizei size = vertex_attribute_desc[i].size;
+            GLsizei stride = sizeof(float) * desc->stride;
+
+            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
+            offset += sizeof(float) * size;
+        }
+    }
+}
+
+static void vao_vertex_format_apply(enum qu__vertex_format format)
+{
+    struct vertex_format_info *info = &priv.vertex_formats[format];
+    CHECK_GL(priv.glBindVertexArrayOES(info->array));
 }
 
 static void surface_add_multisample_buffer(struct qu__surface *surface)
@@ -472,6 +583,26 @@ static void es2_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
+    if (check_extension("GL_OES_vertex_array_object")) {
+        priv.glBindVertexArrayOES = qu__core_get_gl_proc_address("glBindVertexArrayOES");
+        priv.glDeleteVertexArraysOES = qu__core_get_gl_proc_address("glDeleteVertexArraysOES");
+        priv.glGenVertexArraysOES = qu__core_get_gl_proc_address("glGenVertexArraysOES");
+
+        priv.vertex_format_initialize = vao_vertex_format_initialize;
+        priv.vertex_format_terminate = vao_vertex_format_terminate;
+        priv.vertex_format_apply = vao_vertex_format_apply;
+        priv.vertex_format_update = vao_vertex_format_update;
+
+        QU_INFO("GL_OES_vertex_array_object is supported, will use VAOs.\n");
+    } else {
+        priv.vertex_format_initialize = vertex_format_initialize;
+        priv.vertex_format_terminate = vertex_format_terminate;
+        priv.vertex_format_apply = vertex_format_apply;
+        priv.vertex_format_update = vertex_format_update;
+
+        QU_INFO("GL_OES_vertex_array_object is not supported, won't use VAOs.\n");
+    }
+
     CHECK_GL(glEnable(GL_BLEND));
     CHECK_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
@@ -501,6 +632,7 @@ static void es2_initialize(qu_params const *params)
     for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
         struct vertex_format_info *info = &priv.vertex_formats[i];
         CHECK_GL(glGenBuffers(1, &info->buffer));
+        priv.vertex_format_initialize(i);
     }
 
     QU_INFO("Initialized.\n");
@@ -510,6 +642,7 @@ static void es2_terminate(void)
 {
     for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
         CHECK_GL(glDeleteBuffers(1, &priv.vertex_formats[i].buffer));
+        priv.vertex_format_terminate(i);
     }
 
     for (int i = 0; i < TOTAL_PROGRAMS; i++) {
@@ -530,6 +663,8 @@ static void es2_upload_vertex_data(enum qu__vertex_format format, float const *d
     } else {
         CHECK_GL(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * size, data, GL_STREAM_DRAW));
     }
+
+    priv.vertex_format_update(format);
 
     info->buffer_size = size;
 }
@@ -615,20 +750,7 @@ static void es2_apply_vertex_format(enum qu__vertex_format format)
 
     CHECK_GL(glBindBuffer(GL_ARRAY_BUFFER, info->buffer));
 
-    unsigned int offset = 0;
-
-    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
-        if (vertex_format_desc[format].attributes & (1 << i)) {
-            GLsizei size = vertex_attribute_desc[i].size;
-            GLsizei stride = sizeof(float) * vertex_format_desc[format].stride;
-
-            CHECK_GL(glEnableVertexAttribArray(i));
-            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
-            offset += sizeof(float) * size;
-        } else {
-            CHECK_GL(glDisableVertexAttribArray(i));
-        }
-    }
+    priv.vertex_format_apply(format);
 
     enum program program = vertex_format_desc[format].program;
 

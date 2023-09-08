@@ -249,7 +249,7 @@ static bool gl_check_extension(char const *name)
 
 static void *gl_proc_address(char const *name)
 {
-    return NULL;
+    return SDL_GL_GetProcAddress(name);
 }
 
 static int get_gl_multisample_samples(void)
