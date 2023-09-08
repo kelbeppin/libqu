@@ -92,6 +92,7 @@ enum shader
     SHADER_VERTEX,
     SHADER_SOLID,
     SHADER_TEXTURED,
+    SHADER_FONT,
     TOTAL_SHADERS,
 };
 
@@ -183,6 +184,22 @@ static struct shader_desc const shader_desc[TOTAL_SHADERS] = {
             "}\n"
         },
     },
+    [SHADER_FONT] = {
+        .type = GL_FRAGMENT_SHADER,
+        .name = "SHADER_FONT",
+        .src = {
+            "#version 100\n"
+            "precision mediump float;\n"
+            "varying vec2 v_texCoord;\n"
+            "uniform sampler2D u_texture;\n"
+            "uniform vec4 u_color;\n"
+            "void main()\n"
+            "{\n"
+            "    float alpha = texture2D(u_texture, v_texCoord).r;\n"
+            "    gl_FragColor = vec4(u_color.rgb, alpha);\n"
+            "}\n"
+        },
+    },
 };
 
 static struct program_desc const program_desc[QU__TOTAL_BRUSHES] = {
@@ -195,6 +212,11 @@ static struct program_desc const program_desc[QU__TOTAL_BRUSHES] = {
         .name = "BRUSH_TEXTURED",
         .vert = SHADER_VERTEX,
         .frag = SHADER_TEXTURED,
+    },
+    [QU__BRUSH_FONT] = {
+        .name = "BRUSH_FONT",
+        .vert = SHADER_VERTEX,
+        .frag = SHADER_FONT,
     },
 };
 

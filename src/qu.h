@@ -318,6 +318,7 @@ enum qu__brush
 {
     QU__BRUSH_SOLID, // single color
     QU__BRUSH_TEXTURED, // textured
+    QU__BRUSH_FONT,
     QU__TOTAL_BRUSHES,
 };
 

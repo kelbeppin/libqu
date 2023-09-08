@@ -92,6 +92,7 @@ enum gl3__shader
     GL3__SHADER_VERTEX,
     GL3__SHADER_SOLID,
     GL3__SHADER_TEXTURED,
+    GL3__SHADER_FONT,
     GL3__SHADER_CANVAS,
     GL3__TOTAL_SHADERS,
 };
@@ -183,6 +184,21 @@ static struct gl3__shader_desc const s_shaders[GL3__TOTAL_SHADERS] = {
             "}\n"
         },
     },
+    [GL3__SHADER_FONT] = {
+        .type = GL_FRAGMENT_SHADER,
+        .name = "SHADER_FONT",
+        .src = {
+            "#version 330 core\n"
+            "in vec2 v_texCoord;\n"
+            "uniform sampler2D u_texture;\n"
+            "uniform vec4 u_color;\n"
+            "void main()\n"
+            "{\n"
+            "    float alpha = texture2D(u_texture, v_texCoord).r;\n"
+            "    gl_FragColor = vec4(u_color.rgb, alpha);\n"
+            "}\n"
+        },
+    },
     [GL3__SHADER_CANVAS] = {
         .type = GL_VERTEX_SHADER,
         .name = "SHADER_CANVAS",
@@ -212,6 +228,11 @@ static struct gl3__program_desc const s_programs[QU__TOTAL_BRUSHES] = {
         .name = "BRUSH_TEXTURED",
         .vert = GL3__SHADER_VERTEX,
         .frag = GL3__SHADER_TEXTURED,
+    },
+    [QU__BRUSH_FONT] = {
+        .name = "BRUSH_FONT",
+        .vert = GL3__SHADER_VERTEX,
+        .frag = GL3__SHADER_FONT,
     },
 };
 

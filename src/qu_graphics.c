@@ -1217,7 +1217,7 @@ void qu__graphics_draw_text(int32_t id, qu_color color, float const *data, int c
         .args.draw = {
             .texture = texture,
             .color = color,
-            .brush = QU__BRUSH_TEXTURED,
+            .brush = QU__BRUSH_FONT,
             .vertex_format = QU__VERTEX_FORMAT_TEXTURED,
             .render_mode = QU__RENDER_MODE_TRIANGLES,
             .first_vertex = graphics__append_vertex_data(QU__VERTEX_FORMAT_TEXTURED, data, count * 4),

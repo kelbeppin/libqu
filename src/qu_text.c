@@ -181,7 +181,7 @@ static int get_glyph_index(int font_index)
 static bool grow_atlas(struct atlas *atlas)
 {
     int next_height = atlas->height * 2;
-    unsigned char *next_bitmap = realloc(atlas->bitmap, atlas->width * next_height * 2);
+    unsigned char *next_bitmap = realloc(atlas->bitmap, atlas->width * next_height);
 
     if (!next_bitmap) {
         return false;
@@ -194,16 +194,15 @@ static bool grow_atlas(struct atlas *atlas)
 
     for (int y = atlas->height / 2; y < atlas->height; y++) {
         for (int x = 0; x < atlas->width; x++) {
-            atlas->bitmap[y * atlas->width * 2 + x * 2 + 0] = 0;
-            atlas->bitmap[y * atlas->width * 2 + x * 2 + 1] = 0;
+            atlas->bitmap[y * atlas->width + x] = 0;
         }
     }
 
-    qu_delete_texture((qu_texture) { atlas->texture_id });
+    qu__graphics_delete_texture(atlas->texture_id);
 
-    unsigned char fill[2] = { 0x00, 0x00 };
-    atlas->texture_id = qu__graphics_create_texture(atlas->width, atlas->height, 2, fill);
-    qu_set_texture_smooth((qu_texture) { atlas->texture_id }, true);
+    unsigned char fill = 0x00;
+    atlas->texture_id = qu__graphics_create_texture(atlas->width, atlas->height, 1, &fill);
+    qu__graphics_set_texture_smooth(atlas->texture_id, true);
     qu__graphics_update_texture(atlas->texture_id, 0, 0, -1, -1, atlas->bitmap);
 
     return true;
@@ -259,42 +258,23 @@ static int cache_glyph(int font_index, unsigned long codepoint, float x_advance,
         atlas->line_height = 0;
     }
 
-    unsigned char *bitmap_with_alpha = malloc(bitmap_w * bitmap_h * 2);
-
-    if (!bitmap_with_alpha) {
-        return -1;
-    }
-
-    // Convert 1-channel bitmap to 2-channel bitmap (luminance and alpha).
-    for (int y = 0; y < bitmap_h; y++) {
-        for (int x = 0; x < bitmap_w; x++) {
-            int idx = y * bitmap_w * 2 + x * 2;
-
-            bitmap_with_alpha[idx + 0] = 255;
-            bitmap_with_alpha[idx + 1] = bitmap[y * bitmap_w + x];
-        }
-    }
-
     // Replace portion of large on-memory bitmap with new data.
     for (int y = 0; y < bitmap_h; y++) {
         int atlas_y = atlas->cursor_y + y;
 
         for (int x = 0; x < bitmap_w; x++) {
             int atlas_x = atlas->cursor_x + x;
-            int atlas_idx = atlas_y * atlas->width * 2 + atlas_x * 2;
-            int idx = y * bitmap_w * 2 + x * 2;
+            int atlas_idx = atlas_y * atlas->width + atlas_x;
+            int idx = y * bitmap_w + x;
 
-            atlas->bitmap[atlas_idx + 0] = bitmap_with_alpha[idx + 0];
-            atlas->bitmap[atlas_idx + 1] = bitmap_with_alpha[idx + 1];
+            atlas->bitmap[atlas_idx] = bitmap[idx];
         }
     }
 
     // Update on-VRAM texture portion.
     qu__graphics_update_texture(atlas->texture_id,
         atlas->cursor_x, atlas->cursor_y,
-        bitmap_w, bitmap_h, bitmap_with_alpha);
-
-    free(bitmap_with_alpha);
+        bitmap_w, bitmap_h, bitmap);
 
     struct glyph *glyph = &font->glyphs[glyph_index];
 
@@ -439,10 +419,10 @@ int32_t qu__text_load_font(qu_file *file, float pt)
         height *= 2;
     }
 
-    unsigned char fill[2] = { 0x00, 0x00 };
-    fontp->atlas.texture_id = qu__graphics_create_texture(width, height, 2, fill);
-    qu_set_texture_smooth((qu_texture) { fontp->atlas.texture_id }, true);
-    fontp->atlas.bitmap = calloc(width * height * 2, sizeof(unsigned char));
+    unsigned char fill = 0x00;
+    fontp->atlas.texture_id = qu__graphics_create_texture(width, height, 1, &fill);
+    qu__graphics_set_texture_smooth(fontp->atlas.texture_id, true);
+    fontp->atlas.bitmap = calloc(width * height, sizeof(unsigned char));
 
     if (fontp->atlas.texture_id == -1 || !fontp->atlas.bitmap) {
         free(fontp->atlas.bitmap);
