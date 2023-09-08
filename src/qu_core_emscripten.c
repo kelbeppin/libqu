@@ -252,6 +252,11 @@ static void *gl_proc_address(char const *name)
     return NULL;
 }
 
+static int get_gl_multisample_samples(void)
+{
+    return 1;
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__core const qu__core_emscripten = {
@@ -262,4 +267,5 @@ struct qu__core const qu__core_emscripten = {
     .get_renderer = get_renderer,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
+    .get_gl_multisample_samples = get_gl_multisample_samples,
 };

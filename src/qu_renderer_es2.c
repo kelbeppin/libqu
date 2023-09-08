@@ -18,123 +18,832 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
 
-// TODO: implement
-
 #define QU_MODULE "renderer-es2"
 
 #include "qu.h"
 
+#include <GLES2/gl2.h>
+#include <GLES2/gl2ext.h>
+
+//------------------------------------------------------------------------------
+// qu_renderer_es2.c: OpenGL ES 2.0 (WebGL) renderer
 //------------------------------------------------------------------------------
 
-static bool query(qu_params const *params)
+//------------------------------------------------------------------------------
+// Debug messages and error checks
+
+#ifdef NDEBUG
+
+#define CHECK_GL(_call) \
+    _call
+
+#else
+
+static void _check_gl(char const *call, char const *file, int line)
 {
+    GLenum error = glGetError();
+
+    if (error == GL_NO_ERROR) {
+        return;
+    }
+    
+    QU_WARNING("OpenGL error(s) occured in %s:\n", file);
+    QU_WARNING("%4d: %s\n", line, call);
+
+    do {
+        switch (error) {
+        case GL_INVALID_ENUM:
+            QU_WARNING("-- GL_INVALID_ENUM\n");
+            break;
+        case GL_INVALID_VALUE:
+            QU_WARNING("-- GL_INVALID_VALUE\n");
+            break;
+        case GL_INVALID_OPERATION:
+            QU_WARNING("-- GL_INVALID_OPERATION\n");
+            break;
+        case GL_STACK_OVERFLOW:
+            QU_WARNING("-- GL_STACK_OVERFLOW\n");
+            break;
+        case GL_STACK_UNDERFLOW:
+            QU_WARNING("-- GL_STACK_UNDERFLOW\n");
+            break;
+        case GL_OUT_OF_MEMORY:
+            QU_WARNING("-- GL_OUT_OF_MEMORY\n");
+            break;
+        default:
+            QU_WARNING("-- 0x%04x\n", error);
+            break;
+        }
+    } while ((error = glGetError()) != GL_NO_ERROR);
+}
+
+#define CHECK_GL(_call) \
+    do { \
+        _call; \
+        _check_gl(#_call, __FILE__, __LINE__); \
+    } while (0);
+
+#endif
+
+//------------------------------------------------------------------------------
+
+enum shader
+{
+    SHADER_VERTEX,
+    SHADER_SOLID,
+    SHADER_TEXTURED,
+    TOTAL_SHADERS,
+};
+
+enum program
+{
+    PROGRAM_NONE = -1,
+    PROGRAM_SHAPE,
+    PROGRAM_TEXTURE,
+    TOTAL_PROGRAMS,
+};
+
+enum uniform
+{
+    UNIFORM_PROJECTION,
+    UNIFORM_MODELVIEW,
+    UNIFORM_COLOR,
+    TOTAL_UNIFORMS,
+};
+
+//------------------------------------------------------------------------------
+
+struct shader_desc
+{
+    GLenum type;
+    char const *name;
+    char const *src[1];
+};
+
+struct program_desc
+{
+    char const *name;
+    enum shader vert;
+    enum shader frag;
+};
+
+struct vertex_attribute_desc
+{
+    char const *name;
+    unsigned int size;
+};
+
+struct vertex_format_desc
+{
+    unsigned int attributes;
+    unsigned int stride;
+    enum program program;
+};
+
+//------------------------------------------------------------------------------
+
+static struct shader_desc const shader_desc[TOTAL_SHADERS] = {
+    [SHADER_VERTEX] = {
+        .type = GL_VERTEX_SHADER,
+        .name = "SHADER_VERTEX",
+        .src = {
+            "#version 100\n"
+            "attribute vec2 a_position;\n"
+            "attribute vec4 a_color;\n"
+            "attribute vec2 a_texCoord;\n"
+            "varying vec4 v_color;\n"
+            "varying vec2 v_texCoord;\n"
+            "uniform mat4 u_projection;\n"
+            "uniform mat4 u_modelView;\n"
+            "void main()\n"
+            "{\n"
+            "    v_texCoord = a_texCoord;\n"
+            "    v_color = a_color;\n"
+            "    vec4 position = vec4(a_position, 0.0, 1.0);\n"
+            "    gl_Position = u_projection * u_modelView * position;\n"
+            "}\n"
+        },
+    },
+    [SHADER_SOLID] = {
+        .type = GL_FRAGMENT_SHADER,
+        .name = "SHADER_SOLID",
+        .src = {
+            "#version 100\n"
+            "precision mediump float;\n"
+            "uniform vec4 u_color;\n"
+            "void main()\n"
+            "{\n"
+            "    gl_FragColor = u_color;\n"
+            "}\n"
+        },
+    },
+    [SHADER_TEXTURED] = {
+        .type = GL_FRAGMENT_SHADER,
+        .name = "SHADER_TEXTURED",
+        .src = {
+            "#version 100\n"
+            "precision mediump float;\n"
+            "varying vec2 v_texCoord;\n"
+            "uniform sampler2D u_texture;\n"
+            "uniform vec4 u_color;\n"
+            "void main()\n"
+            "{\n"
+            "    gl_FragColor = texture2D(u_texture, v_texCoord) * u_color;\n"
+            "}\n"
+        },
+    },
+};
+
+static struct program_desc const program_desc[TOTAL_PROGRAMS] = {
+    [PROGRAM_SHAPE] = {
+        .name = "PROGRAM_SHAPE",
+        .vert = SHADER_VERTEX,
+        .frag = SHADER_SOLID,
+    },
+    [PROGRAM_TEXTURE] = {
+        .name = "PROGRAM_TEXTURE",
+        .vert = SHADER_VERTEX,
+        .frag = SHADER_TEXTURED,
+    },
+};
+
+static char const *uniform_names[TOTAL_UNIFORMS] = {
+    [UNIFORM_PROJECTION] = "u_projection",
+    [UNIFORM_MODELVIEW] = "u_modelView",
+    [UNIFORM_COLOR] = "u_color",
+};
+
+static struct vertex_attribute_desc const vertex_attribute_desc[QU__TOTAL_VERTEX_ATTRIBUTES] = {
+    [QU__VERTEX_ATTRIBUTE_POSITION] = { .name = "a_position", .size = 2 },
+    [QU__VERTEX_ATTRIBUTE_COLOR] = { .name = "a_color", .size = 4 },
+    [QU__VERTEX_ATTRIBUTE_TEXCOORD] = {.name = "a_texCoord", .size = 2 },
+};
+
+static struct vertex_format_desc const vertex_format_desc[QU__TOTAL_VERTEX_FORMATS] = {
+    [QU__VERTEX_FORMAT_SOLID] = {
+        .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION),
+        .stride = 2,
+        .program = PROGRAM_SHAPE,
+    },
+    [QU__VERTEX_FORMAT_TEXTURED] = {
+        .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION) | (1 << QU__VERTEX_ATTRIBUTE_TEXCOORD),
+        .stride = 4,
+        .program = PROGRAM_TEXTURE,
+    },
+};
+
+//------------------------------------------------------------------------------
+
+static GLenum const mode_map[QU__TOTAL_RENDER_MODES] = {
+    GL_POINTS,
+    GL_LINES,
+    GL_LINE_STRIP,
+    GL_LINE_LOOP,
+    GL_TRIANGLES,
+    GL_TRIANGLE_STRIP,
+    GL_TRIANGLE_FAN,
+};
+
+static GLenum const texture_format_map[4] = {
+    GL_LUMINANCE,
+    GL_LUMINANCE_ALPHA,
+    GL_RGB,
+    GL_RGBA,
+};
+
+static GLenum const blend_factor_map[10] = {
+    GL_ZERO,
+    GL_ONE,
+    GL_SRC_COLOR,
+    GL_ONE_MINUS_SRC_COLOR,
+    GL_DST_COLOR,
+    GL_ONE_MINUS_DST_COLOR,
+    GL_SRC_ALPHA,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_DST_ALPHA,
+    GL_ONE_MINUS_DST_ALPHA,
+};
+
+static GLenum const blend_equation_map[3] = {
+    GL_FUNC_ADD,
+    GL_FUNC_SUBTRACT,
+    GL_FUNC_REVERSE_SUBTRACT,
+};
+
+//------------------------------------------------------------------------------
+
+struct program_info
+{
+    GLuint id;
+    GLint uniforms[TOTAL_UNIFORMS];
+    unsigned int dirty_uniforms;
+};
+
+struct vertex_format_info
+{
+    GLuint buffer;
+    GLuint buffer_size;
+};
+
+struct priv
+{
+    struct qu__texture const *bound_texture;
+    struct qu__surface const *bound_surface;
+    enum program used_program;
+
+    struct program_info programs[TOTAL_PROGRAMS];
+    struct vertex_format_info vertex_formats[QU__TOTAL_VERTEX_FORMATS];
+
+    qu_mat4 projection;
+    qu_mat4 modelview;
+    GLfloat color[4];
+};
+
+//------------------------------------------------------------------------------
+
+static struct priv priv;
+
+//------------------------------------------------------------------------------
+
+static void color_conv(GLfloat *dst, qu_color color)
+{
+    dst[0] = ((color >> 0x10) & 0xFF) / 255.f;
+    dst[1] = ((color >> 0x08) & 0xFF) / 255.f;
+    dst[2] = ((color >> 0x00) & 0xFF) / 255.f;
+    dst[3] = ((color >> 0x18) & 0xFF) / 255.f;
+}
+
+static GLuint load_shader(struct shader_desc const *desc)
+{
+    GLuint shader = glCreateShader(desc->type);
+    CHECK_GL(glShaderSource(shader, 1, desc->src, NULL));
+    CHECK_GL(glCompileShader(shader));
+
+    GLint success;
+    CHECK_GL(glGetShaderiv(shader, GL_COMPILE_STATUS, &success));
+
+    if (!success) {
+        char buffer[256];
+
+        CHECK_GL(glGetShaderInfoLog(shader, 256, NULL, buffer));
+        CHECK_GL(glDeleteShader(shader));
+
+        QU_ERROR("Failed to compile GLSL shader %s. Reason:\n%s\n", desc->name, buffer);
+        return 0;
+    }
+
+    QU_INFO("Shader %s is compiled successfully.\n", desc->name);
+    return shader;
+}
+
+static GLuint build_program(char const *name, GLuint vs, GLuint fs)
+{
+    GLuint program = glCreateProgram();
+
+    CHECK_GL(glAttachShader(program, vs));
+    CHECK_GL(glAttachShader(program, fs));
+
+    for (int j = 0; j < QU__TOTAL_VERTEX_ATTRIBUTES; j++) {
+        CHECK_GL(glBindAttribLocation(program, j, vertex_attribute_desc[j].name));
+    }
+
+    CHECK_GL(glLinkProgram(program));
+
+    GLint success;
+    CHECK_GL(glGetProgramiv(program, GL_LINK_STATUS, &success));
+
+    if (!success) {
+        char buffer[256];
+        
+        CHECK_GL(glGetProgramInfoLog(program, 256, NULL, buffer));
+        CHECK_GL(glDeleteProgram(program));
+
+        QU_ERROR("Failed to link GLSL program %s: %s\n", name, buffer);
+        return 0;
+    }
+
+    QU_INFO("Shader program %s is built successfully.\n", name);
+    return program;
+}
+
+static void update_uniforms(void)
+{
+    if (priv.used_program == PROGRAM_NONE) {
+        return;
+    }
+
+    struct program_info *info = &priv.programs[priv.used_program];
+
+    if (info->dirty_uniforms & (1 << UNIFORM_PROJECTION)) {
+        CHECK_GL(glUniformMatrix4fv(info->uniforms[UNIFORM_PROJECTION], 1, GL_FALSE, priv.projection.m));
+    }
+
+    if (info->dirty_uniforms & (1 << UNIFORM_MODELVIEW)) {
+        CHECK_GL(glUniformMatrix4fv(info->uniforms[UNIFORM_MODELVIEW], 1, GL_FALSE, priv.modelview.m));
+    }
+
+    if (info->dirty_uniforms & (1 << UNIFORM_COLOR)) {
+        CHECK_GL(glUniform4fv(info->uniforms[UNIFORM_COLOR], 1, priv.color));
+    }
+
+    info->dirty_uniforms = 0;
+}
+
+static void surface_add_multisample_buffer(struct qu__surface *surface)
+{
+    surface->sample_count = 1;
+
+#if 0
+    GLsizei width = surface->texture.image.width;
+    GLsizei height = surface->texture.image.height;
+
+    GLuint ms_fbo;
+    GLuint ms_color;
+
+    CHECK_GL(glGenFramebuffers(1, &ms_fbo));
+    CHECK_GL(glBindFramebuffer(GL_FRAMEBUFFER, ms_fbo));
+
+    CHECK_GL(glGenRenderbuffers(1, &ms_color));
+    CHECK_GL(glBindRenderbuffer(GL_RENDERBUFFER, ms_color));
+
+    CHECK_GL(glRenderbufferStorageMultisample(
+        GL_RENDERBUFFER, surface->sample_count, GL_RGBA8, width, height
+    ));
+
+    CHECK_GL(glFramebufferRenderbuffer(
+        GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, ms_color
+    ));
+
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        QU_HALT("[TODO] FBO error handling.");
+    }
+
+    surface->priv[2] = ms_fbo;
+    surface->priv[3] = ms_color;
+#endif
+}
+
+static void surface_remove_multisample_buffer(struct qu__surface *surface)
+{
+#if 0
+    GLuint ms_fbo = surface->priv[2];
+    GLuint ms_color = surface->priv[3];
+
+    CHECK_GL(glDeleteFramebuffers(1, &ms_fbo));
+    CHECK_GL(glDeleteRenderbuffers(1, &ms_color));
+#endif
+}
+
+static void surface_blit_multisample_buffer(struct qu__surface const *surface)
+{
+#if 0
+    GLuint fbo = surface->priv[0];
+    GLuint ms_fbo = surface->priv[2];
+
+    CHECK_GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo));
+    CHECK_GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, ms_fbo));
+
+    GLsizei width = surface->texture.image.width;
+    GLsizei height = surface->texture.image.height;
+
+    CHECK_GL(glBlitFramebuffer(
+        0, 0, width, height,
+        0, 0, width, height,
+        GL_COLOR_BUFFER_BIT,
+        GL_NEAREST
+    ));
+#endif
+}
+
+//------------------------------------------------------------------------------
+
+static bool es2_query(qu_params const *params)
+{
+    if (qu__core_get_renderer() != QU__RENDERER_ES2) {
+        return false;
+    }
+
     return true;
 }
 
-static void initialize(qu_params const *params)
+static void es2_initialize(qu_params const *params)
 {
+    memset(&priv, 0, sizeof(priv));
+
+    CHECK_GL(glEnable(GL_BLEND));
+    CHECK_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+
+    GLuint shaders[TOTAL_SHADERS];
+    
+    for (int i = 0; i < TOTAL_SHADERS; i++) {
+        shaders[i] = load_shader(&shader_desc[i]);
+    }
+
+    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+        GLuint vs = shaders[program_desc[i].vert];
+        GLuint fs = shaders[program_desc[i].frag];
+
+        priv.programs[i].id = build_program(program_desc[i].name, vs, fs);
+
+        for (int j = 0; j < TOTAL_UNIFORMS; j++) {
+            priv.programs[i].uniforms[j] = glGetUniformLocation(priv.programs[i].id, uniform_names[j]);
+        }
+    }
+
+    for (int i = 0; i < TOTAL_SHADERS; i++) {
+        CHECK_GL(glDeleteShader(shaders[i]));
+    }
+
+    priv.used_program = PROGRAM_NONE;
+
+    for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
+        struct vertex_format_info *info = &priv.vertex_formats[i];
+        CHECK_GL(glGenBuffers(1, &info->buffer));
+    }
+
     QU_INFO("Initialized.\n");
 }
 
-static void terminate(void)
+static void es2_terminate(void)
 {
+    for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
+        CHECK_GL(glDeleteBuffers(1, &priv.vertex_formats[i].buffer));
+    }
+
+    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+        CHECK_GL(glDeleteProgram(priv.programs[i].id));
+    }
+
     QU_INFO("Terminated.\n");
 }
 
-static void upload_vertex_data(enum qu__vertex_format format, float const *data, size_t size)
+static void es2_upload_vertex_data(enum qu__vertex_format format, float const *data, size_t size)
 {
+    struct vertex_format_info *info = &priv.vertex_formats[format];
+
+    CHECK_GL(glBindBuffer(GL_ARRAY_BUFFER, info->buffer));
+
+    if (size < info->buffer_size) {
+        CHECK_GL(glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(float) * size, data));
+    } else {
+        CHECK_GL(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * size, data, GL_STREAM_DRAW));
+    }
+
+    info->buffer_size = size;
 }
 
-static void apply_projection(qu_mat4 const *projection)
+static void es2_apply_projection(qu_mat4 const *projection)
 {
+    qu_mat4_copy(&priv.projection, projection);
+
+    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+        priv.programs[i].dirty_uniforms |= (1 << UNIFORM_PROJECTION);
+    }
+
+    update_uniforms();
 }
 
-static void apply_transform(qu_mat4 const *transform)
+static void es2_apply_transform(qu_mat4 const *transform)
 {
+    qu_mat4_copy(&priv.modelview, transform);
+    
+    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+        priv.programs[i].dirty_uniforms |= (1 << UNIFORM_MODELVIEW);
+    }
+
+    update_uniforms();
 }
 
-static void apply_surface(struct qu__surface const *surface)
+static void es2_apply_surface(struct qu__surface const *surface)
 {
+    if (priv.bound_surface && priv.bound_surface->sample_count > 1) {
+        surface_blit_multisample_buffer(priv.bound_surface);
+    }
+
+    if (priv.bound_surface == surface) {
+        return;
+    }
+
+    GLsizei width = surface->texture.image.width;
+    GLsizei height = surface->texture.image.height;
+
+    if (surface->sample_count > 1) {
+        CHECK_GL(glBindFramebuffer(GL_FRAMEBUFFER, surface->priv[2]));
+    } else {
+        CHECK_GL(glBindFramebuffer(GL_FRAMEBUFFER, surface->priv[0]));
+    }
+
+    CHECK_GL(glViewport(0, 0, width, height));
+
+    priv.bound_surface = surface;
 }
 
-static void apply_texture(struct qu__texture const *texture)
+static void es2_apply_texture(struct qu__texture const *texture)
 {
+    if (priv.bound_texture == texture) {
+        return;
+    }
+
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, texture ? texture->priv[0] : 0));
+    priv.bound_texture = texture;
 }
 
-static void apply_clear_color(qu_color color)
+static void es2_apply_clear_color(qu_color color)
 {
+    GLfloat v[4];
+
+    color_conv(v, color);
+    CHECK_GL(glClearColor(v[0], v[1], v[2], v[3]));
 }
 
-static void apply_draw_color(qu_color color)
+static void es2_apply_draw_color(qu_color color)
 {
+    color_conv(priv.color, color);
+    
+    for (int i = 0; i < TOTAL_PROGRAMS; i++) {
+        priv.programs[i].dirty_uniforms |= (1 << UNIFORM_COLOR);
+    }
+
+    update_uniforms();
 }
 
-static void apply_vertex_format(enum qu__vertex_format format)
+static void es2_apply_vertex_format(enum qu__vertex_format format)
 {
+    struct vertex_format_info *info = &priv.vertex_formats[format];
+
+    CHECK_GL(glBindBuffer(GL_ARRAY_BUFFER, info->buffer));
+
+    unsigned int offset = 0;
+
+    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+        if (vertex_format_desc[format].attributes & (1 << i)) {
+            GLsizei size = vertex_attribute_desc[i].size;
+            GLsizei stride = sizeof(float) * vertex_format_desc[format].stride;
+
+            CHECK_GL(glEnableVertexAttribArray(i));
+            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
+            offset += sizeof(float) * size;
+        } else {
+            CHECK_GL(glDisableVertexAttribArray(i));
+        }
+    }
+
+    enum program program = vertex_format_desc[format].program;
+
+    if (priv.used_program == program) {
+        return;
+    }
+
+    CHECK_GL(glUseProgram(priv.programs[program].id));
+    priv.used_program = program;
+
+    update_uniforms();
 }
 
-static void apply_blend_mode(qu_blend_mode mode)
+static void es2_apply_blend_mode(qu_blend_mode mode)
 {
+    GLenum csf = blend_factor_map[mode.color_src_factor];
+    GLenum cdf = blend_factor_map[mode.color_dst_factor];
+    GLenum asf = blend_factor_map[mode.alpha_src_factor];
+    GLenum adf = blend_factor_map[mode.alpha_dst_factor];
+
+    GLenum ceq = blend_equation_map[mode.color_equation];
+    GLenum aeq = blend_equation_map[mode.alpha_equation];
+
+    CHECK_GL(glBlendFuncSeparate(csf, cdf, asf, adf));
+    CHECK_GL(glBlendEquationSeparate(ceq, aeq));
 }
 
-static void exec_resize(int width, int height)
+static void es2_exec_resize(int width, int height)
 {
+    if (!priv.bound_surface) {
+        CHECK_GL(glViewport(0, 0, width, height));
+    }
 }
 
-static void exec_clear(void)
+static void es2_exec_clear(void)
 {
+    CHECK_GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-static void exec_draw(enum qu__render_mode mode, unsigned int first_vertex, unsigned int total_vertices)
+static void es2_exec_draw(enum qu__render_mode mode, unsigned int first_vertex, unsigned int total_vertices)
 {
+    CHECK_GL(glDrawArrays(mode_map[mode], (GLint) first_vertex, (GLsizei) total_vertices));
 }
 
-static void load_texture(struct qu__texture *texture)
+static void es2_load_texture(struct qu__texture *texture)
 {
+    GLuint id = texture->priv[0];
+    
+    if (id == 0) {
+        CHECK_GL(glGenTextures(1, &id));
+        texture->priv[0] = (uintptr_t) id;
+    }
+
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, id));
+
+    GLenum internal_format = texture_format_map[texture->image.channels - 1];
+    GLenum format = internal_format;
+
+    CHECK_GL(glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        internal_format,
+        texture->image.width,
+        texture->image.height,
+        0,
+        format,
+        GL_UNSIGNED_BYTE,
+        texture->image.pixels
+    ));
+
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+
+    if (priv.bound_texture) {
+        CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture->priv[0]));
+    } else {
+        CHECK_GL(glBindTexture(GL_TEXTURE_2D, 0));
+    }
 }
 
-static void unload_texture(struct qu__texture *texture)
+static void es2_unload_texture(struct qu__texture *texture)
 {
+    GLuint id = (GLuint) texture->priv[0];
+
+    CHECK_GL(glDeleteTextures(1, &id));
 }
 
-static void set_texture_smooth(struct qu__texture *texture, bool smooth)
+static void es2_set_texture_smooth(struct qu__texture *texture, bool smooth)
 {
+    GLuint id = (GLuint) texture->priv[0];
+
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, id));
+
+    if (smooth) {
+        CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    } else {
+        CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    }
+
+    if (priv.bound_texture) {
+        CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture->priv[0]));
+    } else {
+        CHECK_GL(glBindTexture(GL_TEXTURE_2D, 0));
+    }
 }
 
-static void create_surface(struct qu__surface *surface)
+static void es2_create_surface(struct qu__surface *surface)
 {
+    GLsizei width = surface->texture.image.width;
+    GLsizei height = surface->texture.image.height;
+
+    GLuint fbo;
+    GLuint depth;
+    GLuint color;
+
+    CHECK_GL(glGenFramebuffers(1, &fbo));
+    CHECK_GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
+
+    CHECK_GL(glGenRenderbuffers(1, &depth));
+    CHECK_GL(glBindRenderbuffer(GL_RENDERBUFFER, depth));
+    CHECK_GL(glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, width, height));
+
+    CHECK_GL(glGenTextures(1, &color));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, color));
+    CHECK_GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
+
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
+    CHECK_GL(glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth));
+    CHECK_GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0));
+
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        QU_HALT("[TODO] FBO error handling.");
+    }
+
+    surface->priv[0] = fbo;
+    surface->priv[1] = depth;
+    surface->texture.priv[0] = color;
+
+    int max_samples = qu__core_get_gl_multisample_samples();
+    surface->sample_count = QU_MIN(max_samples, surface->sample_count);
+
+    if (surface->sample_count > 1) {
+        surface_add_multisample_buffer(surface);
+    }
+
+    if (priv.bound_surface) {
+        CHECK_GL(glBindFramebuffer(GL_FRAMEBUFFER, priv.bound_surface->priv[0]));
+    } else {
+        CHECK_GL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+    }
+
+    if (priv.bound_texture) {
+        CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture->priv[0]));
+    } else {
+        CHECK_GL(glBindTexture(GL_TEXTURE_2D, 0));
+    }
 }
 
-static void destroy_surface(struct qu__surface *surface)
+static void es2_destroy_surface(struct qu__surface *surface)
 {
+    if (surface->sample_count > 1) {
+        surface_remove_multisample_buffer(surface);
+    }
+
+    GLuint fbo = surface->priv[0];
+    GLuint depth = surface->priv[1];
+    GLuint color = surface->texture.priv[0];
+
+    CHECK_GL(glDeleteFramebuffers(1, &fbo));
+    CHECK_GL(glDeleteRenderbuffers(1, &depth));
+    CHECK_GL(glDeleteTextures(1, &color));
 }
 
-static void set_surface_antialiasing_level(struct qu__surface *surface, int level)
+static void es2_set_surface_antialiasing_level(struct qu__surface *surface, int level)
 {
+    if (surface->sample_count > 1) {
+        surface_remove_multisample_buffer(surface);
+    }
+
+    surface->sample_count = level;
+
+    if (surface->sample_count > 1) {
+        surface_add_multisample_buffer(surface);
+    }
 }
 
 //------------------------------------------------------------------------------
 
 struct qu__renderer_impl const qu__renderer_es2 = {
-    .query = query,
-    .initialize = initialize,
-    .terminate = terminate,
-    .upload_vertex_data = upload_vertex_data,
-    .apply_projection = apply_projection,
-    .apply_transform = apply_transform,
-    .apply_surface = apply_surface,
-    .apply_texture = apply_texture,
-    .apply_clear_color = apply_clear_color,
-    .apply_draw_color = apply_draw_color,
-    .apply_vertex_format = apply_vertex_format,
-    .apply_blend_mode = apply_blend_mode,
-    .exec_resize = exec_resize,
-	.exec_clear = exec_clear,
-	.exec_draw = exec_draw,
-    .load_texture = load_texture,
-    .unload_texture = unload_texture,
-    .set_texture_smooth = set_texture_smooth,
-    .create_surface = create_surface,
-    .destroy_surface = destroy_surface,
-    .set_surface_antialiasing_level = set_surface_antialiasing_level,
+    .query = es2_query,
+    .initialize = es2_initialize,
+    .terminate = es2_terminate,
+    .upload_vertex_data = es2_upload_vertex_data,
+    .apply_projection = es2_apply_projection,
+    .apply_transform = es2_apply_transform,
+    .apply_surface = es2_apply_surface,
+    .apply_texture = es2_apply_texture,
+    .apply_clear_color = es2_apply_clear_color,
+    .apply_draw_color = es2_apply_draw_color,
+    .apply_vertex_format = es2_apply_vertex_format,
+    .apply_blend_mode = es2_apply_blend_mode,
+    .exec_resize = es2_exec_resize,
+	.exec_clear = es2_exec_clear,
+	.exec_draw = es2_exec_draw,
+    .load_texture = es2_load_texture,
+    .unload_texture = es2_unload_texture,
+    .set_texture_smooth = es2_set_texture_smooth,
+    .create_surface = es2_create_surface,
+    .destroy_surface = es2_destroy_surface,
+    .set_surface_antialiasing_level = es2_set_surface_antialiasing_level,
 };
