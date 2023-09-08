@@ -77,7 +77,10 @@ if(QU_EMSCRIPTEN)
     target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_EMSCRIPTEN)
     target_compile_options(${PROJECT_NAME} PUBLIC -sUSE_SDL)
-    target_link_options(${PROJECT_NAME} PUBLIC -sINITIAL_MEMORY=536870912 -sPTHREAD_POOL_SIZE=4)
+    target_link_options(${PROJECT_NAME} PUBLIC
+        -sINITIAL_MEMORY=67108864
+        -sPTHREAD_POOL_SIZE=4
+        "SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/emscripten-shell.html")
 endif()
 
 if(QU_POSIX)
