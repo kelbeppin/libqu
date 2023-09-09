@@ -171,22 +171,7 @@ static void color_conv(GLfloat *dst, qu_color color)
 
 static bool check_glext(char const *extension)
 {
-    char *extensions = qu_strdup((char const *) glGetString(GL_EXTENSIONS));
-    char *token = strtok(extensions, " ");
-    bool found = false;
-
-    while (token) {
-        if (strcmp(token, extension) == 0) {
-            found = true;
-            break;
-        }
-
-        token = strtok(NULL, " ");
-    }
-
-    free(extensions);
-
-    return found;
+    return qu__is_entry_in_list((char const *) glGetString(GL_EXTENSIONS), extension);
 }
 
 static void load_gl_functions(void)
@@ -288,6 +273,10 @@ static void gl1__initialize(qu_params const *params)
     _GL_CHECK(glEnable(GL_BLEND));
 
     _GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+
+    QU_INFO("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
+    QU_INFO("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
+    QU_INFO("GL_VERSION: %s\n", glGetString(GL_VERSION));
 
     QU_INFO("Initialized.\n");
 }

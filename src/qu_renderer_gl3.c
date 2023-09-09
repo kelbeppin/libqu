@@ -628,6 +628,10 @@ static void gl3__initialize(qu_params const *params)
         }
     }
 
+    QU_INFO("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
+    QU_INFO("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
+    QU_INFO("GL_VERSION: %s\n", glGetString(GL_VERSION));
+
     QU_INFO("Initialized.\n");
 }
 
