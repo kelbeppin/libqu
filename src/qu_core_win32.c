@@ -41,8 +41,16 @@ typedef HRESULT (APIENTRY *SETPROCESSDPIAWARENESSPROC)(int);
 
 //------------------------------------------------------------------------------
 
+#define EXT_WGL_ARB_PIXEL_FORMAT            0x01
+#define EXT_WGL_ARB_CREATE_CONTEXT          0x02
+#define EXT_WGL_ARB_CREATE_CONTEXT_PROFILE  0x04
+#define EXT_WGL_EXT_SWAP_CONTROL            0x08
+
+//------------------------------------------------------------------------------
+
 static struct
 {
+    unsigned int extensions;
     PFNWGLGETEXTENSIONSSTRINGARBPROC    wglGetExtensionsStringARB;
     PFNWGLGETPIXELFORMATATTRIBIVARBPROC wglGetPixelFormatAttribivARB;
     PFNWGLCHOOSEPIXELFORMATARBPROC      wglChoosePixelFormatARB;
@@ -65,6 +73,8 @@ static struct
     UINT        mouse_button_ordinal;
     UINT        mouse_buttons;
     int         gl_samples;
+    int         gl_version;
+    int         gl_profile; // 0: legacy, 1: core, 2: es2
 } dpy;
 
 //------------------------------------------------------------------------------
@@ -143,12 +153,34 @@ static int init_wgl_extensions(void)
 
     wgl.wglGetExtensionsStringARB = (PFNWGLGETEXTENSIONSSTRINGARBPROC)
         wglGetProcAddress("wglGetExtensionsStringARB");
-    wgl.wglGetPixelFormatAttribivARB = (PFNWGLGETPIXELFORMATATTRIBIVARBPROC)
-        wglGetProcAddress("wglGetPixelFormatAttribivARB");
-    wgl.wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)
-        wglGetProcAddress("wglChoosePixelFormatARB");
-    wgl.wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)
-        wglGetProcAddress("wglCreateContextAttribsARB");
+
+    if (wgl.wglGetExtensionsStringARB) {
+        char const *extensions = wgl.wglGetExtensionsStringARB(dc);
+
+        if (qu__is_entry_in_list(extensions, "WGL_ARB_pixel_format")) {
+            wgl.wglGetPixelFormatAttribivARB = (PFNWGLGETPIXELFORMATATTRIBIVARBPROC)
+                wglGetProcAddress("wglGetPixelFormatAttribivARB");
+            wgl.wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)
+                wglGetProcAddress("wglChoosePixelFormatARB");
+            wgl.extensions |= EXT_WGL_ARB_PIXEL_FORMAT;
+        }
+
+        if (qu__is_entry_in_list(extensions, "WGL_ARB_create_context")) {
+            wgl.wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)
+                wglGetProcAddress("wglCreateContextAttribsARB");
+            wgl.extensions |= EXT_WGL_ARB_CREATE_CONTEXT;
+        }
+
+        if (qu__is_entry_in_list(extensions, "WGL_ARB_create_context_profile")) {
+            wgl.extensions |= EXT_WGL_ARB_CREATE_CONTEXT_PROFILE;
+        }
+
+        if (qu__is_entry_in_list(extensions, "WGL_EXT_swap_control")) {
+            wgl.wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)
+                wglGetProcAddress("wglSwapIntervalEXT");
+            wgl.extensions |= EXT_WGL_EXT_SWAP_CONTROL;
+        }
+    }
 
     wglMakeCurrent(dc, NULL);
     wglDeleteContext(rc);
@@ -161,84 +193,134 @@ static int init_wgl_extensions(void)
     QU_DEBUG(":: wglChoosePixelFormatARB -> %p\n", wgl.wglChoosePixelFormatARB);
     QU_DEBUG(":: wglCreateContextAttribsARB -> %p\n", wgl.wglCreateContextAttribsARB);
 
-    // These functions are mandatory to create OpenGL Core Profile Context.
-
-    if (!wgl.wglGetExtensionsStringARB) {
-        QU_ERROR("WGL: required function wglGetExtensionsStringARB() is unavailable.\n");
-        return -1;
-    }
-
-    if (!wgl.wglGetPixelFormatAttribivARB) {
-        QU_ERROR("WGL: required function wglGetPixelFormatAttribivARB() is unavailable.\n");
-        return -1;
-    }
-
-    if (!wgl.wglChoosePixelFormatARB) {
-        QU_ERROR("WGL: required function wglChoosePixelFormatARB() is unavailable.\n");
-        return -1;
-    }
-
-    if (!wgl.wglCreateContextAttribsARB) {
-        QU_ERROR("WGL: required function wglCreateContextAttribsARB() is unavailable.\n");
-        return -1;
-    }
-
     return 0;
 }
 
-static int choose_pixel_format(HDC dc)
+static int set_pixel_format(HDC dc)
 {
-    int format_attribs[] = {
-        WGL_DRAW_TO_WINDOW_ARB,     (TRUE),
-        WGL_ACCELERATION_ARB,       (WGL_FULL_ACCELERATION_ARB),
-        WGL_SUPPORT_OPENGL_ARB,     (TRUE),
-        WGL_DOUBLE_BUFFER_ARB,      (TRUE),
-        WGL_PIXEL_TYPE_ARB,         (WGL_TYPE_RGBA_ARB),
-        WGL_COLOR_BITS_ARB,         (32),
-        WGL_DEPTH_BITS_ARB,         (24),
-        WGL_STENCIL_BITS_ARB,       (8),
-        0,
-    };
+    PIXELFORMATDESCRIPTOR pfd;
+    int format = 0;
 
-    int formats[256];
-    UINT total_formats = 0;
-    wgl.wglChoosePixelFormatARB(dc, format_attribs, NULL, 256, formats, &total_formats);
-
-    if (!total_formats) {
-        QU_ERROR("No suitable Pixel Format found.\n");
-        return -1;
-    }
-
-    int best_format = -1;
-    int best_samples = 0;
-
-    for (unsigned int i = 0; i < total_formats; i++) {
-        int attribs[] = {
-            WGL_SAMPLE_BUFFERS_ARB,
-            WGL_SAMPLES_ARB,
+    if (wgl.extensions & EXT_WGL_ARB_PIXEL_FORMAT) {
+        int format_attribs[] = {
+            WGL_DRAW_TO_WINDOW_ARB,     (TRUE),
+            WGL_ACCELERATION_ARB,       (WGL_FULL_ACCELERATION_ARB),
+            WGL_SUPPORT_OPENGL_ARB,     (TRUE),
+            WGL_DOUBLE_BUFFER_ARB,      (TRUE),
+            WGL_PIXEL_TYPE_ARB,         (WGL_TYPE_RGBA_ARB),
+            WGL_COLOR_BITS_ARB,         (32),
+            WGL_DEPTH_BITS_ARB,         (24),
+            WGL_STENCIL_BITS_ARB,       (8),
+            0,
         };
 
-        int values[2];
+        int formats[256];
+        UINT total_formats = 0;
+        wgl.wglChoosePixelFormatARB(dc, format_attribs, NULL, 256, formats, &total_formats);
 
-        wgl.wglGetPixelFormatAttribivARB(dc, formats[i], 0, 2, attribs, values);
-
-        if (!values[0]) {
-            continue;
+        if (!total_formats) {
+            QU_ERROR("No suitable Pixel Format found.\n");
+            return 0;
         }
 
-        if (values[1] > best_samples) {
-            best_format = i;
-            best_samples = values[1];
+        int best_format = -1;
+        int best_samples = 0;
+
+        for (unsigned int i = 0; i < total_formats; i++) {
+            int attribs[] = {
+                WGL_SAMPLE_BUFFERS_ARB,
+                WGL_SAMPLES_ARB,
+            };
+
+            int values[2];
+
+            wgl.wglGetPixelFormatAttribivARB(dc, formats[i], 0, 2, attribs, values);
+
+            if (!values[0]) {
+                continue;
+            }
+
+            if (values[1] > best_samples) {
+                best_format = i;
+                best_samples = values[1];
+            }
+        }
+
+        if (best_format == -1) {
+            dpy.gl_samples = 1;
+            format = formats[0];
+        } else {
+            dpy.gl_samples = best_samples;
+            format = formats[best_format];
+        }
+
+        DescribePixelFormat(dc, format, sizeof(pfd), &pfd);
+    } else {
+        pfd = (PIXELFORMATDESCRIPTOR) {
+            .nSize          = sizeof(PIXELFORMATDESCRIPTOR),
+            .nVersion       = 1,
+            .dwFlags        = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL,
+            .iPixelType     = PFD_TYPE_RGBA,
+            .cColorBits     = 32,
+            .cAlphaBits     = 8,
+            .iLayerType     = PFD_MAIN_PLANE,
+        };
+
+        format = ChoosePixelFormat(dc, &pfd);
+    }
+    
+    if (!SetPixelFormat(dc, format, &pfd)) {
+        QU_ERROR("Failed to set Pixel Format.\n");
+        QU_ERROR(":: GetLastError -> 0x%08x\n", GetLastError());
+        return 0;
+    }
+
+    return format;
+}
+
+static HGLRC create_context(HDC dc)
+{
+    HGLRC rc = NULL;
+
+    if (wgl.extensions & EXT_WGL_ARB_CREATE_CONTEXT) {
+        int gl_versions[] = { 460, 450, 440, 420, 410, 400, 330 };
+
+        for (unsigned int i = 0; i < ARRAYSIZE(gl_versions); i++) {
+            int major = gl_versions[i] / 100;
+            int minor = (gl_versions[i] % 100) / 10;
+
+            int attribs[] = {
+                WGL_CONTEXT_MAJOR_VERSION_ARB,  major,
+                WGL_CONTEXT_MINOR_VERSION_ARB,  minor,
+                WGL_CONTEXT_PROFILE_MASK_ARB,   WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+                0,
+            };
+
+            rc = wgl.wglCreateContextAttribsARB(dc, NULL, attribs);
+
+            if (rc && wglMakeCurrent(dc, rc)) {
+                QU_INFO("OpenGL version %d.%d seems to be supported.\n", major, minor);
+                dpy.gl_version = gl_versions[i];
+                dpy.gl_profile = 1;
+                break;
+            }
+
+            QU_ERROR("Unable to create OpenGL version %d.%d context.\n", major, minor);
+        }
+    } else {
+        rc = wglCreateContext(dc);
+
+        if (rc && wglMakeCurrent(dc, rc)) {
+            QU_INFO("Legacy OpenGL context is created.\n");
+
+            dpy.gl_version = -1;
+            dpy.gl_profile = 0;
+        } else {
+            QU_ERROR("Unable to create legacy OpenGL context.\n");
         }
     }
 
-    if (best_format == -1) {
-        dpy.gl_samples = 1;
-        return formats[0];
-    }
-
-    dpy.gl_samples = best_samples;
-    return formats[best_format];
+    return rc;
 }
 
 static int init_wgl_context(HWND window)
@@ -249,75 +331,32 @@ static int init_wgl_context(HWND window)
 
     HDC dc = GetDC(window);
 
-    if (!dc) {
-        QU_HALT("Failed to get Device Context for main window.");
-    }
-
-    QU_INFO("Available WGL extensions: %s\n", wgl.wglGetExtensionsStringARB(dc));
-
-    int format = choose_pixel_format(dc);
-
-    if (format == -1) {
-        QU_ERROR("Failed to choose appropriate Pixel Format.\n");
-
-        ReleaseDC(window, dc);
-        return -1;
-    }
-
-    PIXELFORMATDESCRIPTOR pfd;
-    DescribePixelFormat(dc, format, sizeof(pfd), &pfd);
-
-    if (!SetPixelFormat(dc, format, &pfd)) {
-        QU_ERROR("Failed to set Pixel Format.\n");
-        QU_ERROR(":: GetLastError -> 0x%08x\n", GetLastError());
-
-        ReleaseDC(window, dc);
-        return -1;
-    }
-
-    HGLRC rc = NULL;
-    int gl_versions[] = { 460, 450, 440, 420, 410, 400, 330 };
-
-    for (unsigned int i = 0; i < ARRAYSIZE(gl_versions); i++) {
-        int major = gl_versions[i] / 100;
-        int minor = (gl_versions[i] % 100) / 10;
-
-        int attribs[] = {
-            WGL_CONTEXT_MAJOR_VERSION_ARB,  major,
-            WGL_CONTEXT_MINOR_VERSION_ARB,  minor,
-            WGL_CONTEXT_PROFILE_MASK_ARB,   WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-            0,
-        };
-
-        rc = wgl.wglCreateContextAttribsARB(dc, NULL, attribs);
-
-        if (rc && wglMakeCurrent(dc, rc)) {
-            QU_INFO("OpenGL version %d.%d seems to be supported.\n", major, minor);
-            break;
+    if (dc) {
+        if (wgl.wglGetExtensionsStringARB) {
+            QU_INFO("Available WGL extensions: %s\n", wgl.wglGetExtensionsStringARB(dc));
         }
 
-        QU_ERROR("Unable to create OpenGL version %d.%d context.\n", major, minor);
-    }
+        if (set_pixel_format(dc)) {
+            HGLRC rc = create_context(dc);
 
-    if (!rc) {
-        QU_ERROR("Neither of listed OpenGL versions is supported.\n");
+            if (rc) {
+                if (wgl.extensions & EXT_WGL_EXT_SWAP_CONTROL) {
+                    wgl.wglSwapIntervalEXT(1);
+                }
+
+                dpy.dc = dc;
+                dpy.rc = rc;
+
+                return 0;
+            }
+        }
 
         ReleaseDC(window, dc);
-        return -1;
+    } else {
+        QU_ERROR("Failed to get Device Context for main window.");
     }
 
-    wgl.wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
-
-    if (wgl.wglSwapIntervalEXT) {
-        wgl.wglSwapIntervalEXT(1);
-    }
-
-    dpy.dc = dc;
-    dpy.rc = rc;
-
-    QU_INFO("OpenGL context is successfully created.\n");
-
-    return 0;
+    return -1;
 }
 
 static qu_key key_conv(WPARAM wp, LPARAM lp)
@@ -666,33 +705,18 @@ static void present(void)
 
 static enum qu__renderer get_renderer(void)
 {
-    return QU__RENDERER_GL_CORE;
+    switch (dpy.gl_profile) {
+    default:
+        return QU__RENDERER_GL_COMPAT;
+    case 1:
+        return QU__RENDERER_GL_CORE;
+    case 2:
+        return QU__RENDERER_ES2;
+    }
 }
 
 static bool gl_check_extension(char const *name)
 {
-    if (!wgl.wglGetExtensionsStringARB) {
-        return false;
-    }
-
-    char *list = qu_strdup(wgl.wglGetExtensionsStringARB(dpy.dc));
-
-    if (!list) {
-        return false;
-    }
-
-    char *token = strtok(list, " ");
-
-    while (token) {
-        if (strcmp(token, name) == 0) {
-            return true;
-        }
-
-        token = strtok(NULL, " ");
-    }
-
-    free(list);
-
     return false;
 }
 

@@ -37,6 +37,26 @@ char *qu_strdup(char const *str)
     return dup;
 }
 
+bool qu__is_entry_in_list(char const *list, char const *entry)
+{
+    char *rw = qu_strdup(list);
+    char *token = strtok(rw, " ");
+    bool found = false;
+
+    while (token) {
+        if (strcmp(token, entry) == 0) {
+            found = true;
+            break;
+        }
+
+        token = strtok(NULL, " ");
+    }
+
+    free(rw);
+
+    return found;
+}
+
 void qu_make_circle(float x, float y, float radius, float *data, int num_verts)
 {
     float angle = QU_DEG2RAD(360.f / num_verts);

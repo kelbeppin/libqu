@@ -85,6 +85,7 @@ qu_vec2f qu_mat4_transform_point(qu_mat4 const *mat, qu_vec2f p);
     _ptr = malloc(sizeof(*_ptr) * _size)
 
 char *qu_strdup(char const *str);
+bool qu__is_entry_in_list(char const *list, char const *entry);
 void qu_make_circle(float x, float y, float radius, float *data, int num_verts);
 
 //------------------------------------------------------------------------------
