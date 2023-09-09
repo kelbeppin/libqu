@@ -39,6 +39,10 @@ char *qu_strdup(char const *str)
 
 bool qu__is_entry_in_list(char const *list, char const *entry)
 {
+    if (!list) {
+        return false;
+    }
+
     char *rw = qu_strdup(list);
     char *token = strtok(rw, " ");
     bool found = false;
