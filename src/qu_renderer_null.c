@@ -67,6 +67,10 @@ static void apply_draw_color(qu_color color)
 {
 }
 
+static void apply_brush(enum qu__brush brush)
+{
+}
+
 static void apply_vertex_format(enum qu__vertex_format format)
 {
 }
@@ -124,6 +128,7 @@ struct qu__renderer_impl const qu__renderer_null = {
     .apply_texture = apply_texture,
     .apply_clear_color = apply_clear_color,
     .apply_draw_color = apply_draw_color,
+    .apply_brush = apply_brush,
     .apply_vertex_format = apply_vertex_format,
     .apply_blend_mode = apply_blend_mode,
     .exec_resize = exec_resize,
