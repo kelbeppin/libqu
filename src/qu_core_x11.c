@@ -59,7 +59,7 @@ enum
 
 static struct
 {
-    bool legacy_context;
+    int gl_profile;
 
     // Xlib variables
 
@@ -403,22 +403,28 @@ static void initialize(qu_params const *params)
 
     // (6) Create GLX context and surface
 
-    char *env = getenv("QU_FORCE_LEGACY_GL");
-    bool use_es2 = true;
+    if (impl.extensions & ARB_CREATE_CONTEXT_PROFILE) {
+        int major_version = 3;
+        int minor_version = 3;
+        int profile_mask = GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
 
-    if (env) {
-        if (!strcmp(env, "1") || !strcasecmp(env, "YES")) {
-            use_es2 = false;
+#ifdef QU_USE_ES2
+        if (impl.extensions & EXT_CREATE_CONTEXT_ES2_PROFILE) {
+            major_version = 2;
+            minor_version = 0;
+            profile_mask = GLX_CONTEXT_ES2_PROFILE_BIT_EXT;
+            impl.gl_profile = 1;
         }
-    }
+#endif
 
-    if (use_es2 && (impl.extensions & EXT_CREATE_CONTEXT_ES2_PROFILE)) {
-        QU_INFO("Creating OpenGL ES 2.0 context...\n");
+        QU_INFO("Creating %s %d.%d context...\n",
+            impl.gl_profile == 1 ? "OpenGL ES" : "OpenGL",
+            major_version, minor_version);
 
         int ctx_attribs[] = {
-            GLX_CONTEXT_MAJOR_VERSION_ARB,  2,
-            GLX_CONTEXT_MINOR_VERSION_ARB,  0,
-            GLX_CONTEXT_PROFILE_MASK_ARB,   GLX_CONTEXT_ES2_PROFILE_BIT_EXT,
+            GLX_CONTEXT_MAJOR_VERSION_ARB,  major_version,
+            GLX_CONTEXT_MINOR_VERSION_ARB,  minor_version,
+            GLX_CONTEXT_PROFILE_MASK_ARB,   profile_mask,
             None,
         };
 
@@ -430,7 +436,7 @@ static void initialize(qu_params const *params)
     if (!impl.context) {
         QU_INFO("Creating legacy OpenGL context...\n");
         impl.context = glXCreateContext(impl.display, vi, NULL, True);
-        impl.legacy_context = true;
+        impl.gl_profile = -1;
     }
 
     XFree(vi);
@@ -545,11 +551,14 @@ static void present(void)
 
 static enum qu__renderer get_renderer(void)
 {
-    if (impl.legacy_context) {
+    switch (impl.gl_profile) {
+    case 0:
+        return QU__RENDERER_GL_CORE;
+    case 1:
+        return QU__RENDERER_ES2;
+    default:
         return QU__RENDERER_GL_COMPAT;
     }
-
-    return QU__RENDERER_ES2;
 }
 
 static bool gl_check_extension(char const *name)
@@ -575,6 +584,11 @@ static void *gl_proc_address(char const *name)
     return glXGetProcAddress((GLubyte const *) name);
 }
 
+static int get_gl_multisample_samples(void)
+{
+    return 1;
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__core const qu__core_x11 = {
@@ -585,4 +599,5 @@ struct qu__core const qu__core_x11 = {
     .get_renderer = get_renderer,
     .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
+    .get_gl_multisample_samples = get_gl_multisample_samples,
 };
