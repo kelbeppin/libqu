@@ -135,7 +135,7 @@ static GLenum const blend_equation_map[3] = {
 struct qu__gl1_renderer_priv
 {
     GLuint bound_texture;
-    struct qu__surface *bound_surface;
+    struct qu__surface const *bound_surface;
     float const *vertex_data[QU__TOTAL_VERTEX_FORMATS];
     
     bool no_ms_surfaces;
@@ -333,9 +333,9 @@ static void gl1__apply_surface(struct qu__surface const *surface)
     GLsizei height = surface->texture.image.height;
 
     if (surface->sample_count > 1) {
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[0]));
-    } else {
         _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[2]));
+    } else {
+        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[0]));
     }
 
     _GL_CHECK(glViewport(0, 0, width, height));
