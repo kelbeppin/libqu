@@ -107,7 +107,6 @@ void qu__core_initialize(qu_params const *params)
     QU_HALT_IF(!priv.impl->process);
     QU_HALT_IF(!priv.impl->present);
     QU_HALT_IF(!priv.impl->get_renderer);
-    QU_HALT_IF(!priv.impl->gl_check_extension);
     QU_HALT_IF(!priv.impl->gl_proc_address);
     QU_HALT_IF(!priv.impl->get_gl_multisample_samples);
 

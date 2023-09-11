@@ -243,7 +243,6 @@ struct qu__core
 
     enum qu__renderer (*get_renderer)(void);
 
-    bool (*gl_check_extension)(char const *name);
     void *(*gl_proc_address)(char const *name);
     int (*get_gl_multisample_samples)(void);
 };

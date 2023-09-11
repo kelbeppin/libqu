@@ -242,11 +242,6 @@ static enum qu__renderer get_renderer(void)
     return QU__RENDERER_ES2;
 }
 
-static bool gl_check_extension(char const *name)
-{
-    return false;
-}
-
 static void *gl_proc_address(char const *name)
 {
     return SDL_GL_GetProcAddress(name);
@@ -265,7 +260,6 @@ struct qu__core const qu__core_emscripten = {
     .process = process,
     .present = present,
     .get_renderer = get_renderer,
-    .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
 };

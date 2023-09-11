@@ -561,24 +561,6 @@ static enum qu__renderer get_renderer(void)
     }
 }
 
-static bool gl_check_extension(char const *name)
-{
-    char *list = strdup(glXQueryExtensionsString(impl.display, impl.screen));
-    char *token = strtok(list, " ");
-
-    while (token) {
-        if (strcmp(token, name) == 0) {
-            free(list);
-            return true;
-        }
-
-        token = strtok(NULL, " ");
-    }
-
-    free(list);
-    return false;
-}
-
 static void *gl_proc_address(char const *name)
 {
     return glXGetProcAddress((GLubyte const *) name);
@@ -597,7 +579,6 @@ struct qu__core const qu__core_x11 = {
     .process = process,
     .present = present,
     .get_renderer = get_renderer,
-    .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
 };

@@ -715,11 +715,6 @@ static enum qu__renderer get_renderer(void)
     }
 }
 
-static bool gl_check_extension(char const *name)
-{
-    return false;
-}
-
 static void *gl_proc_address(char const *name)
 {
     return (void *) wglGetProcAddress(name);
@@ -738,7 +733,6 @@ struct qu__core const qu__core_win32 = {
     .process = process,
     .present = present,
     .get_renderer = get_renderer,
-    .gl_check_extension = gl_check_extension,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
 };
