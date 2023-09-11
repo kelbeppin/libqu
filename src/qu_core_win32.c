@@ -45,6 +45,7 @@ typedef HRESULT (APIENTRY *SETPROCESSDPIAWARENESSPROC)(int);
 #define EXT_WGL_ARB_CREATE_CONTEXT          0x02
 #define EXT_WGL_ARB_CREATE_CONTEXT_PROFILE  0x04
 #define EXT_WGL_EXT_SWAP_CONTROL            0x08
+#define EXT_WGL_EXT_CREATE_CONTEXT_ES2_PROFILE 0x10
 
 //------------------------------------------------------------------------------
 
@@ -74,7 +75,7 @@ static struct
     UINT        mouse_buttons;
     int         gl_samples;
     int         gl_version;
-    int         gl_profile; // 0: legacy, 1: core, 2: es2
+    int         renderer;
 } dpy;
 
 //------------------------------------------------------------------------------
@@ -180,6 +181,10 @@ static int init_wgl_extensions(void)
                 wglGetProcAddress("wglSwapIntervalEXT");
             wgl.extensions |= EXT_WGL_EXT_SWAP_CONTROL;
         }
+
+        if (qu__is_entry_in_list(extensions, "WGL_EXT_create_context_es2_profile")) {
+            wgl.extensions |= EXT_WGL_EXT_CREATE_CONTEXT_ES2_PROFILE;
+        }
     }
 
     wglMakeCurrent(dc, NULL);
@@ -259,10 +264,10 @@ static int set_pixel_format(HDC dc)
         pfd = (PIXELFORMATDESCRIPTOR) {
             .nSize          = sizeof(PIXELFORMATDESCRIPTOR),
             .nVersion       = 1,
-            .dwFlags        = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL,
+            .dwFlags        = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
             .iPixelType     = PFD_TYPE_RGBA,
             .cColorBits     = 32,
-            .cAlphaBits     = 8,
+            .cStencilBits   = 8,
             .iLayerType     = PFD_MAIN_PLANE,
         };
 
@@ -278,46 +283,105 @@ static int set_pixel_format(HDC dc)
     return format;
 }
 
+static HGLRC create_context_with_profile(HDC dc, int version, int profile)
+{
+    int major = version / 100;
+    int minor = (version % 100) / 10;
+
+    int profile_attrib = 0;
+    int profile_mask = 0;
+
+    if (wgl.extensions & EXT_WGL_ARB_CREATE_CONTEXT_PROFILE) {
+        profile_attrib = WGL_CONTEXT_PROFILE_MASK_ARB;
+
+        if (profile == 'c') {
+            profile_mask = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
+        } else if (profile == 'l') {
+            profile_mask = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
+        } else if (profile == 'e' && (wgl.extensions & EXT_WGL_EXT_CREATE_CONTEXT_ES2_PROFILE)) {
+            profile_mask = WGL_CONTEXT_ES2_PROFILE_BIT_EXT;
+        } else {
+            QU_ERROR("Internal error: selected invalid OpenGL profile.\n");
+            return NULL;
+        }
+    }
+
+    int attribs[] = {
+        WGL_CONTEXT_MAJOR_VERSION_ARB, major,
+        WGL_CONTEXT_MINOR_VERSION_ARB, minor,
+        profile_attrib, profile_mask,
+        0,
+    };
+
+    return wgl.wglCreateContextAttribsARB(dc, NULL, attribs);
+}
+
 static HGLRC create_context(HDC dc)
 {
     HGLRC rc = NULL;
 
     if (wgl.extensions & EXT_WGL_ARB_CREATE_CONTEXT) {
-        int gl_versions[] = { 460, 450, 440, 420, 410, 400, 330 };
+        int list[][3] = {
+#ifdef QU_USE_ES2
+            { 200, 'e' },
+#endif
+            { 330, 'c' },
+            { 150, 'l' },
+        };
 
-        for (unsigned int i = 0; i < ARRAYSIZE(gl_versions); i++) {
-            int major = gl_versions[i] / 100;
-            int minor = (gl_versions[i] % 100) / 10;
+        for (unsigned int i = 0; i < ARRAYSIZE(list); i++) {
+            int version = list[i][0];
+            int profile = list[i][1];
 
-            int attribs[] = {
-                WGL_CONTEXT_MAJOR_VERSION_ARB,  major,
-                WGL_CONTEXT_MINOR_VERSION_ARB,  minor,
-                WGL_CONTEXT_PROFILE_MASK_ARB,   WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
-                0,
-            };
-
-            rc = wgl.wglCreateContextAttribsARB(dc, NULL, attribs);
+            rc = create_context_with_profile(dc, version, profile);
 
             if (rc && wglMakeCurrent(dc, rc)) {
-                QU_INFO("OpenGL version %d.%d seems to be supported.\n", major, minor);
-                dpy.gl_version = gl_versions[i];
-                dpy.gl_profile = 1;
+                dpy.gl_version = version;
+
+                if (profile == 'c') {
+                    dpy.renderer = QU__RENDERER_GL_CORE;
+                } else if (profile == 'l') {
+                    dpy.renderer = QU__RENDERER_GL_COMPAT;
+                } else if (profile == 'e') {
+                    dpy.renderer = QU__RENDERER_ES2;
+                }
+
                 break;
             }
-
-            QU_ERROR("Unable to create OpenGL version %d.%d context.\n", major, minor);
         }
     } else {
         rc = wglCreateContext(dc);
 
-        if (rc && wglMakeCurrent(dc, rc)) {
-            QU_INFO("Legacy OpenGL context is created.\n");
-
+        if (wglMakeCurrent(dc, rc)) {
             dpy.gl_version = -1;
-            dpy.gl_profile = 0;
+            dpy.renderer = QU__RENDERER_GL_COMPAT;
         } else {
-            QU_ERROR("Unable to create legacy OpenGL context.\n");
+            rc = NULL;
         }
+    }
+
+    if (!rc) {
+        QU_ERROR("Unable to create OpenGL context.\n");
+        return NULL;
+    }
+
+    if (dpy.gl_version > 100) {
+        int major = dpy.gl_version / 100;
+        int minor = (dpy.gl_version % 100) / 10;
+
+        char const *profile;
+
+        if (dpy.renderer == QU__RENDERER_GL_CORE) {
+            profile = "core";
+        } else if (dpy.renderer == QU__RENDERER_GL_COMPAT) {
+            profile = "compatibility";
+        } else if (dpy.renderer == QU__RENDERER_ES2) {
+            profile = "ES";
+        }
+
+        QU_INFO("Created OpenGL context: version %d.%d, %s profile.\n", major, minor, profile);
+    } else {
+        QU_INFO("Created OpenGL context: unknown version.\n");
     }
 
     return rc;
@@ -705,14 +769,7 @@ static void present(void)
 
 static enum qu__renderer get_renderer(void)
 {
-    switch (dpy.gl_profile) {
-    default:
-        return QU__RENDERER_GL_COMPAT;
-    case 1:
-        return QU__RENDERER_GL_CORE;
-    case 2:
-        return QU__RENDERER_ES2;
-    }
+    return dpy.renderer;
 }
 
 static void *gl_proc_address(char const *name)
