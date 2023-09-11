@@ -326,6 +326,7 @@ struct qu__texture
 {
     struct qu__image image;
     uintptr_t priv[4];
+    bool smooth;
 };
 
 struct qu__surface

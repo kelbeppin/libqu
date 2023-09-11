@@ -830,7 +830,12 @@ static void gl3_load_texture(struct qu__texture *texture)
         texture->image.pixels
     ));
 
-    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    if (texture->smooth) {
+        CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+    } else {
+        CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    }
+
     CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 
     GLenum const *swizzle = texture_swizzle_map[texture->image.channels - 1];
@@ -865,6 +870,8 @@ static void gl3_set_texture_smooth(struct qu__texture *data, bool smooth)
     } else {
         CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     }
+
+    data->smooth = smooth;
 
     if (priv.bound_texture) {
         CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture->priv[0]));

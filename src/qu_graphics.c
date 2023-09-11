@@ -1106,6 +1106,7 @@ void qu__graphics_set_texture_smooth(int32_t id, bool smooth)
     struct qu__texture *texture = qu_array_get(priv.textures, id);
 
     if (texture) {
+        texture->smooth = smooth;
         priv.renderer->set_texture_smooth(texture, smooth);
     }
 }
