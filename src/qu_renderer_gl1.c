@@ -41,12 +41,12 @@
 
 #ifdef NDEBUG
 
-#define _GL_CHECK(_call) \
+#define CHECK_GL(_call) \
     _call
 
 #else
 
-static void _gl_check(char const *call, char const *file, int line)
+static void _check_gl(char const *call, char const *file, int line)
 {
     GLenum error = glGetError();
 
@@ -84,10 +84,10 @@ static void _gl_check(char const *call, char const *file, int line)
     } while ((error = glGetError()) != GL_NO_ERROR);
 }
 
-#define _GL_CHECK(_call) \
+#define CHECK_GL(_call) \
     do { \
         _call; \
-        _gl_check(#_call, __FILE__, __LINE__); \
+        _check_gl(#_call, __FILE__, __LINE__); \
     } while (0);
 
 #endif
@@ -132,13 +132,16 @@ static GLenum const blend_equation_map[3] = {
 
 //------------------------------------------------------------------------------
 
-struct qu__gl1_renderer_priv
+struct priv
 {
     GLuint bound_texture;
     struct qu__surface const *bound_surface;
     float const *vertex_data[QU__TOTAL_VERTEX_FORMATS];
     
     bool no_ms_surfaces;
+
+    PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
+    PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate;
 
     PFNGLBINDFRAMEBUFFEREXTPROC glBindFramebufferEXT;
     PFNGLBINDRENDERBUFFEREXTPROC glBindRenderbufferEXT;
@@ -152,12 +155,9 @@ struct qu__gl1_renderer_priv
     PFNGLFRAMEBUFFERTEXTURE2DEXTPROC glFramebufferTexture2DEXT;
     PFNGLRENDERBUFFERSTORAGEEXTPROC glRenderbufferStorageEXT;
     PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
-
-    PFNGLBLENDFUNCSEPARATEPROC glBlendFuncSeparate;
-    PFNGLBLENDEQUATIONSEPARATEPROC glBlendEquationSeparate;
 };
 
-static struct qu__gl1_renderer_priv priv;
+static struct priv priv;
 
 //------------------------------------------------------------------------------
 
@@ -176,6 +176,9 @@ static bool check_glext(char const *extension)
 
 static void load_gl_functions(void)
 {
+    priv.glBlendFuncSeparate = qu__core_get_gl_proc_address("glBlendFuncSeparate");
+    priv.glBlendEquationSeparate = qu__core_get_gl_proc_address("glBlendEquationSeparate");
+
     priv.glBindFramebufferEXT = qu__core_get_gl_proc_address("glBindFramebufferEXT");
     priv.glBindRenderbufferEXT = qu__core_get_gl_proc_address("glBindRenderbufferEXT");
     priv.glCheckFramebufferStatusEXT = qu__core_get_gl_proc_address("glCheckFramebufferStatusEXT");
@@ -186,9 +189,6 @@ static void load_gl_functions(void)
     priv.glFramebufferRenderbufferEXT = qu__core_get_gl_proc_address("glFramebufferRenderbufferEXT");
     priv.glFramebufferTexture2DEXT = qu__core_get_gl_proc_address("glFramebufferTexture2DEXT");
     priv.glRenderbufferStorageEXT = qu__core_get_gl_proc_address("glRenderbufferStorageEXT");
-
-    priv.glBlendFuncSeparate = qu__core_get_gl_proc_address("glBlendFuncSeparate");
-    priv.glBlendEquationSeparate = qu__core_get_gl_proc_address("glBlendEquationSeparate");
 
     if (!priv.no_ms_surfaces) {
         priv.glBlitFramebufferEXT = qu__core_get_gl_proc_address("glBlitFramebufferEXT");
@@ -204,17 +204,17 @@ static void surface_add_multisample_buffer(struct qu__surface *surface)
     GLuint ms_fbo;
     GLuint ms_color;
 
-    _GL_CHECK(priv.glGenFramebuffersEXT(1, &ms_fbo));
-    _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, ms_fbo));
+    CHECK_GL(priv.glGenFramebuffersEXT(1, &ms_fbo));
+    CHECK_GL(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, ms_fbo));
 
-    _GL_CHECK(priv.glGenRenderbuffersEXT(1, &ms_color));
-    _GL_CHECK(priv.glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, ms_color));
+    CHECK_GL(priv.glGenRenderbuffersEXT(1, &ms_color));
+    CHECK_GL(priv.glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, ms_color));
 
-    _GL_CHECK(priv.glRenderbufferStorageMultisampleEXT(
+    CHECK_GL(priv.glRenderbufferStorageMultisampleEXT(
         GL_RENDERBUFFER_EXT, surface->sample_count, GL_RGBA8, width, height
     ));
 
-    _GL_CHECK(priv.glFramebufferRenderbufferEXT(
+    CHECK_GL(priv.glFramebufferRenderbufferEXT(
         GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, ms_color
     ));
 
@@ -233,13 +233,13 @@ static void surface_remove_multisample_buffer(struct qu__surface *surface)
     GLuint ms_fbo = surface->priv[2];
     GLuint ms_color = surface->priv[3];
 
-    _GL_CHECK(priv.glDeleteFramebuffersEXT(1, &ms_fbo));
-    _GL_CHECK(priv.glDeleteRenderbuffersEXT(1, &ms_color));
+    CHECK_GL(priv.glDeleteFramebuffersEXT(1, &ms_fbo));
+    CHECK_GL(priv.glDeleteRenderbuffersEXT(1, &ms_color));
 }
 
 //------------------------------------------------------------------------------
 
-static bool gl1__query(qu_params const *params)
+static bool gl1_query(qu_params const *params)
 {
     if (qu__core_get_renderer() != QU__RENDERER_GL_COMPAT) {
         return false;
@@ -263,16 +263,16 @@ static bool gl1__query(qu_params const *params)
     return true;
 }
 
-static void gl1__initialize(qu_params const *params)
+static void gl1_initialize(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
     load_gl_functions();
 
-    _GL_CHECK(glEnable(GL_TEXTURE_2D));
-    _GL_CHECK(glEnable(GL_BLEND));
+    CHECK_GL(glEnable(GL_TEXTURE_2D));
+    CHECK_GL(glEnable(GL_BLEND));
 
-    _GL_CHECK(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+    CHECK_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
     QU_INFO("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
     QU_INFO("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
@@ -281,43 +281,43 @@ static void gl1__initialize(qu_params const *params)
     QU_INFO("Initialized.\n");
 }
 
-static void gl1__terminate(void)
+static void gl1_terminate(void)
 {
     QU_INFO("Terminated.\n");
 }
 
-static void gl1__upload_vertex_data(enum qu__vertex_format vertex_format, float const *data, size_t size)
+static void gl1_upload_vertex_data(enum qu__vertex_format vertex_format, float const *data, size_t size)
 {
     // Don't actually upload anything.
     priv.vertex_data[vertex_format] = data;
 }
 
-static void gl1__apply_projection(qu_mat4 const *projection)
+static void gl1_apply_projection(qu_mat4 const *projection)
 {
-    glMatrixMode(GL_PROJECTION);
-    glLoadMatrixf(projection->m);
+    CHECK_GL(glMatrixMode(GL_PROJECTION));
+    CHECK_GL(glLoadMatrixf(projection->m));
 
-    glMatrixMode(GL_MODELVIEW);
+    CHECK_GL(glMatrixMode(GL_MODELVIEW));
 }
 
-static void gl1__apply_transform(qu_mat4 const *transform)
+static void gl1_apply_transform(qu_mat4 const *transform)
 {
     glLoadMatrixf(transform->m);
 }
 
-static void gl1__apply_surface(struct qu__surface const *surface)
+static void gl1_apply_surface(struct qu__surface const *surface)
 {
     if (priv.bound_surface && priv.bound_surface->sample_count > 1) {
         GLuint fbo = priv.bound_surface->priv[0];
         GLuint ms_fbo = priv.bound_surface->priv[2];
 
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, fbo));
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, ms_fbo));
+        CHECK_GL(priv.glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, fbo));
+        CHECK_GL(priv.glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, ms_fbo));
 
         GLsizei width = priv.bound_surface->texture.image.width;
         GLsizei height = priv.bound_surface->texture.image.height;
 
-        _GL_CHECK(priv.glBlitFramebufferEXT(
+        CHECK_GL(priv.glBlitFramebufferEXT(
             0, 0, width, height,
             0, 0, width, height,
             GL_COLOR_BUFFER_BIT,
@@ -333,17 +333,17 @@ static void gl1__apply_surface(struct qu__surface const *surface)
     GLsizei height = surface->texture.image.height;
 
     if (surface->sample_count > 1) {
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[2]));
+        CHECK_GL(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[2]));
     } else {
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[0]));
+        CHECK_GL(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[0]));
     }
 
-    _GL_CHECK(glViewport(0, 0, width, height));
+    CHECK_GL(glViewport(0, 0, width, height));
 
     priv.bound_surface = surface;
 }
 
-static void gl1__apply_texture(struct qu__texture const *texture)
+static void gl1_apply_texture(struct qu__texture const *texture)
 {
     GLuint id = texture ? texture->priv[0] : 0;
 
@@ -351,54 +351,54 @@ static void gl1__apply_texture(struct qu__texture const *texture)
         return;
     }
 
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, id));
     priv.bound_texture = id;
 }
 
-static void gl1__apply_clear_color(qu_color color)
+static void gl1_apply_clear_color(qu_color color)
 {
     GLfloat v[4];
 
     color_conv(v, color);
-    _GL_CHECK(glClearColor(v[0], v[1], v[2], v[3]));
+    CHECK_GL(glClearColor(v[0], v[1], v[2], v[3]));
 }
 
-static void gl1__apply_draw_color(qu_color color)
+static void gl1_apply_draw_color(qu_color color)
 {
     GLfloat v[4];
 
     color_conv(v, color);
-    _GL_CHECK(glColor4fv(v));
+    CHECK_GL(glColor4fv(v));
 }
 
-static void gl1__apply_brush(enum qu__brush brush)
+static void gl1_apply_brush(enum qu__brush brush)
 {
 }
 
-static void gl1__apply_vertex_format(enum qu__vertex_format vertex_format)
+static void gl1_apply_vertex_format(enum qu__vertex_format vertex_format)
 {
     switch (vertex_format) {
     case QU__VERTEX_FORMAT_SOLID:
-        _GL_CHECK(glEnableClientState(GL_VERTEX_ARRAY));
-        _GL_CHECK(glDisableClientState(GL_COLOR_ARRAY));
-        _GL_CHECK(glDisableClientState(GL_TEXTURE_COORD_ARRAY));
+        CHECK_GL(glEnableClientState(GL_VERTEX_ARRAY));
+        CHECK_GL(glDisableClientState(GL_COLOR_ARRAY));
+        CHECK_GL(glDisableClientState(GL_TEXTURE_COORD_ARRAY));
         
-        _GL_CHECK(glVertexPointer(2, GL_FLOAT, 0, priv.vertex_data[vertex_format]));
+        CHECK_GL(glVertexPointer(2, GL_FLOAT, 0, priv.vertex_data[vertex_format]));
         break;
     case QU__VERTEX_FORMAT_TEXTURED:
-        _GL_CHECK(glEnableClientState(GL_VERTEX_ARRAY));
-        _GL_CHECK(glDisableClientState(GL_COLOR_ARRAY));
-        _GL_CHECK(glEnableClientState(GL_TEXTURE_COORD_ARRAY));
+        CHECK_GL(glEnableClientState(GL_VERTEX_ARRAY));
+        CHECK_GL(glDisableClientState(GL_COLOR_ARRAY));
+        CHECK_GL(glEnableClientState(GL_TEXTURE_COORD_ARRAY));
 
-        _GL_CHECK(glVertexPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 0));
-        _GL_CHECK(glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 2));
+        CHECK_GL(glVertexPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 0));
+        CHECK_GL(glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 4, priv.vertex_data[vertex_format] + 2));
         break;
     default:
         break;
     }
 }
 
-static void gl1__apply_blend_mode(qu_blend_mode mode)
+static void gl1_apply_blend_mode(qu_blend_mode mode)
 {
     GLenum csf = blend_factor_map[mode.color_src_factor];
     GLenum cdf = blend_factor_map[mode.color_dst_factor];
@@ -408,39 +408,39 @@ static void gl1__apply_blend_mode(qu_blend_mode mode)
     GLenum ceq = blend_equation_map[mode.color_equation];
     GLenum aeq = blend_equation_map[mode.alpha_equation];
 
-    _GL_CHECK(priv.glBlendFuncSeparate(csf, cdf, asf, adf));
-    _GL_CHECK(priv.glBlendEquationSeparate(ceq, aeq));
+    CHECK_GL(priv.glBlendFuncSeparate(csf, cdf, asf, adf));
+    CHECK_GL(priv.glBlendEquationSeparate(ceq, aeq));
 }
 
-static void gl1__exec_resize(int width, int height)
+static void gl1_exec_resize(int width, int height)
 {
-    _GL_CHECK(glViewport(0, 0, width, height));
+    CHECK_GL(glViewport(0, 0, width, height));
 }
 
-static void gl1__exec_clear(void)
+static void gl1_exec_clear(void)
 {
-    _GL_CHECK(glClear(GL_COLOR_BUFFER_BIT));
+    CHECK_GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-static void gl1__exec_draw(enum qu__render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices)
+static void gl1_exec_draw(enum qu__render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices)
 {
-    _GL_CHECK(glDrawArrays(mode_map[render_mode], (GLint) first_vertex, (GLsizei) total_vertices));
+    CHECK_GL(glDrawArrays(mode_map[render_mode], (GLint) first_vertex, (GLsizei) total_vertices));
 }
 
-static void gl1__load_texture(struct qu__texture *texture)
+static void gl1_load_texture(struct qu__texture *texture)
 {
     GLuint id = texture->priv[0];
     
     if (id == 0) {
-        _GL_CHECK(glGenTextures(1, &id));
+        CHECK_GL(glGenTextures(1, &id));
         texture->priv[0] = (uintptr_t) id;
     }
 
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, id));
 
     GLenum format = texture_format_map[texture->image.channels - 1];
 
-    _GL_CHECK(glTexImage2D(
+    CHECK_GL(glTexImage2D(
         GL_TEXTURE_2D,
         0,
         format,
@@ -452,20 +452,20 @@ static void gl1__load_texture(struct qu__texture *texture)
         texture->image.pixels
     ));
 
-    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1__unload_texture(struct qu__texture *texture)
+static void gl1_unload_texture(struct qu__texture *texture)
 {
     GLuint id = (GLuint) texture->priv[0];
 
-    _GL_CHECK(glDeleteTextures(1, &id));
+    CHECK_GL(glDeleteTextures(1, &id));
 }
 
-static void gl1__set_texture_smooth(struct qu__texture *texture, bool smooth)
+static void gl1_set_texture_smooth(struct qu__texture *texture, bool smooth)
 {
     GLuint id = (GLuint) texture->priv[0];
 
@@ -473,18 +473,18 @@ static void gl1__set_texture_smooth(struct qu__texture *texture, bool smooth)
         return;
     }
 
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, id));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, id));
 
     if (smooth) {
-        _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+        CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
     } else {
-        _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+        CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
     }
 
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1__create_surface(struct qu__surface *surface)
+static void gl1_create_surface(struct qu__surface *surface)
 {
     GLsizei width = surface->texture.image.width;
     GLsizei height = surface->texture.image.height;
@@ -493,28 +493,28 @@ static void gl1__create_surface(struct qu__surface *surface)
     GLuint depth;
     GLuint color;
 
-    _GL_CHECK(priv.glGenFramebuffersEXT(1, &fbo));
-    _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo));
+    CHECK_GL(priv.glGenFramebuffersEXT(1, &fbo));
+    CHECK_GL(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo));
 
-    _GL_CHECK(priv.glGenRenderbuffersEXT(1, &depth));
-    _GL_CHECK(priv.glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, depth));
-    _GL_CHECK(priv.glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT16,
+    CHECK_GL(priv.glGenRenderbuffersEXT(1, &depth));
+    CHECK_GL(priv.glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, depth));
+    CHECK_GL(priv.glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT16,
                                             width, height));
 
-    _GL_CHECK(glGenTextures(1, &color));
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, color));
-    _GL_CHECK(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height,
+    CHECK_GL(glGenTextures(1, &color));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, color));
+    CHECK_GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height,
                            0, GL_RGBA, GL_UNSIGNED_BYTE, NULL));
 
-    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
-    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 
-    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-    _GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 
-    _GL_CHECK(priv.glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
+    CHECK_GL(priv.glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,
                                                 GL_RENDERBUFFER_EXT, depth));
-    _GL_CHECK(priv.glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT,
+    CHECK_GL(priv.glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT,
                                              GL_TEXTURE_2D, color, 0));
 
     GLenum status = priv.glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
@@ -535,15 +535,15 @@ static void gl1__create_surface(struct qu__surface *surface)
     }
 
     if (priv.bound_surface) {
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, priv.bound_surface->priv[0]));
+        CHECK_GL(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, priv.bound_surface->priv[0]));
     } else {
-        _GL_CHECK(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0));
+        CHECK_GL(priv.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0));
     }
 
-    _GL_CHECK(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
+    CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1__destroy_surface(struct qu__surface *surface)
+static void gl1_destroy_surface(struct qu__surface *surface)
 {
     if (surface->sample_count > 1) {
         surface_remove_multisample_buffer(surface);
@@ -553,12 +553,12 @@ static void gl1__destroy_surface(struct qu__surface *surface)
     GLuint depth = surface->priv[1];
     GLuint color = surface->texture.priv[0];
 
-    _GL_CHECK(priv.glDeleteFramebuffersEXT(1, &fbo));
-    _GL_CHECK(priv.glDeleteRenderbuffersEXT(1, &depth));
-    _GL_CHECK(glDeleteTextures(1, &color));
+    CHECK_GL(priv.glDeleteFramebuffersEXT(1, &fbo));
+    CHECK_GL(priv.glDeleteRenderbuffersEXT(1, &depth));
+    CHECK_GL(glDeleteTextures(1, &color));
 }
 
-static void gl1__set_surface_antialiasing_level(struct qu__surface *surface, int level)
+static void gl1_set_surface_antialiasing_level(struct qu__surface *surface, int level)
 {
     if (surface->sample_count > 1) {
         surface_remove_multisample_buffer(surface);
@@ -574,26 +574,26 @@ static void gl1__set_surface_antialiasing_level(struct qu__surface *surface, int
 //------------------------------------------------------------------------------
 
 struct qu__renderer_impl const qu__renderer_gl1 = {
-    .query = gl1__query,
-    .initialize = gl1__initialize,
-    .terminate = gl1__terminate,
-    .upload_vertex_data = gl1__upload_vertex_data,
-    .apply_projection = gl1__apply_projection,
-    .apply_transform = gl1__apply_transform,
-    .apply_surface = gl1__apply_surface,
-    .apply_texture = gl1__apply_texture,
-    .apply_clear_color = gl1__apply_clear_color,
-    .apply_draw_color = gl1__apply_draw_color,
-    .apply_brush = gl1__apply_brush,
-    .apply_vertex_format = gl1__apply_vertex_format,
-    .apply_blend_mode = gl1__apply_blend_mode,
-    .exec_resize = gl1__exec_resize,
-	.exec_clear = gl1__exec_clear,
-	.exec_draw = gl1__exec_draw,
-    .load_texture = gl1__load_texture,
-    .unload_texture = gl1__unload_texture,
-    .set_texture_smooth = gl1__set_texture_smooth,
-    .create_surface = gl1__create_surface,
-    .destroy_surface = gl1__destroy_surface,
-    .set_surface_antialiasing_level = gl1__set_surface_antialiasing_level,
+    .query = gl1_query,
+    .initialize = gl1_initialize,
+    .terminate = gl1_terminate,
+    .upload_vertex_data = gl1_upload_vertex_data,
+    .apply_projection = gl1_apply_projection,
+    .apply_transform = gl1_apply_transform,
+    .apply_surface = gl1_apply_surface,
+    .apply_texture = gl1_apply_texture,
+    .apply_clear_color = gl1_apply_clear_color,
+    .apply_draw_color = gl1_apply_draw_color,
+    .apply_brush = gl1_apply_brush,
+    .apply_vertex_format = gl1_apply_vertex_format,
+    .apply_blend_mode = gl1_apply_blend_mode,
+    .exec_resize = gl1_exec_resize,
+	.exec_clear = gl1_exec_clear,
+	.exec_draw = gl1_exec_draw,
+    .load_texture = gl1_load_texture,
+    .unload_texture = gl1_unload_texture,
+    .set_texture_smooth = gl1_set_texture_smooth,
+    .create_surface = gl1_create_surface,
+    .destroy_surface = gl1_destroy_surface,
+    .set_surface_antialiasing_level = gl1_set_surface_antialiasing_level,
 };
