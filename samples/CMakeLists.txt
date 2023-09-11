@@ -4,4 +4,5 @@ if(EMSCRIPTEN)
 endif()
 
 add_subdirectory(hello)
+add_subdirectory(mouse)
 add_subdirectory(audio)
