@@ -298,3 +298,11 @@ include(CPack)
 if(QU_BUILD_SAMPLES)
     add_subdirectory(samples)
 endif()
+
+#-------------------------------------------------------------------------------
+
+include(CTest)
+
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
