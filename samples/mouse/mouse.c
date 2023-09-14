@@ -16,6 +16,7 @@ struct app
     double frame_start_time;
     double frame_lag;
     bool enable_crosshair;
+    float background_brightness;
 };
 
 struct circles
@@ -55,6 +56,19 @@ static void mouse_button_release_callback(qu_mouse_button button)
     }
 }
 
+static void mouse_wheel_scroll_callback(int x_delta, int y_delta)
+{
+    app.background_brightness -= y_delta * 0.025f;
+
+    if (app.background_brightness < 0.f) {
+        app.background_brightness = 0.f;
+    }
+
+    if (app.background_brightness > 1.f) {
+        app.background_brightness = 1.f;
+    }
+}
+
 //------------------------------------------------------------------------------
 
 static void update(void)
@@ -70,7 +84,11 @@ static void update(void)
 
 static void draw(float lag_offset)
 {
-    qu_clear(QU_COLOR(0, 160, 128));
+    int red = 0;
+    int green = 160 * app.background_brightness;
+    int blue = 128 * app.background_brightness;
+
+    qu_clear(QU_COLOR(red, green, blue));
 
     if (app.enable_crosshair) {
         qu_vec2i position = qu_get_mouse_cursor_position();
@@ -129,6 +147,7 @@ int main(int argc, char *argv[])
 
     qu_on_mouse_button_pressed(mouse_button_press_callback);
     qu_on_mouse_button_released(mouse_button_release_callback);
+    qu_on_mouse_wheel_scrolled(mouse_wheel_scroll_callback);
 
     qu_execute(loop);
 }
