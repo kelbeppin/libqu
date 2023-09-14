@@ -22,6 +22,10 @@
 
 #include "qu.h"
 
+#ifdef __EMSCRIPTEN__
+#define GL_GLEXT_PROTOTYPES
+#endif
+
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
@@ -314,15 +318,21 @@ struct priv
     void (*vertex_format_terminate)(enum qu__vertex_format);
     void (*vertex_format_update)(enum qu__vertex_format);
     void (*vertex_format_apply)(enum qu__vertex_format);
-
-    PFNGLBINDVERTEXARRAYOESPROC glBindVertexArrayOES;
-    PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArraysOES;
-    PFNGLGENVERTEXARRAYSOESPROC glGenVertexArraysOES;
 };
 
 //------------------------------------------------------------------------------
 
 static struct priv priv;
+
+//------------------------------------------------------------------------------
+
+#ifndef GL_GLEXT_PROTOTYPES
+
+PFNGLBINDVERTEXARRAYOESPROC glBindVertexArrayOES;
+PFNGLDELETEVERTEXARRAYSOESPROC glDeleteVertexArraysOES;
+PFNGLGENVERTEXARRAYSOESPROC glGenVertexArraysOES;
+
+#endif
 
 //------------------------------------------------------------------------------
 
@@ -468,8 +478,8 @@ static void vao_vertex_format_initialize(enum qu__vertex_format format)
     struct vertex_format_info *info = &priv.vertex_formats[format];
     struct vertex_format_desc const *desc = &vertex_format_desc[format];
 
-    CHECK_GL(priv.glGenVertexArraysOES(1, &info->array));
-    CHECK_GL(priv.glBindVertexArrayOES(info->array));
+    CHECK_GL(glGenVertexArraysOES(1, &info->array));
+    CHECK_GL(glBindVertexArrayOES(info->array));
 
     for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
         if (desc->attributes & (1 << i)) {
@@ -482,7 +492,7 @@ static void vao_vertex_format_terminate(enum qu__vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
 
-    CHECK_GL(priv.glDeleteVertexArraysOES(1, &info->array));
+    CHECK_GL(glDeleteVertexArraysOES(1, &info->array));
 }
 
 static void vao_vertex_format_update(enum qu__vertex_format format)
@@ -490,7 +500,7 @@ static void vao_vertex_format_update(enum qu__vertex_format format)
     struct vertex_format_info *info = &priv.vertex_formats[format];
     struct vertex_format_desc const *desc = &vertex_format_desc[format];
 
-    CHECK_GL(priv.glBindVertexArrayOES(info->array));
+    CHECK_GL(glBindVertexArrayOES(info->array));
 
     unsigned int offset = 0;
 
@@ -508,7 +518,7 @@ static void vao_vertex_format_update(enum qu__vertex_format format)
 static void vao_vertex_format_apply(enum qu__vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
-    CHECK_GL(priv.glBindVertexArrayOES(info->array));
+    CHECK_GL(glBindVertexArrayOES(info->array));
 }
 
 static void surface_add_multisample_buffer(struct qu__surface *surface)
@@ -595,9 +605,11 @@ static void es2_initialize(qu_params const *params)
     memset(&priv, 0, sizeof(priv));
 
     if (check_extension("GL_OES_vertex_array_object")) {
-        priv.glBindVertexArrayOES = qu__core_get_gl_proc_address("glBindVertexArrayOES");
-        priv.glDeleteVertexArraysOES = qu__core_get_gl_proc_address("glDeleteVertexArraysOES");
-        priv.glGenVertexArraysOES = qu__core_get_gl_proc_address("glGenVertexArraysOES");
+#ifndef GL_GLEXT_PROTOTYPES
+        glBindVertexArrayOES = qu__core_get_gl_proc_address("glBindVertexArrayOES");
+        glDeleteVertexArraysOES = qu__core_get_gl_proc_address("glDeleteVertexArraysOES");
+        glGenVertexArraysOES = qu__core_get_gl_proc_address("glGenVertexArraysOES");
+#endif
 
         priv.vertex_format_initialize = vao_vertex_format_initialize;
         priv.vertex_format_terminate = vao_vertex_format_terminate;
