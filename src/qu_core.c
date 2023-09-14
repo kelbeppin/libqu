@@ -40,6 +40,9 @@ static struct qu__core const *supported_core_impl_list[] = {
     &qu__core_emscripten,
 #endif
 
+#ifdef QU_ANDROID
+    &qu__core_android,
+#endif
 };
 
 static struct qu__joystick const *supported_joystick_impl_list[] = {

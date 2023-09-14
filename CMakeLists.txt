@@ -49,11 +49,13 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(QU_LINUX 1)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
     set(QU_EMSCRIPTEN 1)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Android")
+    set(QU_ANDROID 1)
 else()
     message(FATAL_ERROR "This system is not supported by ${PROJECT_NAME}: ${CMAKE_SYSTEM_NAME}.")
 endif()
 
-if(QU_LINUX OR QU_EMSCRIPTEN)
+if(QU_LINUX OR QU_EMSCRIPTEN OR QU_ANDROID)
     set(QU_POSIX 1)
 endif()
 
@@ -85,7 +87,7 @@ if(QU_LINUX)
     set(QU_USE_X11 1)
 endif()
 
-if(QU_EMSCRIPTEN)
+if(QU_EMSCRIPTEN OR QU_ANDROID)
     set(QU_USE_ES2 1)
 endif()
 
