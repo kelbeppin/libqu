@@ -158,8 +158,6 @@ int main(int argc, char *argv[])
 		{ NULL },
 	};
 
-	qu_platform_initialize();
-
 	int current = 0;
 
 	while (true) {
