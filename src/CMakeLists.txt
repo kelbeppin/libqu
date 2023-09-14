@@ -80,6 +80,7 @@ if(QU_EMSCRIPTEN)
     target_link_options(${PROJECT_NAME} PUBLIC
         -sINITIAL_MEMORY=67108864
         -sPTHREAD_POOL_SIZE=4
+        -sOFFSCREEN_FRAMEBUFFER
         "SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/emscripten-shell.html")
 endif()
 

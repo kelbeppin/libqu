@@ -19,139 +19,317 @@
 //------------------------------------------------------------------------------
 
 #define QU_MODULE "emscripten"
+
 #include "qu.h"
-#include <SDL.h>
+
+#include <emscripten/html5.h>
 
 //------------------------------------------------------------------------------
 // qu_core_emscripten.c: Emscripten core module
-// TODO: use html5.h API
 //------------------------------------------------------------------------------
 
-static struct
-{
-    SDL_Surface *display;
-} impl;
+#define CHECK_EMSCRIPTEN(call, error) \
+    do { \
+        EMSCRIPTEN_RESULT result = call; \
+        if (result != EMSCRIPTEN_RESULT_SUCCESS) { \
+            QU_HALT(error); \
+        } \
+    } while (0);
 
 //------------------------------------------------------------------------------
 
-static qu_key key_conv(SDL_Keysym *sym)
+struct event
 {
-    switch (sym->sym) {
-    case SDLK_0:                return QU_KEY_0;
-    case SDLK_1:                return QU_KEY_1;
-    case SDLK_2:                return QU_KEY_2;
-    case SDLK_3:                return QU_KEY_3;
-    case SDLK_4:                return QU_KEY_4;
-    case SDLK_5:                return QU_KEY_5;
-    case SDLK_6:                return QU_KEY_6;
-    case SDLK_7:                return QU_KEY_7;
-    case SDLK_8:                return QU_KEY_8;
-    case SDLK_9:                return QU_KEY_9;
-    case SDLK_a:                return QU_KEY_A;
-    case SDLK_b:                return QU_KEY_B;
-    case SDLK_c:                return QU_KEY_C;
-    case SDLK_d:                return QU_KEY_D;
-    case SDLK_e:                return QU_KEY_E;
-    case SDLK_f:                return QU_KEY_F;
-    case SDLK_g:                return QU_KEY_G;
-    case SDLK_h:                return QU_KEY_H;
-    case SDLK_i:                return QU_KEY_I;
-    case SDLK_j:                return QU_KEY_J;
-    case SDLK_k:                return QU_KEY_K;
-    case SDLK_l:                return QU_KEY_L;
-    case SDLK_m:                return QU_KEY_M;
-    case SDLK_n:                return QU_KEY_N;
-    case SDLK_o:                return QU_KEY_O;
-    case SDLK_p:                return QU_KEY_P;
-    case SDLK_q:                return QU_KEY_Q;
-    case SDLK_r:                return QU_KEY_R;
-    case SDLK_s:                return QU_KEY_S;
-    case SDLK_t:                return QU_KEY_T;
-    case SDLK_u:                return QU_KEY_U;
-    case SDLK_w:                return QU_KEY_W;
-    case SDLK_x:                return QU_KEY_X;
-    case SDLK_y:                return QU_KEY_Y;
-    case SDLK_z:                return QU_KEY_Z;
-    case SDLK_BACKQUOTE:        return QU_KEY_GRAVE;
-    case SDLK_QUOTE:            return QU_KEY_APOSTROPHE;
-    case SDLK_MINUS:            return QU_KEY_MINUS;
-    case SDLK_EQUALS:           return QU_KEY_EQUAL;
-    case SDLK_LEFTBRACKET:      return QU_KEY_LBRACKET;
-    case SDLK_RIGHTBRACKET:     return QU_KEY_RBRACKET;
-    case SDLK_COMMA:            return QU_KEY_COMMA;
-    case SDLK_PERIOD:           return QU_KEY_PERIOD;
-    case SDLK_SEMICOLON:        return QU_KEY_SEMICOLON;
-    case SDLK_SLASH:            return QU_KEY_SLASH;
-    case SDLK_BACKSLASH:        return QU_KEY_BACKSLASH;
-    case SDLK_SPACE:            return QU_KEY_SPACE;
-    case SDLK_ESCAPE:           return QU_KEY_ESCAPE;
-    case SDLK_BACKSPACE:        return QU_KEY_BACKSPACE;
-    case SDLK_TAB:              return QU_KEY_TAB;
-    case SDLK_RETURN:           return QU_KEY_ENTER;
-    case SDLK_F1:               return QU_KEY_F1;
-    case SDLK_F2:               return QU_KEY_F2;
-    case SDLK_F3:               return QU_KEY_F3;
-    case SDLK_F4:               return QU_KEY_F4;
-    case SDLK_F5:               return QU_KEY_F5;
-    case SDLK_F6:               return QU_KEY_F6;
-    case SDLK_F7:               return QU_KEY_F7;
-    case SDLK_F8:               return QU_KEY_F8;
-    case SDLK_F9:               return QU_KEY_F9;
-    case SDLK_F10:              return QU_KEY_F10;
-    case SDLK_F11:              return QU_KEY_F11;
-    case SDLK_F12:              return QU_KEY_F12;
-    case SDLK_UP:               return QU_KEY_UP;
-    case SDLK_DOWN:             return QU_KEY_DOWN;
-    case SDLK_LEFT:             return QU_KEY_LEFT;
-    case SDLK_RIGHT:            return QU_KEY_RIGHT;
-    case SDLK_LSHIFT:           return QU_KEY_LSHIFT;
-    case SDLK_RSHIFT:           return QU_KEY_RSHIFT;
-    case SDLK_LCTRL:            return QU_KEY_LCTRL;
-    case SDLK_RCTRL:            return QU_KEY_RCTRL;
-    case SDLK_LALT:             return QU_KEY_LALT;
-    case SDLK_RALT:             return QU_KEY_RALT;
-    case SDLK_LSUPER:           return QU_KEY_LSUPER;
-    case SDLK_RSUPER:           return QU_KEY_RSUPER;
-    case SDLK_MENU:             return QU_KEY_MENU;
-    case SDLK_PAGEUP:           return QU_KEY_PGUP;
-    case SDLK_PAGEDOWN:         return QU_KEY_PGDN;
-    case SDLK_HOME:             return QU_KEY_HOME;
-    case SDLK_END:              return QU_KEY_END;
-    case SDLK_INSERT:           return QU_KEY_INSERT;
-    case SDLK_DELETE:           return QU_KEY_DELETE;
-    case SDLK_PRINTSCREEN:      return QU_KEY_PRINTSCREEN;
-    case SDLK_PAUSE:            return QU_KEY_PAUSE;
-    case SDLK_CAPSLOCK:         return QU_KEY_CAPSLOCK;
-    case SDLK_SCROLLLOCK:       return QU_KEY_SCROLLLOCK;
-    case SDLK_NUMLOCK:          return QU_KEY_NUMLOCK;
-    case SDLK_KP_0:             return QU_KEY_KP_0;
-    case SDLK_KP_1:             return QU_KEY_KP_1;
-    case SDLK_KP_2:             return QU_KEY_KP_2;
-    case SDLK_KP_3:             return QU_KEY_KP_3;
-    case SDLK_KP_4:             return QU_KEY_KP_4;
-    case SDLK_KP_5:             return QU_KEY_KP_5;
-    case SDLK_KP_6:             return QU_KEY_KP_6;
-    case SDLK_KP_7:             return QU_KEY_KP_7;
-    case SDLK_KP_8:             return QU_KEY_KP_8;
-    case SDLK_KP_9:             return QU_KEY_KP_9;
-    case SDLK_KP_MULTIPLY:      return QU_KEY_KP_MUL;
-    case SDLK_KP_PLUS:          return QU_KEY_KP_ADD;
-    case SDLK_KP_MINUS:         return QU_KEY_KP_SUB;
-    case SDLK_KP_PERIOD:        return QU_KEY_KP_POINT;
-    case SDLK_KP_DIVIDE:        return QU_KEY_KP_DIV;
-    case SDLK_KP_ENTER:         return QU_KEY_KP_ENTER;
-    default:                    return QU_KEY_INVALID;
+    int type;
+
+    union {
+        EmscriptenKeyboardEvent keyboard;
+        EmscriptenMouseEvent mouse;
+        EmscriptenWheelEvent wheel;
+    };
+};
+
+struct event_buffer
+{
+    struct event *array;
+    size_t length;
+    size_t capacity;
+};
+
+struct priv
+{
+    struct event_buffer events;
+    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE gl;
+};
+
+//------------------------------------------------------------------------------
+
+static struct priv priv;
+
+//------------------------------------------------------------------------------
+
+static qu_key key_conv(char const *code)
+{
+    // Letter keys
+
+    if (strncmp(code, "Key", 3) == 0) {
+        char sym = code[3];
+
+        if (sym >= 'A' && sym <= 'Z') {
+            return QU_KEY_A + (sym - 'A');
+        }
     }
+    
+    // Digit keys
+
+    if (strncmp(code, "Digit", 5) == 0) {
+        char digit = code[5];
+
+        if (digit >= '0' && digit <= '9') {
+            return QU_KEY_0 + (digit - '0');
+        }
+    }
+    
+    // F1-F12
+
+    if (code[0] == 'F' && code[1] >= '1' && code[1] <= '9') {
+        if (code[2] == '\0') {
+            return QU_KEY_F1 + (code[1] - '1');
+        } else if (code[2] >= '0' && code[2] <= '2') {
+            if (code[1] == '1') {
+                return QU_KEY_F10 + (code[2] - '0');
+            }
+        }
+    }
+
+    // Alt, Shift, Control, Meta
+
+    if (strncmp(code, "Alt", 3) == 0) {
+        if (strcmp(&code[3], "Left") == 0) {
+            return QU_KEY_LALT;
+        }
+
+        if (strcmp(&code[3], "Right") == 0) {
+            return QU_KEY_RALT;
+        }
+    }
+
+    if (strncmp(code, "Shift", 5) == 0) {
+        if (strcmp(&code[5], "Left") == 0) {
+            return QU_KEY_LSHIFT;
+        }
+
+        if (strcmp(&code[5], "Right") == 0) {
+            return QU_KEY_RSHIFT;
+        }
+    }
+
+    if (strncmp(code, "Control", 7) == 0) {
+        if (strcmp(&code[7], "Left") == 0) {
+            return QU_KEY_LCTRL;
+        }
+
+        if (strcmp(&code[7], "Right") == 0) {
+            return QU_KEY_RCTRL;
+        }
+    }
+
+    if (strncmp(code, "Meta", 4) == 0) {
+        if (strcmp(&code[4], "Left") == 0) {
+            return QU_KEY_LSUPER;
+        }
+
+        if (strcmp(&code[4], "Right") == 0) {
+            return QU_KEY_RSUPER;
+        }
+    }
+
+    if (strncmp(code, "OS", 2) == 0) {
+        if (strcmp(&code[2], "Left") == 0) {
+            return QU_KEY_LSUPER;
+        }
+
+        if (strcmp(&code[2], "Right") == 0) {
+            return QU_KEY_RSUPER;
+        }
+    }
+
+    // Numpad
+
+    if (strncmp(code, "Numpad", 6) == 0) {
+        if (code[6] >= '0' && code[6] <= '9' && code[7] == '\0') {
+            return QU_KEY_KP_0 + (code[6] - '0');
+        }
+
+        if (strcmp(&code[6], "Multiply") == 0) {
+            return QU_KEY_KP_MUL;
+        }
+
+        if (strcmp(&code[6], "Add") == 0) {
+            return QU_KEY_KP_ADD;
+        }
+
+        if (strcmp(&code[6], "Subtract") == 0) {
+            return QU_KEY_KP_SUB;
+        }
+
+        if (strcmp(&code[6], "Decimal") == 0) {
+            return QU_KEY_KP_POINT;
+        }
+
+        if (strcmp(&code[6], "Multiply") == 0) {
+            return QU_KEY_KP_DIV;
+        }
+
+        if (strcmp(&code[6], "Enter") == 0) {
+            return QU_KEY_KP_ENTER;
+        }
+    }
+
+    // Other keys...
+
+    if (strcmp(code, "Backquote") == 0) {
+        return QU_KEY_GRAVE;
+    }
+
+    if (strcmp(code, "Quote") == 0) {
+        return QU_KEY_APOSTROPHE;
+    }
+
+    if (strcmp(code, "Minus") == 0) {
+        return QU_KEY_MINUS;
+    }
+
+    if (strcmp(code, "Equal") == 0) {
+        return QU_KEY_EQUAL;
+    }
+
+    if (strncmp(code, "Bracket", 7) == 0) {
+        if (strcmp(&code[7], "Left") == 0) {
+            return QU_KEY_LBRACKET;
+        }
+
+        if (strcmp(&code[7], "Right") == 0) {
+            return QU_KEY_RBRACKET;
+        }
+    }
+
+    if (strcmp(code, "Comma") == 0) {
+        return QU_KEY_COMMA;
+    }
+
+    if (strcmp(code, "Period") == 0) {
+        return QU_KEY_PERIOD;
+    }
+
+    if (strcmp(code, "Semicolon") == 0) {
+        return QU_KEY_SEMICOLON;
+    }
+
+    if (strcmp(code, "Slash") == 0) {
+        return QU_KEY_SLASH;
+    }
+
+    if (strcmp(code, "Backslash") == 0) {
+        return QU_KEY_BACKSLASH;
+    }
+
+    if (strcmp(code, "Space") == 0) {
+        return QU_KEY_SPACE;
+    }
+
+    if (strcmp(code, "Escape") == 0) {
+        return QU_KEY_ESCAPE;
+    }
+
+    if (strcmp(code, "Backspace") == 0) {
+        return QU_KEY_BACKSPACE;
+    }
+
+    if (strcmp(code, "Tab") == 0) {
+        return QU_KEY_TAB;
+    }
+
+    if (strcmp(code, "Enter") == 0) {
+        return QU_KEY_ENTER;
+    }
+
+    if (strncmp(code, "Arrow", 5) == 0) {
+        if (strcmp(&code[5], "Up") == 0) {
+            return QU_KEY_UP;
+        }
+
+        if (strcmp(&code[5], "Down") == 0) {
+            return QU_KEY_DOWN;
+        }
+
+        if (strcmp(&code[5], "Left") == 0) {
+            return QU_KEY_LEFT;
+        }
+
+        if (strcmp(&code[5], "Right") == 0) {
+            return QU_KEY_RIGHT;
+        }
+    }
+
+    if (strcmp(code, "ContextMenu") == 0) {
+        return QU_KEY_MENU;
+    }
+
+    if (strncmp(code, "Page", 4) == 0) {
+        if (strcmp(&code[4], "Up") == 0) {
+            return QU_KEY_PGUP;
+        }
+
+        if (strcmp(&code[4], "Down") == 0) {
+            return QU_KEY_PGDN;
+        }
+    }
+
+    if (strcmp(code, "Home") == 0) {
+        return QU_KEY_HOME;
+    }
+
+    if (strcmp(code, "End") == 0) {
+        return QU_KEY_END;
+    }
+
+    if (strcmp(code, "Insert") == 0) {
+        return QU_KEY_INSERT;
+    }
+    
+    if (strcmp(code, "Delete") == 0) {
+        return QU_KEY_DELETE;
+    }
+
+    if (strcmp(code, "Pause") == 0) {
+        return QU_KEY_PAUSE;
+    }
+
+    if (strcmp(code, "CapsLock") == 0) {
+        return QU_KEY_CAPSLOCK;
+    }
+
+    if (strcmp(code, "ScrollLock") == 0) {
+        return QU_KEY_SCROLLLOCK;
+    }
+
+    if (strcmp(code, "NumLock") == 0) {
+        return QU_KEY_NUMLOCK;
+    }
+
+    return QU_KEY_INVALID;
 }
 
-static qu_mouse_button mb_conv(Uint8 button)
+static qu_mouse_button mouse_button_conv(int button)
 {
     switch (button) {
-        case SDL_BUTTON_LEFT:   return QU_MOUSE_BUTTON_LEFT;
-        case SDL_BUTTON_MIDDLE: return QU_MOUSE_BUTTON_MIDDLE;
-        case SDL_BUTTON_RIGHT:  return QU_MOUSE_BUTTON_RIGHT;
-        default:
-            break;
+    case 0:
+        return QU_MOUSE_BUTTON_LEFT;
+    case 1:
+        return QU_MOUSE_BUTTON_MIDDLE;
+    case 2:
+        return QU_MOUSE_BUTTON_RIGHT;
     }
 
     return QU_MOUSE_BUTTON_INVALID;
@@ -159,82 +337,249 @@ static qu_mouse_button mb_conv(Uint8 button)
 
 //------------------------------------------------------------------------------
 
+static void handle_keyboard_event(int type, EmscriptenKeyboardEvent const *event)
+{
+    qu_key key = key_conv(event->code);
+
+    if (key == QU_KEY_INVALID) {
+        return;
+    }
+
+    switch (type) {
+    case EMSCRIPTEN_EVENT_KEYDOWN:
+        qu__core_on_key_pressed(key);
+        break;
+    case EMSCRIPTEN_EVENT_KEYUP:
+        qu__core_on_key_released(key);
+        break;
+    }
+}
+
+static void handle_mouse_event(int type, EmscriptenMouseEvent const *event)
+{
+    if (type == EMSCRIPTEN_EVENT_MOUSEMOVE) {
+        qu__core_on_mouse_cursor_moved((int) event->targetX, (int) event->targetY);
+        return;
+    }
+
+    qu_mouse_button button = mouse_button_conv(event->button);
+
+    if (button == QU_MOUSE_BUTTON_INVALID) {
+        return;
+    }
+
+    switch (type) {
+    case EMSCRIPTEN_EVENT_MOUSEDOWN:
+        qu__core_on_mouse_button_pressed(button);
+        break;
+    case EMSCRIPTEN_EVENT_MOUSEUP:
+        qu__core_on_mouse_button_released(button);
+        break;
+    }
+}
+
+static void handle_wheel_event(int type, EmscriptenWheelEvent const *event)
+{
+    double scale;
+
+    // These values are arbitrary.
+
+    switch (event->deltaMode) {
+    default:
+    case DOM_DELTA_PIXEL:
+        scale = 0.25f;
+        break;
+    case DOM_DELTA_LINE:
+        scale = 1.f;
+        break;
+    case DOM_DELTA_PAGE:
+        scale = 8.f;
+        break;
+    }
+
+    int dx = (int) (event->deltaX * scale);
+    int dy = (int) (event->deltaY * scale);
+
+    qu__core_on_mouse_wheel_scrolled(dx, dy);
+}
+
+//------------------------------------------------------------------------------
+// Custom event buffer
+
+static void push_event(struct event_buffer *buffer, struct event *event)
+{
+    if (buffer->length == buffer->capacity) {
+        buffer->capacity *= 2;
+
+        if (buffer->capacity == 0) {
+            buffer->capacity = 256;
+        }
+
+        buffer->array = realloc(buffer->array, sizeof(struct event) * buffer->capacity);
+
+        if (!buffer->array) {
+            QU_HALT("Out of memory: unable to grow Emscripten event buffer.");
+        }
+    }
+
+    memcpy(&buffer->array[buffer->length++], event, sizeof(struct event));
+}
+
+static void execute_events(struct event_buffer *buffer)
+{
+    for (size_t i = 0; i < buffer->length; i++) {
+        struct event *event = &buffer->array[i];
+
+        switch (event->type) {
+        case EMSCRIPTEN_EVENT_KEYDOWN:
+        case EMSCRIPTEN_EVENT_KEYUP:
+            handle_keyboard_event(event->type, &event->keyboard);
+            break;
+        case EMSCRIPTEN_EVENT_MOUSEMOVE:
+        case EMSCRIPTEN_EVENT_MOUSEDOWN:
+        case EMSCRIPTEN_EVENT_MOUSEUP:
+            handle_mouse_event(event->type, &event->mouse);
+            break;
+        case EMSCRIPTEN_EVENT_WHEEL:
+            handle_wheel_event(event->type, &event->wheel);
+            break;
+        }
+    }
+
+    buffer->length = 0;
+}
+
+//------------------------------------------------------------------------------
+// Emscripten callbacks
+
+static EM_BOOL keyboard_callback(int type, EmscriptenKeyboardEvent const *event, void *data)
+{
+    push_event(data, &(struct event) {
+        .type = type,
+        .keyboard = *event,
+    });
+
+    return EM_TRUE;
+}
+
+static EM_BOOL mouse_callback(int type, EmscriptenMouseEvent const *event, void *data)
+{
+    push_event(data, &(struct event) {
+        .type = type,
+        .mouse = *event,
+    });
+
+    return EM_TRUE;
+}
+
+static EM_BOOL wheel_callback(int type, EmscriptenWheelEvent const *event, void *data)
+{
+    push_event(data, &(struct event) {
+        .type = type,
+        .wheel = *event,
+    });
+
+    return EM_TRUE;
+}
+
+//------------------------------------------------------------------------------
+
 static void initialize(qu_params const *params)
 {
-    memset(&impl, 0, sizeof(impl));
+    memset(&priv, 0, sizeof(priv));
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) == -1) {
-        QU_HALT("Failed to initialize SDL.\n");
+    EM_ASM({
+        specialHTMLTargets["!canvas"] = Module.canvas;
+    });
+
+    char const *document = EMSCRIPTEN_EVENT_TARGET_DOCUMENT;
+    char const *canvas = "!canvas";
+
+    // Set keyboard event handlers.
+
+    CHECK_EMSCRIPTEN(emscripten_set_keydown_callback(document, &priv.events, EM_TRUE, keyboard_callback),
+        "Failed to set event callback: keydown");
+
+    CHECK_EMSCRIPTEN(emscripten_set_keyup_callback(document, &priv.events, EM_TRUE, keyboard_callback),
+        "Failed to set event callback: keyup");
+
+    // Set mouse event handlers.
+
+    CHECK_EMSCRIPTEN(emscripten_set_mousemove_callback(document, &priv.events, EM_TRUE, mouse_callback),
+        "Failed to set event callback: mousemove");
+
+    CHECK_EMSCRIPTEN(emscripten_set_mousedown_callback(document, &priv.events, EM_TRUE, mouse_callback),
+        "Failed to set event callback: mousedown");
+
+    CHECK_EMSCRIPTEN(emscripten_set_mouseup_callback(document, &priv.events, EM_TRUE, mouse_callback),
+        "Failed to set event callback: mouseup");
+
+    CHECK_EMSCRIPTEN(emscripten_set_wheel_callback(document, &priv.events, EM_TRUE, wheel_callback),
+        "Failed to set event callback: wheel");
+
+    // Create WebGL context.
+
+    priv.gl = emscripten_webgl_create_context(canvas, &(EmscriptenWebGLContextAttributes) {
+        .alpha = EM_TRUE,
+        .depth = EM_TRUE,
+        .stencil = EM_TRUE,
+        .antialias = EM_TRUE,
+        .premultipliedAlpha = EM_TRUE,
+        .preserveDrawingBuffer = EM_FALSE,
+        .powerPreference = EM_WEBGL_POWER_PREFERENCE_DEFAULT,
+        .failIfMajorPerformanceCaveat = EM_FALSE,
+        .majorVersion = 2,
+        .minorVersion = 0,
+        .enableExtensionsByDefault = EM_FALSE,
+        .explicitSwapControl = EM_TRUE,
+        .renderViaOffscreenBackBuffer = EM_TRUE,
+        .proxyContextToMainThread = EMSCRIPTEN_WEBGL_CONTEXT_PROXY_DISALLOW,
+    });
+
+    if (!priv.gl) {
+        QU_HALT("Failed to create WebGL context.");
     }
 
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    CHECK_EMSCRIPTEN(emscripten_webgl_make_context_current(priv.gl),
+        "Unable to activate WebGL context.");
 
-    impl.display = SDL_SetVideoMode(
-        params->display_width,
-        params->display_height,
-        32,
-        SDL_OPENGL | SDL_RESIZABLE
-    );
+    // Enable required WebGL extensions.
 
-    if (!impl.display) {
-        QU_HALT("Failed to initialize display.\n");
+    if (!emscripten_webgl_enable_extension(priv.gl, "OES_vertex_array_object")) {
+        QU_INFO("OES_vertex_array_object is not available.\n");
     }
 
-    SDL_WM_SetCaption(params->title, NULL);
-    SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+    // Set proper canvas size.
 
-    QU_INFO("Emscripten core module initialized.\n");
+    int width = params->display_width;
+    int height = params->display_height;
+
+    CHECK_EMSCRIPTEN(emscripten_set_canvas_element_size(canvas, width, height),
+        "Unable to set HTML canvas size.");
+
+    // Done.
+
+    QU_INFO("Initialized.\n");
 }
 
 static void terminate(void)
 {
-    SDL_Quit();
-    QU_INFO("Emscripten core module terminated.\n");
+    emscripten_webgl_destroy_context(priv.gl);
+    free(priv.events.array);
+
+    QU_INFO("Terminated.\n");
 }
 
 static bool process(void)
 {
-    SDL_Event event;
-
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-            case SDL_QUIT:
-                return false;
-            case SDL_KEYDOWN:
-                qu__core_on_key_pressed(key_conv(&event.key.keysym));
-                break;
-            case SDL_KEYUP:
-                qu__core_on_key_released(key_conv(&event.key.keysym));
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-                qu__core_on_mouse_button_pressed(mb_conv(event.button.button));
-                break;
-            case SDL_MOUSEBUTTONUP:
-                qu__core_on_mouse_button_released(mb_conv(event.button.button));
-                break;
-            case SDL_MOUSEMOTION:
-                qu__core_on_mouse_cursor_moved(event.motion.x, event.motion.y);
-                break;
-            case SDL_MOUSEWHEEL:
-                qu__core_on_mouse_wheel_scrolled(event.wheel.x, event.wheel.y);
-                break;
-            default:
-                break;
-        }
-    }
+    execute_events(&priv.events);
 
     return true;
 }
 
 static void present(void)
 {
-    SDL_GL_SwapBuffers();
+    emscripten_webgl_commit_frame();
 }
 
 static enum qu__renderer get_renderer(void)
@@ -244,7 +589,8 @@ static enum qu__renderer get_renderer(void)
 
 static void *gl_proc_address(char const *name)
 {
-    return SDL_GL_GetProcAddress(name);
+    QU_HALT("Requesting GL procedure address is not allowed in Emscripten. Fix the library code.");
+    return NULL;
 }
 
 static int get_gl_multisample_samples(void)
