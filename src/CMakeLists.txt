@@ -88,6 +88,11 @@ if(QU_EMSCRIPTEN)
         "SHELL:--shell-file ${CMAKE_CURRENT_SOURCE_DIR}/emscripten-shell.html")
 endif()
 
+if(QU_ANDROID)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_android.c)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_ANDROID)
+endif()
+
 if(QU_POSIX)
     target_sources(${PROJECT_NAME} PRIVATE qu_platform_posix.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_POSIX)

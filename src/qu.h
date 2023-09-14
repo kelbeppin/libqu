@@ -247,6 +247,7 @@ struct qu__core
     int (*get_gl_multisample_samples)(void);
 };
 
+extern struct qu__core const qu__core_android;
 extern struct qu__core const qu__core_emscripten;
 extern struct qu__core const qu__core_win32;
 extern struct qu__core const qu__core_x11;
