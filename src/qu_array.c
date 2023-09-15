@@ -45,6 +45,8 @@ struct qu_array
     int64_t last_free_index;
     struct control *control;
     void *data;
+
+    int64_t last_iter;
 };
 
 //------------------------------------------------------------------------------
@@ -136,6 +138,7 @@ qu_array *qu_create_array(size_t element_size, void (*dtor)(void *))
         .last_free_index = -1,
         .control = NULL,
         .data = NULL,
+        .last_iter = -1,
     };
 
     return array;
@@ -222,4 +225,43 @@ void *qu_array_get(qu_array *array, int32_t id)
     }
 
     return get_data(array, index);
+}
+
+void *qx_array_get_first(qu_array *array)
+{
+    if (!array) {
+        return NULL;
+    }
+
+    array->last_iter = -1;
+
+    for (size_t i = 0; i < array->size; i++) {
+        if (array->control[i].flags & FLAG_USED) {
+            array->last_iter = i;
+            return get_data(array, i);
+        }
+    }
+
+    return NULL;
+}
+
+void *qx_array_get_next(qu_array *array)
+{
+    if (!array) {
+        return NULL;
+    }
+
+    if (array->last_iter < 0 || array->last_iter >= array->size) {
+        return NULL;
+    }
+
+    for (size_t i = array->last_iter + 1; i < array->size; i++) {
+        if (array->control[i].flags & FLAG_USED) {
+            array->last_iter = i;
+            return get_data(array, i);
+        }
+    }
+
+    array->last_iter = -1;
+    return NULL;
 }

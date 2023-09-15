@@ -150,6 +150,9 @@ int32_t qu_array_add(qu_array *array, void *data);
 void qu_array_remove(qu_array *array, int32_t id);
 void *qu_array_get(qu_array *array, int32_t id);
 
+void *qx_array_get_first(qu_array *array);
+void *qx_array_get_next(qu_array *array);
+
 //------------------------------------------------------------------------------
 // FS
 
@@ -383,6 +386,8 @@ void qu__graphics_initialize(qu_params const *params);
 void qu__graphics_terminate(void);
 void qu__graphics_refresh(void);
 void qu__graphics_swap(void);
+void qu__graphics_on_context_lost(void);
+void qu__graphics_on_context_restored(void);
 void qu__graphics_on_display_resize(int width, int height);
 qu_vec2i qu__graphics_conv_cursor(qu_vec2i position);
 qu_vec2i qu__graphics_conv_cursor_delta(qu_vec2i position);
