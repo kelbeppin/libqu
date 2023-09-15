@@ -21,6 +21,10 @@
 #define QU_MODULE "log"
 #include "qu.h"
 
+#ifdef ANDROID
+#include <android/log.h>
+#endif
+
 //------------------------------------------------------------------------------
 // qu_log.c: logging
 //------------------------------------------------------------------------------
@@ -65,6 +69,20 @@ void qu_log_printf(qu_log level, char const* module, char const* fmt, ...)
     fprintf((level == QU_LOG_ERROR) ? stderr : stdout,
             "(%8.3f) [%s] %s: %s", qu_get_time_mediump(),
             labels[level], module, heap ? heap : buffer);
+
+#ifdef ANDROID
+    int prio[] = {
+        [QU_LOG_DEBUG] = ANDROID_LOG_VERBOSE,
+        [QU_LOG_INFO] = ANDROID_LOG_INFO,
+        [QU_LOG_WARNING] = ANDROID_LOG_WARN,
+        [QU_LOG_ERROR] = ANDROID_LOG_ERROR,
+    };
+
+    char tag[64];
+    snprintf(tag, 64, "libquack-%s", module);
+
+    __android_log_write(prio[level], tag, heap ? heap : buffer);
+#endif
 
     free(heap);
 }
