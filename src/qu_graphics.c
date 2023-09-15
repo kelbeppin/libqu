@@ -175,6 +175,8 @@ struct qu__graphics_priv
     float canvas_ay;
     float canvas_bx;
     float canvas_by;
+
+    qu_params tmp_params;
 };
 
 static struct qu__graphics_priv priv;
@@ -526,6 +528,10 @@ static void graphics__flush_canvas(void)
 
 static void texture_dtor(void *ptr)
 {
+    if (!priv.renderer) {
+        return;
+    }
+
     // This won't be called on surface textures.
 
     struct qu__texture *texture = ptr;
@@ -536,14 +542,18 @@ static void texture_dtor(void *ptr)
 
 static void surface_dtor(void *ptr)
 {
+    if (!priv.renderer) {
+        return;
+    }
+
     priv.renderer->destroy_surface((struct qu__surface *) ptr);
 }
 
 //------------------------------------------------------------------------------
 
-void qu__graphics_initialize(qu_params const *params)
+static void initialize_renderer(qu_params const *params)
 {
-    memset(&priv, 0, sizeof(priv));
+    QU_DEBUG("Initializing renderer...\n");
 
     int renderer_impl_count = QU__ARRAY_SIZE(supported_renderer_impl_list);
 
@@ -590,6 +600,76 @@ void qu__graphics_initialize(qu_params const *params)
 
     priv.renderer->initialize(params);
 
+    struct qu__texture *texture = qx_array_get_first(priv.textures);
+
+    while (texture) {
+        priv.renderer->load_texture(texture);
+        texture = qx_array_get_next(priv.textures);
+    }
+
+    struct qu__surface *surface = qx_array_get_first(priv.surfaces);
+
+    while (surface) {
+        priv.renderer->create_surface(surface);
+        surface = qx_array_get_next(priv.surfaces);
+    }
+
+    priv.renderer->apply_clear_color(priv.clear_color);
+    priv.renderer->apply_draw_color(priv.draw_color);
+    priv.renderer->apply_brush(priv.brush);
+    priv.renderer->apply_vertex_format(priv.vertex_format);
+    priv.renderer->apply_projection(&priv.current_surface->projection);
+    priv.renderer->apply_transform(&priv.current_surface->modelview[0]);
+    priv.renderer->apply_surface(priv.current_surface);
+    priv.renderer->apply_texture(priv.current_texture);
+
+    // Trigger resize.
+    priv.renderer->exec_resize(params->display_width, params->display_height);
+
+    // Enable alpha blend by default.
+    priv.renderer->apply_blend_mode(QU_BLEND_MODE_ALPHA);
+
+    if (params->enable_canvas) {
+        priv.renderer->create_surface(&priv.canvas);
+        priv.renderer->set_texture_smooth(&priv.canvas.texture, params->canvas_smooth);
+    }
+
+    QU_DEBUG("Renderer is initialized.\n");
+}
+
+static void terminate_renderer(void)
+{
+    struct qu__texture *texture = qx_array_get_first(priv.textures);
+
+    while (texture) {
+        priv.renderer->unload_texture(texture);
+        texture = qx_array_get_next(priv.textures);
+    }
+
+    struct qu__surface *surface = qx_array_get_first(priv.surfaces);
+
+    while (surface) {
+        priv.renderer->destroy_surface(surface);
+        surface = qx_array_get_next(priv.surfaces);
+    }
+
+    if (priv.canvas_enabled) {
+        priv.renderer->destroy_surface(&priv.canvas);
+    }
+
+    priv.renderer->terminate();
+
+    priv.renderer = NULL;
+}
+
+//------------------------------------------------------------------------------
+
+void qu__graphics_initialize(qu_params const *params)
+{
+    memset(&priv, 0, sizeof(priv));
+
+    priv.tmp_params = *params;
+
     QU__ALLOC_ARRAY(priv.command_buffer.data, QU__RENDER_COMMAND_BUFFER_INITIAL_CAPACITY);
     priv.command_buffer.size = 0;
     priv.command_buffer.capacity = QU__RENDER_COMMAND_BUFFER_INITIAL_CAPACITY;
@@ -608,14 +688,8 @@ void qu__graphics_initialize(qu_params const *params)
     priv.clear_color = QU_COLOR(0, 0, 0);
     priv.draw_color = QU_COLOR(255, 255, 255);
 
-    priv.brush = -1;
-    priv.vertex_format = -1;
-
-    priv.renderer->apply_clear_color(priv.clear_color);
-    priv.renderer->apply_draw_color(priv.draw_color);
-
-    // Trigger resize.
-    priv.renderer->exec_resize(params->display_width, params->display_height);
+    priv.brush = QU__BRUSH_SOLID;
+    priv.vertex_format = QU__VERTEX_FORMAT_SOLID;
 
     // Create pseudo-texture for display.
     priv.display = (struct qu__surface) {
@@ -630,9 +704,6 @@ void qu__graphics_initialize(qu_params const *params)
 
     priv.current_texture = NULL;
     priv.current_surface = &priv.display;
-
-    priv.renderer->apply_projection(&priv.current_surface->projection);
-    priv.renderer->apply_transform(&priv.current_surface->modelview[0]);
 
     // Create texture for canvas if needed.
     if (params->enable_canvas) {
@@ -649,9 +720,6 @@ void qu__graphics_initialize(qu_params const *params)
         qu_mat4_ortho(&priv.canvas.projection, 0.f, params->canvas_width, params->canvas_height, 0.f);
         qu_mat4_identity(&priv.canvas.modelview[0]);
 
-        priv.renderer->create_surface(&priv.canvas);
-        priv.renderer->set_texture_smooth(&priv.canvas.texture, params->canvas_smooth);
-
         graphics__append_render_command(&(struct qu__render_command_info) {
             .command = QU__RENDER_COMMAND_SET_SURFACE,
             .args.surface.surface = &priv.canvas,
@@ -660,12 +728,13 @@ void qu__graphics_initialize(qu_params const *params)
         graphics__update_canvas_coords(params->display_width, params->display_height);
     }
 
-    // Enable alpha blend by default.
-    priv.renderer->apply_blend_mode(QU_BLEND_MODE_ALPHA);
+    initialize_renderer(params);
 }
 
 void qu__graphics_terminate(void)
 {
+    terminate_renderer();
+
     free(priv.command_buffer.data);
 
     for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
@@ -675,13 +744,7 @@ void qu__graphics_terminate(void)
     qu_destroy_array(priv.textures);
     qu_destroy_array(priv.surfaces);
 
-    if (priv.canvas_enabled) {
-        priv.renderer->destroy_surface(&priv.canvas);
-    }
-
     free(priv.circle_vertices);
-
-    priv.renderer->terminate();
 }
 
 void qu__graphics_refresh(void)
@@ -701,14 +764,27 @@ void qu__graphics_swap(void)
 
     graphics__execute_command_buffer();
 
-    priv.vertex_format = -1;
-
     if (priv.canvas_enabled) {
         graphics__append_render_command(&(struct qu__render_command_info) {
             .command = QU__RENDER_COMMAND_SET_SURFACE,
             .args.surface.surface = &priv.canvas,
         });
     }
+}
+
+void qu__graphics_on_context_lost(void)
+{
+    terminate_renderer();
+    
+    priv.renderer = &qu__renderer_null;
+    priv.renderer->initialize(NULL);
+}
+
+void qu__graphics_on_context_restored(void)
+{
+    priv.renderer->terminate();
+
+    initialize_renderer(&priv.tmp_params);
 }
 
 void qu__graphics_on_display_resize(int width, int height)
