@@ -85,15 +85,17 @@ if(QU_EMSCRIPTEN)
 endif()
 
 if(QU_ANDROID)
-    target_sources(${PROJECT_NAME} PRIVATE qu_activity_android.c qu_core_android.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_android.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_ANDROID)
 
     find_library(ANDROID_LIBRARY android)
     find_library(LOG_LIBRARY log)
+    find_library(EGL_LIBRARY EGL)
 
     target_link_libraries(${PROJECT_NAME} PUBLIC
         ${ANDROID_LIBRARY}
-        ${LOG_LIBRARY})
+        ${LOG_LIBRARY}
+        ${EGL_LIBRARY})
 endif()
 
 if(QU_POSIX)
