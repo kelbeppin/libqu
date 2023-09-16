@@ -85,7 +85,7 @@ if(QU_EMSCRIPTEN)
 endif()
 
 if(QU_ANDROID)
-    target_sources(${PROJECT_NAME} PRIVATE qu_core_android.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_android.c qu_sys_android.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_ANDROID)
 
     find_library(ANDROID_LIBRARY android)
