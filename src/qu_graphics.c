@@ -801,6 +801,9 @@ void qu__graphics_on_display_resize(int width, int height)
             .height = height,
         },
     });
+
+    priv.tmp_params.display_width = width;
+    priv.tmp_params.display_height = height;
 }
 
 qu_vec2i qu__graphics_conv_cursor(qu_vec2i position)

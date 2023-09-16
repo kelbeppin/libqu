@@ -34,6 +34,7 @@
 #define COMMAND_SET_ACTIVITY_STATE      0x00
 #define COMMAND_SET_INPUT_QUEUE         0x01
 #define COMMAND_SET_WINDOW              0x02
+#define COMMAND_RESIZE                  0x03
 
 #define ACTIVITY_STATE_CREATED          0
 #define ACTIVITY_STATE_STARTED          1
@@ -261,6 +262,13 @@ static int main_looper_callback(int fd, int events, void *arg)
             egl_initialize();
         }
         break;
+    case COMMAND_RESIZE:
+        if (priv.window) {
+            int width = ANativeWindow_getWidth(priv.window);
+            int height = ANativeWindow_getHeight(priv.window);
+            qu__graphics_on_display_resize(width, height);
+        }
+        break;
     }
 
     return 1;
@@ -454,6 +462,7 @@ static void onNativeWindowCreated(ANativeActivity *activity, ANativeWindow *wind
 static void onNativeWindowResized(ANativeActivity *activity, ANativeWindow *window)
 {
     QU_DEBUG("NativeWindowResized: %p -- %p\n", activity, window);
+    write_command(COMMAND_RESIZE);
 }
 
 static void onNativeWindowRedrawNeeded(ANativeActivity *activity, ANativeWindow *window)
@@ -535,7 +544,6 @@ static bool android_process(void)
     ALooper_pollAll(0, NULL, NULL, NULL);
 
     if (priv.activity_state == ACTIVITY_STATE_ON_DESTROY) {
-        QU_DEBUG("Destroy requested.\n");
         return false;
     }
 
