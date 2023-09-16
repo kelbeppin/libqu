@@ -167,6 +167,17 @@ int64_t qu_fseek(qu_file *file, int64_t offset, int origin);
 size_t qu_file_size(qu_file *file);
 char const *qu_file_repr(qu_file *file);
 
+typedef struct qx_file qx_file;
+
+qx_file *qx_fopen(char const *path);
+qx_file *qx_membuf_to_file(void const *data, size_t size);
+int64_t qx_fread(void *buffer, size_t size, qx_file *file);
+int64_t qx_ftell(qx_file *file);
+int64_t qx_fseek(qx_file *file, int64_t offset, int origin);
+size_t qx_file_get_size(qx_file *file);
+char const *qx_file_get_name(qx_file *file);
+void qx_fclose(qx_file *file);
+
 //------------------------------------------------------------------------------
 // Image
 
@@ -244,6 +255,7 @@ void qx_sys_fclose(void *file);
 int64_t qx_sys_fread(void *buffer, size_t size, void *file);
 int64_t qx_sys_ftell(void *file);
 int64_t qx_sys_fseek(void *file, int64_t offset, int origin);
+size_t qx_sys_get_file_size(void *file);
 
 //------------------------------------------------------------------------------
 // Core
