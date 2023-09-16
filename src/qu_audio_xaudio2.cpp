@@ -75,7 +75,7 @@ struct Sound
 
 struct BGM
 {
-    qu_file *pFile;
+    qx_file *pFile;
     qu_sound_reader *pSndReader;
     struct Stream *pStream;
 };
@@ -208,7 +208,7 @@ static void BGMDtor(void *pData)
     }
 
     qu_close_sound_reader(pMusic->pSndReader);
-    qu_fclose(pMusic->pFile);
+    qx_fclose(pMusic->pFile);
 }
 
 static void SetWaveFormat(WAVEFORMATEX *pFormat, qu_sound_reader *pSndReader)
@@ -669,7 +669,7 @@ static void set_master_volume(float volume)
 
 //------------------------------------------------------------------------------
 
-static int32_t load_sound(qu_file *pFile)
+static int32_t load_sound(qx_file *pFile)
 {
     // Open sound reader for a given file.
 
@@ -723,7 +723,7 @@ static int32_t loop_sound(int32_t soundId)
 
 //------------------------------------------------------------------------------
 
-static int32_t open_music(qu_file *pFile)
+static int32_t open_music(qx_file *pFile)
 {
     qu_sound_reader *pSndReader = qu_open_sound_reader(pFile);
 

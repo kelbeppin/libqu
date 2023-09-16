@@ -30,21 +30,21 @@
 
 static int read(void *user, char *data, int size)
 {
-    qu_file *file = (qu_file *) user;
-    return (int) qu_fread(data, size, file);
+    qx_file *file = (qx_file *) user;
+    return (int) qx_fread(data, size, file);
 }
 
 static void skip(void *user, int n)
 {
-    qu_file *file = (qu_file *) user;
-    qu_fseek(file, n, SEEK_CUR);
+    qx_file *file = (qx_file *) user;
+    qx_fseek(file, n, SEEK_CUR);
 }
 
 static int eof(void *user)
 {
-    qu_file *file = (qu_file *) user;
-    int64_t position = qu_ftell(file);
-    int64_t size = qu_file_size(file);
+    qx_file *file = (qx_file *) user;
+    int64_t position = qx_ftell(file);
+    int64_t size = qx_file_get_size(file);
 
     return (position == size);
 }
@@ -102,7 +102,7 @@ void qu__image_create(struct qu__image *image, unsigned char *fill)
     }
 }
 
-void qu__image_load(struct qu__image *image, qu_file *file)
+void qu__image_load(struct qu__image *image, qx_file *file)
 {
     image->pixels = stbi_load_from_callbacks(
         &(stbi_io_callbacks) {
@@ -117,7 +117,7 @@ void qu__image_load(struct qu__image *image, qu_file *file)
 
     if (!image->pixels) {
         QU_ERROR("Failed to load image from %s. stbi error: %s\n",
-            qu_file_repr(file), stbi_failure_reason());
+            qx_file_get_name(file), stbi_failure_reason());
 
         image->width = -1;
         image->height = -1;
@@ -128,7 +128,7 @@ void qu__image_load(struct qu__image *image, qu_file *file)
 
     QU_INFO("Loaded %dx%d (%d bits) image from %s.\n",
         image->width, image->height,
-        image->channels * 8, qu_file_repr(file));
+        image->channels * 8, qx_file_get_name(file));
 }
 
 void qu__image_delete(struct qu__image *image)

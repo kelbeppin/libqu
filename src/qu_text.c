@@ -89,7 +89,7 @@ static struct
 static unsigned long ft_stream_io(FT_Stream stream, unsigned long offset,
                                   unsigned char *buffer, unsigned long count)
 {
-    if (qu_fseek(stream->descriptor.pointer, offset, SEEK_SET) == -1) {
+    if (qx_fseek(stream->descriptor.pointer, offset, SEEK_SET) == -1) {
         if (count == 0) {
             return 1;
         }
@@ -97,7 +97,7 @@ static unsigned long ft_stream_io(FT_Stream stream, unsigned long offset,
         return 0;
     }
 
-    return qu_fread(buffer, count, stream->descriptor.pointer);
+    return qx_fread(buffer, count, stream->descriptor.pointer);
 }
 
 /**
@@ -105,7 +105,7 @@ static unsigned long ft_stream_io(FT_Stream stream, unsigned long offset,
  */
 static void ft_stream_close(FT_Stream stream)
 {
-    qu_fclose(stream->descriptor.pointer);
+    qx_fclose(stream->descriptor.pointer);
 }
 
 /**
@@ -370,7 +370,7 @@ void qu_terminate_text(void)
  * Loads font.
  * TODO: Weight is not implemented yet.
  */
-int32_t qu__text_load_font(qu_file *file, float pt)
+int32_t qu__text_load_font(qx_file *file, float pt)
 {
     int32_t index = get_font_index();
 
@@ -382,10 +382,10 @@ int32_t qu__text_load_font(qu_file *file, float pt)
     memset(fontp, 0, sizeof(struct font));
 
     fontp->stream.base = NULL;
-    fontp->stream.size = qu_file_size(file);
-    fontp->stream.pos = qu_ftell(file);
+    fontp->stream.size = qx_file_get_size(file);
+    fontp->stream.pos = qx_ftell(file);
     fontp->stream.descriptor.pointer = file;
-    fontp->stream.pathname.pointer = (void *) qu_file_repr(file);
+    fontp->stream.pathname.pointer = (void *) qx_file_get_name(file);
     fontp->stream.read = ft_stream_io;
     fontp->stream.close = ft_stream_close;
 
@@ -397,7 +397,7 @@ int32_t qu__text_load_font(qu_file *file, float pt)
     FT_Error error = FT_Open_Face(impl.freetype, &args, 0, &fontp->face);
 
     if (error) {
-        QU_ERROR("Failed to open font %s.\n", qu_file_repr(file));
+        QU_ERROR("Failed to open font %s.\n", qx_file_get_name(file));
         return 0;
     }
 
@@ -491,7 +491,7 @@ void qu__text_delete_font(int32_t id)
     hb_font_destroy(fontp->font);
     fontp->font = NULL;
 
-    qu_fclose(fontp->stream.descriptor.pointer);
+    qx_fclose(fontp->stream.descriptor.pointer);
     fontp->face = NULL;
 }
 

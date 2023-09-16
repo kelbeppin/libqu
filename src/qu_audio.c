@@ -99,7 +99,7 @@ void qu__audio_set_master_volume(float volume)
     priv.impl->set_master_volume(volume);
 }
 
-int32_t qu__audio_load_sound(qu_file *file)
+int32_t qu__audio_load_sound(qx_file *file)
 {
     return priv.impl->load_sound(file);
 }
@@ -119,7 +119,7 @@ int32_t qu__audio_loop_sound(int32_t id)
     return priv.impl->loop_sound(id);
 }
 
-int32_t qu__audio_open_music(qu_file *file)
+int32_t qu__audio_open_music(qx_file *file)
 {
     return priv.impl->open_music(file);
 }

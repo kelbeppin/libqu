@@ -44,7 +44,7 @@ static void set_master_volume(float volume)
 {
 }
 
-static int32_t load_sound(qu_file *file)
+static int32_t load_sound(qx_file *file)
 {
     return 1;
 }
@@ -63,7 +63,7 @@ static int32_t loop_sound(int32_t sound_id)
     return 1;
 }
 
-static int32_t open_music(qu_file *file)
+static int32_t open_music(qx_file *file)
 {
     return 1;
 }

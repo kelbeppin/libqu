@@ -60,7 +60,7 @@ struct sound
 
 struct music
 {
-    qu_file *file;
+    qx_file *file;
     qu_sound_reader *decoder;
     struct stream *stream;
 };
@@ -393,7 +393,7 @@ static int32_t start_dynamic_stream(int32_t music_id, bool loop)
 
     if (music->stream) {
         QU_WARNING("Can't play the same music track (%s) more than once at a time.\n",
-                      qu_file_repr(music->file));
+                      qx_file_get_name(music->file));
         return music->stream->id;
     }
 
@@ -454,7 +454,7 @@ static void music_dtor(void *data)
     }
 
     qu_close_sound_reader(music->decoder);
-    qu_fclose(music->file);
+    qx_fclose(music->file);
 }
 
 //------------------------------------------------------------------------------
@@ -547,7 +547,7 @@ static void set_master_volume(float volume)
     CALL_AL(alListenerf(AL_GAIN, volume));
 }
 
-static int32_t load_sound(qu_file *file)
+static int32_t load_sound(qx_file *file)
 {
     qu_sound_reader *decoder = qu_open_sound_reader(file);
 
@@ -600,7 +600,7 @@ static int32_t loop_sound(int32_t sound_id)
 // Why the fuck did you stop? Doesn't even try to explain.
 // No errors, no nothing *flips table*
 
-static int32_t open_music_none(qu_file *file)
+static int32_t open_music_none(qx_file *file)
 {
     return 1;
 }
@@ -621,7 +621,7 @@ static int32_t loop_music_none(int32_t music_id)
 
 #endif
 
-static int32_t open_music(qu_file *file)
+static int32_t open_music(qx_file *file)
 {
     struct music music = {
         .file = file,

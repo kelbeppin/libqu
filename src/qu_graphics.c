@@ -1162,7 +1162,7 @@ int32_t qu__graphics_create_texture(int width, int height, int channels, unsigne
     return qu_array_add(priv.textures, &texture);
 }
 
-int32_t qu__graphics_load_texture(qu_file *file)
+int32_t qu__graphics_load_texture(qx_file *file)
 {
     struct qu__texture texture = { 0 };
     qu__image_load(&texture.image, file);

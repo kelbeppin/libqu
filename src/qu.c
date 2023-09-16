@@ -214,7 +214,7 @@ void qu_draw_circle(float x, float y, float radius, qu_color outline, qu_color f
 
 qu_texture qu_load_texture(char const *path)
 {
-    qu_file *file = qu_fopen(path);
+    qx_file *file = qx_fopen(path);
 
     if (!file) {
         return (qu_texture) { .id = 0 };
@@ -222,7 +222,7 @@ qu_texture qu_load_texture(char const *path)
 
     int32_t id = qu__graphics_load_texture(file);
 
-    qu_fclose(file);
+    qx_fclose(file);
 
     return (qu_texture) { .id = id };
 }
@@ -284,7 +284,7 @@ void qu_draw_surface(qu_surface surface, float x, float y, float w, float h)
 
 qu_font qu_load_font(char const *path, float pt)
 {
-    qu_file *file = qu_fopen(path);
+    qx_file *file = qx_fopen(path);
 
     if (!file) {
         return (qu_font) { .id = 0 };
@@ -293,7 +293,7 @@ qu_font qu_load_font(char const *path, float pt)
     int32_t id = qu__text_load_font(file, pt);
 
     if (id == 0) {
-        qu_fclose(file);
+        qx_fclose(file);
     }
 
     return (qu_font) { .id = id };
@@ -343,7 +343,7 @@ void qu_set_master_volume(float volume)
 
 qu_sound qu_load_sound(char const *path)
 {
-    qu_file *file = qu_fopen(path);
+    qx_file *file = qx_fopen(path);
 
     if (!file) {
         return (qu_sound) { 0 };
@@ -351,7 +351,7 @@ qu_sound qu_load_sound(char const *path)
 
     int32_t id = qu__audio_load_sound(file);
 
-    qu_fclose(file);
+    qx_fclose(file);
 
     return (qu_sound) { id };
 }
@@ -373,7 +373,7 @@ qu_voice qu_loop_sound(qu_sound sound)
 
 qu_music qu_open_music(char const *path)
 {
-    qu_file *file = qu_fopen(path);
+    qx_file *file = qx_fopen(path);
 
     if (!file) {
         return (qu_music) { 0 };
@@ -382,7 +382,7 @@ qu_music qu_open_music(char const *path)
     int32_t id = qu__audio_open_music(file);
         
     if (!id) {
-        qu_fclose(file);
+        qx_fclose(file);
     }
 
     return (qu_music) { id };
