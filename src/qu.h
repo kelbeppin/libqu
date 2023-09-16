@@ -156,17 +156,6 @@ void *qx_array_get_next(qu_array *array);
 //------------------------------------------------------------------------------
 // FS
 
-typedef struct qu_file qu_file;
-
-qu_file *qu_fopen(char const *path);
-qu_file *qu_mopen(void const *buffer, size_t size);
-void qu_fclose(qu_file *file);
-int64_t qu_fread(void *buffer, size_t size, qu_file *file);
-int64_t qu_ftell(qu_file *file);
-int64_t qu_fseek(qu_file *file, int64_t offset, int origin);
-size_t qu_file_size(qu_file *file);
-char const *qu_file_repr(qu_file *file);
-
 typedef struct qx_file qx_file;
 
 qx_file *qx_fopen(char const *path);
@@ -190,7 +179,7 @@ struct qu__image
 };
 
 void qu__image_create(struct qu__image *image, unsigned char *fill);
-void qu__image_load(struct qu__image *image, qu_file *file);
+void qu__image_load(struct qu__image *image, qx_file *file);
 void qu__image_delete(struct qu__image *image);
 
 //------------------------------------------------------------------------------
@@ -201,11 +190,11 @@ typedef struct
     int16_t num_channels;
     int64_t num_samples;
     int64_t sample_rate;
-    qu_file *file;
+    qx_file *file;
     void *data;
 } qu_sound_reader;
 
-qu_sound_reader *qu_open_sound_reader(qu_file *file);
+qu_sound_reader *qu_open_sound_reader(qx_file *file);
 void qu_close_sound_reader(qu_sound_reader *reader);
 int64_t qu_sound_read(qu_sound_reader *reader, int16_t *samples, int64_t max_samples);
 void qu_sound_seek(qu_sound_reader *reader, int64_t sample_offset);
@@ -437,7 +426,7 @@ void qu__graphics_draw_triangle(float ax, float ay, float bx, float by, float cx
 void qu__graphics_draw_rectangle(float x, float y, float w, float h, qu_color outline, qu_color fill);
 void qu__graphics_draw_circle(float x, float y, float radius, qu_color outline, qu_color fill);
 int32_t qu__graphics_create_texture(int w, int h, int channels, unsigned char *fill);
-int32_t qu__graphics_load_texture(qu_file *file);
+int32_t qu__graphics_load_texture(qx_file *file);
 void qu__graphics_delete_texture(int32_t id);
 void qu__graphics_set_texture_smooth(int32_t id, bool smooth);
 void qu__graphics_update_texture(int32_t id, int x, int y, int w, int h, uint8_t const *pixels);
@@ -457,7 +446,7 @@ void qu__graphics_draw_surface(int32_t id, float x, float y, float w, float h);
 
 void qu_initialize_text(void);
 void qu_terminate_text(void);
-int32_t qu__text_load_font(qu_file *file, float pt);
+int32_t qu__text_load_font(qx_file *file, float pt);
 void qu__text_delete_font(int32_t id);
 void qu__text_draw(int32_t id, float x, float y, qu_color color, char const *text);
 
@@ -472,12 +461,12 @@ struct qu__audio
 
     void (*set_master_volume)(float volume);
 
-    int32_t (*load_sound)(qu_file *file);
+    int32_t (*load_sound)(qx_file *file);
     void (*delete_sound)(int32_t sound_id);
     int32_t (*play_sound)(int32_t sound_id);
     int32_t (*loop_sound)(int32_t sound_id);
 
-    int32_t (*open_music)(qu_file *file);
+    int32_t (*open_music)(qx_file *file);
     void (*close_music)(int32_t music_id);
     int32_t (*play_music)(int32_t music_id);
     int32_t (*loop_music)(int32_t music_id);
@@ -495,12 +484,12 @@ void qu__audio_initialize(qu_params const *params);
 void qu__audio_terminate(void);
 
 void qu__audio_set_master_volume(float volume);
-int32_t qu__audio_load_sound(qu_file *file);
+int32_t qu__audio_load_sound(qx_file *file);
 void qu__audio_delete_sound(int32_t id);
 int32_t qu__audio_play_sound(int32_t id);
 int32_t qu__audio_loop_sound(int32_t id);
 
-int32_t qu__audio_open_music(qu_file *file);
+int32_t qu__audio_open_music(qx_file *file);
 void qu__audio_close_music(int32_t id);
 int32_t qu__audio_play_music(int32_t id);
 int32_t qu__audio_loop_music(int32_t id);
