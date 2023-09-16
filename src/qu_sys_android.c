@@ -598,3 +598,31 @@ int qx_android_gl_get_sample_count(void)
 
     return egl.samples;
 }
+
+//------------------------------------------------------------------------------
+
+void *qx_sys_fopen(char const *path)
+{
+    return AAssetManager_open(priv.activity->assetManager, path, AASSET_MODE_UNKNOWN);
+}
+
+void qx_sys_fclose(void *file)
+{
+    AAsset_close((AAsset *) file);
+}
+
+int64_t qx_sys_fread(void *buffer, size_t size, void *file)
+{
+    return AAsset_read((AAsset *) file, buffer, size);
+}
+
+int64_t qx_sys_ftell(void *file)
+{
+    int64_t length = AAsset_getLength64((AAsset *) file);
+    return length - AAsset_getRemainingLength64((AAsset *) file);
+}
+
+int64_t qx_sys_fseek(void *file, int64_t offset, int origin)
+{
+    return AAsset_seek64((AAsset *) file, offset, origin);
+}

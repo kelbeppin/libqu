@@ -62,14 +62,15 @@ if(QU_WIN32)
         qu_audio_xaudio2.cpp
         qu_core_win32.c
         qu_joystick_win32.cpp
-        qu_platform_win32.c)
+        qu_platform_win32.c
+        qu_sys_win32.c)
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi XInput)
 endif()
 
 if(QU_LINUX)
-    target_sources(${PROJECT_NAME} PRIVATE qu_joystick_linux.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_joystick_linux.c qu_sys_linux.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_LINUX)
 endif()
 
@@ -78,7 +79,7 @@ if(QU_FREEBSD)
 endif()
 
 if(QU_EMSCRIPTEN)
-    target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c qu_sys_emscripten.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_EMSCRIPTEN)
     target_compile_options(${PROJECT_NAME} PUBLIC -sUSE_SDL)
     target_link_options(${PROJECT_NAME} PUBLIC
