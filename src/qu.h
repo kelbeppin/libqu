@@ -239,6 +239,12 @@ int qx_android_gl_get_sample_count(void);
 
 #endif // ANDROID
 
+void *qx_sys_fopen(char const *path);
+void qx_sys_fclose(void *file);
+int64_t qx_sys_fread(void *buffer, size_t size, void *file);
+int64_t qx_sys_ftell(void *file);
+int64_t qx_sys_fseek(void *file, int64_t offset, int origin);
+
 //------------------------------------------------------------------------------
 // Core
 
