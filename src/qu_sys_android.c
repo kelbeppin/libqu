@@ -626,3 +626,8 @@ int64_t qx_sys_fseek(void *file, int64_t offset, int origin)
 {
     return AAsset_seek64((AAsset *) file, offset, origin);
 }
+
+size_t qx_sys_get_file_size(void *file)
+{
+    return AAsset_getLength64((AAsset *) file);
+}

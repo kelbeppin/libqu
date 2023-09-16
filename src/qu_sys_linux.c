@@ -47,3 +47,8 @@ int64_t qx_sys_fseek(void *file, int64_t offset, int origin)
 {
 	return -1;
 }
+
+size_t qx_sys_get_file_size(void *file)
+{
+	return 0;
+}
