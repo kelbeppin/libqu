@@ -227,6 +227,19 @@ void qu__platform_close_library(qu__library library);
 qu__procedure qu__platform_get_procedure(qu__library library, char const *name);
 
 //------------------------------------------------------------------------------
+// System
+
+#ifdef ANDROID
+
+int qx_android_poll_events(void);
+int qx_android_swap_buffers(void);
+int qx_android_get_renderer(void);
+void *qx_android_gl_get_proc_address(char const *name);
+int qx_android_gl_get_sample_count(void);
+
+#endif // ANDROID
+
+//------------------------------------------------------------------------------
 // Core
 
 enum qu__renderer
