@@ -47,10 +47,6 @@
 
 #endif // _WIN32
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
-
 //------------------------------------------------------------------------------
 
 #ifdef __cplusplus

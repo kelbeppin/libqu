@@ -102,6 +102,8 @@ bool qu_process(void)
 
 #if defined(__EMSCRIPTEN__)
 
+#include <emscripten.h>
+
 static void main_loop(void *arg)
 {
     if (qu_process()) {

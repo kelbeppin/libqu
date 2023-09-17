@@ -22,6 +22,7 @@
 
 #include "qu.h"
 
+#include <emscripten.h>
 #include <emscripten/html5.h>
 
 //------------------------------------------------------------------------------
