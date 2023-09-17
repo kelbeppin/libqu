@@ -59,6 +59,16 @@ static int android_gl_get_sample_count(void)
     return qx_android_gl_get_sample_count();
 }
 
+static bool android_set_window_title(char const *title)
+{
+    return false;
+}
+
+static bool android_set_window_size(int width, int height)
+{
+    return false;
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__core const qu__core_android = {
@@ -69,4 +79,6 @@ struct qu__core const qu__core_android = {
     .get_renderer = android_get_renderer,
     .gl_proc_address = android_gl_get_proc_address,
     .get_gl_multisample_samples = android_gl_get_sample_count,
+    .set_window_title = android_set_window_title,
+    .set_window_size = android_set_window_size,
 };
