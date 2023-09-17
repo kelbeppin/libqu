@@ -142,6 +142,33 @@ void qu_present(void)
 }
 
 //------------------------------------------------------------------------------
+// Core
+
+char const *qu_get_window_title(void)
+{
+    return qx_core_get_window_title();
+}
+
+void qu_set_window_title(char const *title)
+{
+    qx_core_set_window_title(title);
+}
+
+qu_vec2i qu_get_window_size(void)
+{
+    int width, height;
+
+    qx_core_get_window_size(&width, &height);
+
+    return (qu_vec2i) { width, height };
+}
+
+void qu_set_window_size(int width, int height)
+{
+    qx_core_set_window_size(width, height);
+}
+
+//------------------------------------------------------------------------------
 // Graphics
 
 void qu_set_view(float x, float y, float w, float h, float rotation)

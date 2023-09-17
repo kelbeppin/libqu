@@ -26,6 +26,8 @@
 // qu_core.c: Core module
 //------------------------------------------------------------------------------
 
+#define WINDOW_TITLE_LENGTH         256
+
 static struct qu__core const *supported_core_impl_list[] = {
 
 #ifdef QU_WIN32
@@ -62,6 +64,10 @@ struct qu__core_priv
 {
 	struct qu__core const *impl;
     struct qu__joystick const *joystick;
+
+    char window_title[WINDOW_TITLE_LENGTH];
+    int window_width;
+    int window_height;
 
     qu_keyboard_state keyboard;
     uint32_t mouse_buttons;
@@ -112,6 +118,8 @@ void qu__core_initialize(qu_params const *params)
     QU_HALT_IF(!priv.impl->get_renderer);
     QU_HALT_IF(!priv.impl->gl_proc_address);
     QU_HALT_IF(!priv.impl->get_gl_multisample_samples);
+    QU_HALT_IF(!priv.impl->set_window_title);
+    QU_HALT_IF(!priv.impl->set_window_size);
 
     for (int i = 0; i < joystick_impl_count; i++) {
         priv.joystick = supported_joystick_impl_list[i];
@@ -275,6 +283,32 @@ void qu__core_on_mouse_wheel_scrolled(int dx, int dy)
 
 //------------------------------------------------------------------------------
 // API entries
+
+char const *qx_core_get_window_title(void)
+{
+    return priv.window_title;
+}
+
+void qx_core_set_window_title(char const *title)
+{
+    if (priv.impl->set_window_title(title)) {
+        strncpy(priv.window_title, title, WINDOW_TITLE_LENGTH);
+    }
+}
+
+void qx_core_get_window_size(int *width, int *height)
+{
+    *width = priv.window_width;
+    *height = priv.window_height;
+}
+
+void qx_core_set_window_size(int width, int height)
+{
+    if (priv.impl->set_window_size(width, height)) {
+        priv.window_width = width;
+        priv.window_height = height;
+    }
+}
 
 qu_keyboard_state const *qu_get_keyboard_state(void)
 {

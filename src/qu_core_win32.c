@@ -61,9 +61,9 @@ static struct
 
 static struct
 {
-    WCHAR       wide_title[256];
-    LPCWSTR     class_name;
-    LPCWSTR     window_name;
+    WCHAR       title[256];
+    WCHAR       class_name[256];
+    WCHAR       window_name[256];
     DWORD       style;
     HWND        window;
     HDC         dc;
@@ -656,7 +656,7 @@ static void initialize(qu_params const *params)
     if (!instance) {
         QU_HALT("Invalid module instance.");
     }
-
+    
     // DPI awareness
 
     qu__library shcore_dll = qu__platform_open_library("shcore.dll");
@@ -681,9 +681,10 @@ static void initialize(qu_params const *params)
 
     // Create window
 
-    MultiByteToWideChar(CP_UTF8, 0, params->title, -1, dpy.wide_title, ARRAYSIZE(dpy.wide_title));
-    dpy.class_name = dpy.wide_title;
-    dpy.window_name = dpy.wide_title;
+    MultiByteToWideChar(CP_UTF8, 0, params->title, -1, dpy.title, ARRAYSIZE(dpy.title));
+
+    wcsncpy(dpy.class_name, dpy.title, ARRAYSIZE(dpy.class_name));
+    wcsncpy(dpy.window_name, dpy.title, ARRAYSIZE(dpy.window_name));
 
     dpy.style = WS_CAPTION | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_SIZEBOX;
 
@@ -782,6 +783,29 @@ static int get_gl_multisample_samples(void)
     return dpy.gl_samples;
 }
 
+static bool w32_set_window_title(char const *title)
+{
+    WCHAR title_w[256];
+
+    MultiByteToWideChar(CP_UTF8, 0, title, -1, title_w, ARRAYSIZE(title_w));
+    
+    if (!SetWindowTextW(dpy.window, title_w)) {
+        return false;
+    }
+
+    wcsncpy(dpy.title, title_w, ARRAYSIZE(title_w));
+    wcsncpy(dpy.window_name, title_w, ARRAYSIZE(title_w));
+
+    return true;
+}
+
+static bool w32_set_window_size(int width, int height)
+{
+    set_size(width, height);
+
+    return true;
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__core const qu__core_win32 = {
@@ -792,4 +816,6 @@ struct qu__core const qu__core_win32 = {
     .get_renderer = get_renderer,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
+    .set_window_title = w32_set_window_title,
+    .set_window_size = w32_set_window_size,
 };

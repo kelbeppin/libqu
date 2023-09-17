@@ -266,6 +266,9 @@ struct qu__core
 
     void *(*gl_proc_address)(char const *name);
     int (*get_gl_multisample_samples)(void);
+
+    bool (*set_window_title)(char const *title);
+    bool (*set_window_size)(int width, int height);
 };
 
 extern struct qu__core const qu__core_android;
@@ -305,6 +308,11 @@ void qu__core_on_mouse_button_pressed(qu_mouse_button button);
 void qu__core_on_mouse_button_released(qu_mouse_button button);
 void qu__core_on_mouse_cursor_moved(int x, int y);
 void qu__core_on_mouse_wheel_scrolled(int dx, int dy);
+
+char const *qx_core_get_window_title(void);
+void qx_core_set_window_title(char const *title);
+void qx_core_get_window_size(int *width, int *height);
+void qx_core_set_window_size(int width, int height);
 
 //------------------------------------------------------------------------------
 // Graphics

@@ -571,6 +571,16 @@ static int get_gl_multisample_samples(void)
     return 1;
 }
 
+static bool set_window_title(char const *title)
+{
+    return false;
+}
+
+static bool set_window_size(int width, int height)
+{
+    return false;
+}
+
 //------------------------------------------------------------------------------
 
 struct qu__core const qu__core_x11 = {
@@ -581,4 +591,6 @@ struct qu__core const qu__core_x11 = {
     .get_renderer = get_renderer,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
+    .set_window_title = set_window_title,
+    .set_window_size = set_window_size,
 };

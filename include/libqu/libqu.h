@@ -258,6 +258,50 @@ QU_API void QU_CALL qu_present(void);
  */
 
 //----------------------------------------------------------
+// Window
+
+/**
+ * \name Window
+ * @{
+ */
+
+/**
+ * \brief Get window title.
+ * 
+ * \return Current title of window. No need to free.
+ */
+QU_API char const * QU_CALL qu_get_window_title(void);
+
+/**
+ * \brief Update window title.
+ * 
+ * Note: has no effect on Android and Emscripten.
+ * 
+ * \param title New window title.
+ */
+QU_API void QU_CALL qu_set_window_title(char const *title);
+
+/**
+ * \brief Get window size.
+ * 
+ * \return Current window size in pixels (excluding title bar
+ *         and other OS-specific elements).
+ */
+QU_API qu_vec2i QU_CALL qu_get_window_size(void);
+
+/**
+ * \brief Resize window.
+ * 
+ * Note: has no effect on Android and Emscripten.
+ * 
+ * \param width New width of window.
+ * \param height New height of window.
+ */
+QU_API void QU_CALL qu_set_window_size(int width, int height);
+
+/**@}*/
+
+//----------------------------------------------------------
 // Keyboard
 
 /**
