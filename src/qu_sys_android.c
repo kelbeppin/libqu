@@ -563,6 +563,10 @@ int qx_android_poll_events(void)
         return -1;
     }
 
+    if (priv.activity_state == ACTIVITY_STATE_STOPPED) {
+        nanosleep(&(struct timespec) { .tv_sec = 1 }, NULL);
+    }
+
     return 0;
 }
 
