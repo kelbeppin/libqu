@@ -24,6 +24,10 @@
 
 //------------------------------------------------------------------------------
 
+void qx_sys_write_log(int level, char const *tag, char const *message)
+{
+}
+
 void *qx_sys_fopen(char const *path)
 {
 	return NULL;

@@ -24,6 +24,7 @@
 
 #include "qu.h"
 
+#include <android/log.h>
 #include <android/native_activity.h>
 #include <EGL/egl.h>
 #include <pthread.h>
@@ -604,6 +605,29 @@ int qx_android_gl_get_sample_count(void)
 }
 
 //------------------------------------------------------------------------------
+
+void qx_sys_write_log(int level, char const *tag, char const *message)
+{
+    int priorities[] = {
+        [QU_LOG_DEBUG] = ANDROID_LOG_VERBOSE,
+        [QU_LOG_INFO] = ANDROID_LOG_INFO,
+        [QU_LOG_WARNING] = ANDROID_LOG_WARN,
+        [QU_LOG_ERROR] = ANDROID_LOG_ERROR,
+    };
+
+    int priority;
+
+    if (level >= QU_LOG_DEBUG && level <= QU_LOG_ERROR) {
+        priority = priorities[level];
+    } else {
+        priority = ANDROID_LOG_UNKNOWN;
+    }
+
+    char decorated_tag[64];
+    snprintf(decorated_tag, 64, "qu-%s", tag);
+
+    __android_log_write(priority, decorated_tag, message);
+}
 
 void *qx_sys_fopen(char const *path)
 {
