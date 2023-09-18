@@ -173,6 +173,46 @@ static void handle_mouse_wheel_scroll(struct qx_mouse_event const *event)
     priv.mouse_wheel_delta.y += event->dy_wheel;
 }
 
+static void release_all_inputs(void)
+{
+    for (int i = 0; i < QU_TOTAL_KEYS; i++) {
+        if (priv.keyboard.keys[i] == QU_KEY_PRESSED) {
+            priv.keyboard.keys[i] = QU_KEY_RELEASED;
+
+            if (priv.key_release_fn) {
+                priv.key_release_fn(i);
+            }
+        }
+    }
+
+    for (int i = 0; i < QU_TOTAL_MOUSE_BUTTONS; i++) {
+        int mask = (1 << i);
+
+        if (priv.mouse_buttons & mask) {
+            priv.mouse_buttons &= ~mask;
+
+            if (priv.mouse_button_release_fn) {
+                priv.mouse_button_release_fn(i);
+            }
+        }
+    }
+}
+
+static void handle_window_activation(bool active)
+{
+    if (priv.window_active == active) {
+        return;
+    }
+
+    if (active) {
+        // ...
+    } else {
+        release_all_inputs();
+    }
+
+    priv.window_active = active;
+}
+
 //------------------------------------------------------------------------------
 
 void qu__core_initialize(qu_params const *params)
@@ -285,6 +325,12 @@ bool qu__core_process(void)
             break;
         case QX_EVENT_MOUSE_WHEEL_SCROLLED:
             handle_mouse_wheel_scroll(&event->data.mouse);
+            break;
+        case QX_EVENT_ACTIVATE:
+            handle_window_activation(true);
+            break;
+        case QX_EVENT_DEACTIVATE:
+            handle_window_activation(false);
             break;
         }
     }

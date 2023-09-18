@@ -253,6 +253,8 @@ size_t qx_sys_get_file_size(void *file);
 #define QX_EVENT_MOUSE_BUTTON_RELEASED          (0x03)
 #define QX_EVENT_MOUSE_CURSOR_MOVED             (0x04)
 #define QX_EVENT_MOUSE_WHEEL_SCROLLED           (0x05)
+#define QX_EVENT_ACTIVATE                       (0x06)
+#define QX_EVENT_DEACTIVATE                     (0x07)
 
 enum qu__renderer
 {
@@ -379,6 +381,7 @@ char const *qx_core_get_window_title(void);
 void qx_core_set_window_title(char const *title);
 void qx_core_get_window_size(int *width, int *height);
 void qx_core_set_window_size(int width, int height);
+bool qx_core_is_window_active(void);
 
 //------------------------------------------------------------------------------
 // Graphics
