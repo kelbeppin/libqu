@@ -39,27 +39,8 @@
 
 //------------------------------------------------------------------------------
 
-struct event
-{
-    int type;
-
-    union {
-        EmscriptenKeyboardEvent keyboard;
-        EmscriptenMouseEvent mouse;
-        EmscriptenWheelEvent wheel;
-    };
-};
-
-struct event_buffer
-{
-    struct event *array;
-    size_t length;
-    size_t capacity;
-};
-
 struct priv
 {
-    struct event_buffer events;
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE gl;
 };
 
@@ -337,50 +318,75 @@ static qu_mouse_button mouse_button_conv(int button)
 }
 
 //------------------------------------------------------------------------------
+// Emscripten callbacks
 
-static void handle_keyboard_event(int type, EmscriptenKeyboardEvent const *event)
+static EM_BOOL keyboard_callback(int type, EmscriptenKeyboardEvent const *event, void *data)
 {
-    qu_key key = key_conv(event->code);
-
-    if (key == QU_KEY_INVALID) {
-        return;
-    }
+    int conv_type;
 
     switch (type) {
     case EMSCRIPTEN_EVENT_KEYDOWN:
-        qu__core_on_key_pressed(key);
+        conv_type = QX_EVENT_KEY_PRESSED;
         break;
     case EMSCRIPTEN_EVENT_KEYUP:
-        qu__core_on_key_released(key);
+        conv_type = QX_EVENT_KEY_RELEASED;
         break;
+    default:
+        return EM_FALSE;
     }
+
+    qx_core_push_event(&(struct qx_event) {
+        .type = conv_type,
+        .data.keyboard = {
+            .key = key_conv(event->code),
+        },
+    });
+
+    return EM_TRUE;
 }
 
-static void handle_mouse_event(int type, EmscriptenMouseEvent const *event)
+static EM_BOOL mouse_callback(int type, EmscriptenMouseEvent const *event, void *data)
 {
-    if (type == EMSCRIPTEN_EVENT_MOUSEMOVE) {
-        qu__core_on_mouse_cursor_moved((int) event->targetX, (int) event->targetY);
-        return;
-    }
-
-    qu_mouse_button button = mouse_button_conv(event->button);
-
-    if (button == QU_MOUSE_BUTTON_INVALID) {
-        return;
-    }
+    int conv_type;
 
     switch (type) {
     case EMSCRIPTEN_EVENT_MOUSEDOWN:
-        qu__core_on_mouse_button_pressed(button);
+        conv_type = QX_EVENT_MOUSE_BUTTON_PRESSED;
         break;
     case EMSCRIPTEN_EVENT_MOUSEUP:
-        qu__core_on_mouse_button_released(button);
+        conv_type = QX_EVENT_MOUSE_BUTTON_RELEASED;
         break;
+    case EMSCRIPTEN_EVENT_MOUSEMOVE:
+        conv_type = QX_EVENT_MOUSE_CURSOR_MOVED;
+        break;
+    default:
+        return EM_FALSE;
     }
+
+    qx_core_push_event(&(struct qx_event) {
+        .type = conv_type,
+        .data.mouse = {
+            .button = mouse_button_conv(event->button),
+            .x_cursor = (int) event->targetX,
+            .y_cursor = (int) event->targetY,
+        },
+    });
+
+    return EM_TRUE;
 }
 
-static void handle_wheel_event(int type, EmscriptenWheelEvent const *event)
+static EM_BOOL wheel_callback(int type, EmscriptenWheelEvent const *event, void *data)
 {
+    int conv_type;
+
+    switch (type) {
+    case EMSCRIPTEN_EVENT_WHEEL:
+        conv_type = QX_EVENT_MOUSE_WHEEL_SCROLLED;
+        break;
+    default:
+        return EM_FALSE;
+    }
+
     double scale;
 
     // These values are arbitrary.
@@ -398,86 +404,12 @@ static void handle_wheel_event(int type, EmscriptenWheelEvent const *event)
         break;
     }
 
-    int dx = (int) (event->deltaX * scale);
-    int dy = (int) (event->deltaY * scale);
-
-    qu__core_on_mouse_wheel_scrolled(dx, dy);
-}
-
-//------------------------------------------------------------------------------
-// Custom event buffer
-
-static void push_event(struct event_buffer *buffer, struct event *event)
-{
-    if (buffer->length == buffer->capacity) {
-        buffer->capacity *= 2;
-
-        if (buffer->capacity == 0) {
-            buffer->capacity = 256;
-        }
-
-        buffer->array = realloc(buffer->array, sizeof(struct event) * buffer->capacity);
-
-        if (!buffer->array) {
-            QU_HALT("Out of memory: unable to grow Emscripten event buffer.");
-        }
-    }
-
-    memcpy(&buffer->array[buffer->length++], event, sizeof(struct event));
-}
-
-static void execute_events(struct event_buffer *buffer)
-{
-    for (size_t i = 0; i < buffer->length; i++) {
-        struct event *event = &buffer->array[i];
-
-        switch (event->type) {
-        case EMSCRIPTEN_EVENT_KEYDOWN:
-        case EMSCRIPTEN_EVENT_KEYUP:
-            handle_keyboard_event(event->type, &event->keyboard);
-            break;
-        case EMSCRIPTEN_EVENT_MOUSEMOVE:
-        case EMSCRIPTEN_EVENT_MOUSEDOWN:
-        case EMSCRIPTEN_EVENT_MOUSEUP:
-            handle_mouse_event(event->type, &event->mouse);
-            break;
-        case EMSCRIPTEN_EVENT_WHEEL:
-            handle_wheel_event(event->type, &event->wheel);
-            break;
-        }
-    }
-
-    buffer->length = 0;
-}
-
-//------------------------------------------------------------------------------
-// Emscripten callbacks
-
-static EM_BOOL keyboard_callback(int type, EmscriptenKeyboardEvent const *event, void *data)
-{
-    push_event(data, &(struct event) {
-        .type = type,
-        .keyboard = *event,
-    });
-
-    return EM_TRUE;
-}
-
-static EM_BOOL mouse_callback(int type, EmscriptenMouseEvent const *event, void *data)
-{
-    push_event(data, &(struct event) {
-        .type = type,
-        .mouse = *event,
-    });
-
-    return EM_TRUE;
-}
-
-static EM_BOOL wheel_callback(int type, EmscriptenWheelEvent const *event, void *data)
-{
-    push_event(data, &(struct event) {
-        .type = type,
-        .wheel = *event,
+    qx_core_push_event(&(struct qx_event) {
+        .type = conv_type,
+        .data.mouse = {
+            .dx_wheel = (int) (event->deltaX * scale),
+            .dy_wheel = (int) (event->deltaY * scale),
+        },
     });
 
     return EM_TRUE;
@@ -498,24 +430,24 @@ static void initialize(qu_params const *params)
 
     // Set keyboard event handlers.
 
-    CHECK_EMSCRIPTEN(emscripten_set_keydown_callback(document, &priv.events, EM_TRUE, keyboard_callback),
+    CHECK_EMSCRIPTEN(emscripten_set_keydown_callback(document, NULL, EM_TRUE, keyboard_callback),
         "Failed to set event callback: keydown");
 
-    CHECK_EMSCRIPTEN(emscripten_set_keyup_callback(document, &priv.events, EM_TRUE, keyboard_callback),
+    CHECK_EMSCRIPTEN(emscripten_set_keyup_callback(document, NULL, EM_TRUE, keyboard_callback),
         "Failed to set event callback: keyup");
 
     // Set mouse event handlers.
 
-    CHECK_EMSCRIPTEN(emscripten_set_mousemove_callback(document, &priv.events, EM_TRUE, mouse_callback),
+    CHECK_EMSCRIPTEN(emscripten_set_mousemove_callback(document, NULL, EM_TRUE, mouse_callback),
         "Failed to set event callback: mousemove");
 
-    CHECK_EMSCRIPTEN(emscripten_set_mousedown_callback(document, &priv.events, EM_TRUE, mouse_callback),
+    CHECK_EMSCRIPTEN(emscripten_set_mousedown_callback(document, NULL, EM_TRUE, mouse_callback),
         "Failed to set event callback: mousedown");
 
-    CHECK_EMSCRIPTEN(emscripten_set_mouseup_callback(document, &priv.events, EM_TRUE, mouse_callback),
+    CHECK_EMSCRIPTEN(emscripten_set_mouseup_callback(document, NULL, EM_TRUE, mouse_callback),
         "Failed to set event callback: mouseup");
 
-    CHECK_EMSCRIPTEN(emscripten_set_wheel_callback(document, &priv.events, EM_TRUE, wheel_callback),
+    CHECK_EMSCRIPTEN(emscripten_set_wheel_callback(document, NULL, EM_TRUE, wheel_callback),
         "Failed to set event callback: wheel");
 
     // Create WebGL context.
@@ -573,8 +505,6 @@ static void terminate(void)
 
 static bool process(void)
 {
-    execute_events(&priv.events);
-
     return true;
 }
 
