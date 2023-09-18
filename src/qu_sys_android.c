@@ -257,6 +257,12 @@ static int main_looper_callback(int fd, int events, void *arg)
             pthread_cond_broadcast(&priv.cond);
         }
         pthread_mutex_unlock(&priv.mutex);
+
+        if (priv.activity_state == ACTIVITY_STATE_RESUMED) {
+            qx_core_push_event(&(struct qx_event) { .type = QX_EVENT_ACTIVATE });
+        } else if (priv.activity_state == ACTIVITY_STATE_STOPPED) {
+            qx_core_push_event(&(struct qx_event) { .type = QX_EVENT_DEACTIVATE });
+        }
         break;
     case COMMAND_SET_INPUT_QUEUE:
         pthread_mutex_lock(&priv.mutex);
@@ -565,7 +571,7 @@ int qx_android_poll_events(void)
     }
 
     if (priv.activity_state == ACTIVITY_STATE_STOPPED) {
-        nanosleep(&(struct timespec) { .tv_sec = 1 }, NULL);
+        nanosleep(&(struct timespec) { .tv_sec = 0, .tv_nsec = 100000000 }, NULL);
     }
 
     return 0;

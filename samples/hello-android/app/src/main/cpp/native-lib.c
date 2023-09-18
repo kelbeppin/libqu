@@ -32,6 +32,10 @@ void android_main(void)
         float current_time = qu_get_time_mediump();
         float elapsed_time = current_time - prev_time;
 
+        if (!qu_is_window_active()) {
+            continue;
+        }
+
         local_time += elapsed_time;
 
         qu_clear(QU_COLOR(16, 16, 16));
