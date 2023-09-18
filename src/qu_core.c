@@ -60,6 +60,13 @@ static struct qu__joystick const *supported_joystick_impl_list[] = {
     &qu__joystick_null,
 };
 
+struct core_event_buffer
+{
+    struct qx_event *array;
+    size_t length;
+    size_t capacity;
+};
+
 struct qu__core_priv
 {
 	struct qu__core const *impl;
@@ -68,6 +75,7 @@ struct qu__core_priv
     char window_title[WINDOW_TITLE_LENGTH];
     int window_width;
     int window_height;
+    bool window_active;
 
     qu_keyboard_state keyboard;
     uint32_t mouse_buttons;
@@ -82,9 +90,88 @@ struct qu__core_priv
     qu_mouse_button_fn mouse_button_release_fn;
     qu_mouse_cursor_fn mouse_cursor_motion_fn;
     qu_mouse_wheel_fn mouse_wheel_scroll_fn;
+
+    struct core_event_buffer event_buffer;
 };
 
 static struct qu__core_priv priv;
+
+//------------------------------------------------------------------------------
+
+static void handle_key_press(struct qx_keyboard_event const *event)
+{
+    switch (priv.keyboard.keys[event->key]) {
+    case QU_KEY_IDLE:
+        priv.keyboard.keys[event->key] = QU_KEY_PRESSED;
+
+        if (priv.key_press_fn) {
+            priv.key_press_fn(event->key);
+        }
+        break;
+    case QU_KEY_PRESSED:
+        if (priv.key_repeat_fn) {
+            priv.key_repeat_fn(event->key);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+static void handle_key_release(struct qx_keyboard_event const *event)
+{
+    if (priv.keyboard.keys[event->key] == QU_KEY_PRESSED) {
+        priv.keyboard.keys[event->key] = QU_KEY_RELEASED;
+
+        if (priv.key_release_fn) {
+            priv.key_release_fn(event->key);
+        }
+    }
+}
+
+static void handle_mouse_button_press(struct qx_mouse_event const *event)
+{
+    unsigned int mask = (1 << event->button);
+
+    if ((priv.mouse_buttons & mask) == 0) {
+        priv.mouse_buttons |= mask;
+
+        if (priv.mouse_button_press_fn) {
+            priv.mouse_button_press_fn(event->button);
+        }
+    }
+}
+
+static void handle_mouse_button_release(struct qx_mouse_event const *event)
+{
+    unsigned int mask = (1 << event->button);
+
+    if ((priv.mouse_buttons & mask) == mask) {
+        priv.mouse_buttons &= ~mask;
+
+        if (priv.mouse_button_release_fn) {
+            priv.mouse_button_release_fn(event->button);
+        }
+    }
+}
+
+static void handle_mouse_cursor_motion(struct qx_mouse_event const *event)
+{
+    int x_old = priv.mouse_cursor_position.x;
+    int y_old = priv.mouse_cursor_position.y;
+
+    priv.mouse_cursor_position.x = event->x_cursor;
+    priv.mouse_cursor_position.y = event->y_cursor;
+
+    priv.mouse_cursor_delta.x = event->x_cursor - x_old;
+    priv.mouse_cursor_delta.y = event->y_cursor - y_old;
+}
+
+static void handle_mouse_wheel_scroll(struct qx_mouse_event const *event)
+{
+    priv.mouse_wheel_delta.x += event->dx_wheel;
+    priv.mouse_wheel_delta.y += event->dy_wheel;
+}
 
 //------------------------------------------------------------------------------
 
@@ -143,6 +230,12 @@ void qu__core_initialize(qu_params const *params)
 
 	priv.impl->initialize(params);
     priv.joystick->initialize(params);
+
+    // Temporary:
+    priv.window_width = params->display_width;
+    priv.window_height = params->display_height;
+    strncpy(priv.window_title, params->title, WINDOW_TITLE_LENGTH);
+    priv.window_active = true;
 }
 
 void qu__core_terminate(void)
@@ -168,6 +261,35 @@ bool qu__core_process(void)
     if (!priv.impl->process()) {
         return false;
     }
+
+    struct core_event_buffer *buffer = &priv.event_buffer;
+
+    for (size_t i = 0; i < buffer->length; i++) {
+        struct qx_event *event = &buffer->array[i];
+
+        switch (event->type) {
+        case QX_EVENT_KEY_PRESSED:
+            handle_key_press(&event->data.keyboard);
+            break;
+        case QX_EVENT_KEY_RELEASED:
+            handle_key_release(&event->data.keyboard);
+            break;
+        case QX_EVENT_MOUSE_BUTTON_PRESSED:
+            handle_mouse_button_press(&event->data.mouse);
+            break;
+        case QX_EVENT_MOUSE_BUTTON_RELEASED:
+            handle_mouse_button_release(&event->data.mouse);
+            break;
+        case QX_EVENT_MOUSE_CURSOR_MOVED:
+            handle_mouse_cursor_motion(&event->data.mouse);
+            break;
+        case QX_EVENT_MOUSE_WHEEL_SCROLLED:
+            handle_mouse_wheel_scroll(&event->data.mouse);
+            break;
+        }
+    }
+
+    buffer->length = 0;
 
     if (priv.mouse_cursor_delta.x || priv.mouse_cursor_delta.y) {
         if (priv.mouse_cursor_motion_fn) {
@@ -206,79 +328,23 @@ int qu__core_get_gl_multisample_samples(void)
     return priv.impl->get_gl_multisample_samples();
 }
 
-void qu__core_on_key_pressed(qu_key key)
+void qx_core_push_event(struct qx_event const *event)
 {
-    switch (priv.keyboard.keys[key]) {
-    case QU_KEY_IDLE:
-        priv.keyboard.keys[key] = QU_KEY_PRESSED;
+    struct core_event_buffer *buffer = &priv.event_buffer;
 
-        if (priv.key_press_fn) {
-            priv.key_press_fn(key);
+    if (buffer->length == buffer->capacity) {
+        size_t next_capacity = buffer->capacity == 0 ? 256 : buffer->capacity * 2;
+        void *next_array = realloc(buffer->array, sizeof(struct qx_event) * next_capacity);
+
+        if (!next_array) {
+            QU_HALT("Out of memory: unable to grow event buffer.");
         }
-        break;
-    case QU_KEY_PRESSED:
-        if (priv.key_repeat_fn) {
-            priv.key_repeat_fn(key);
-        }
-        break;
-    default:
-        break;
+
+        buffer->array = next_array;
+        buffer->capacity = next_capacity;
     }
-}
 
-void qu__core_on_key_released(qu_key key)
-{
-    if (priv.keyboard.keys[key] == QU_KEY_PRESSED) {
-        priv.keyboard.keys[key] = QU_KEY_RELEASED;
-
-        if (priv.key_release_fn) {
-            priv.key_release_fn(key);
-        }
-    }
-}
-
-void qu__core_on_mouse_button_pressed(qu_mouse_button button)
-{
-    unsigned int mask = (1 << button);
-
-    if ((priv.mouse_buttons & mask) == 0) {
-        priv.mouse_buttons |= mask;
-
-        if (priv.mouse_button_press_fn) {
-            priv.mouse_button_press_fn(button);
-        }
-    }
-}
-
-void qu__core_on_mouse_button_released(qu_mouse_button button)
-{
-    unsigned int mask = (1 << button);
-
-    if ((priv.mouse_buttons & mask) == mask) {
-        priv.mouse_buttons &= ~mask;
-
-        if (priv.mouse_button_release_fn) {
-            priv.mouse_button_release_fn(button);
-        }
-    }
-}
-
-void qu__core_on_mouse_cursor_moved(int x, int y)
-{
-    int x_old = priv.mouse_cursor_position.x;
-    int y_old = priv.mouse_cursor_position.y;
-
-    priv.mouse_cursor_position.x = x;
-    priv.mouse_cursor_position.y = y;
-
-    priv.mouse_cursor_delta.x = x - x_old;
-    priv.mouse_cursor_delta.y = x - y_old;
-}
-
-void qu__core_on_mouse_wheel_scrolled(int dx, int dy)
-{
-    priv.mouse_wheel_delta.x += dx;
-    priv.mouse_wheel_delta.y += dy;
+    memcpy(&buffer->array[buffer->length++], event, sizeof(struct qx_event));
 }
 
 //------------------------------------------------------------------------------
@@ -308,6 +374,11 @@ void qx_core_set_window_size(int width, int height)
         priv.window_width = width;
         priv.window_height = height;
     }
+}
+
+bool qx_core_is_window_active(void)
+{
+    return priv.window_active;
 }
 
 qu_keyboard_state const *qu_get_keyboard_state(void)
