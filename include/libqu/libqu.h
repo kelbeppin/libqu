@@ -299,6 +299,13 @@ QU_API qu_vec2i QU_CALL qu_get_window_size(void);
  */
 QU_API void QU_CALL qu_set_window_size(int width, int height);
 
+/**
+ * \brief Check if window is focused.
+ *
+ * \return True if the libqu window is focused.
+ */
+QU_API bool QU_CALL qu_is_window_active(void);
+
 /**@}*/
 
 //----------------------------------------------------------

@@ -168,6 +168,11 @@ void qu_set_window_size(int width, int height)
     qx_core_set_window_size(width, height);
 }
 
+bool qu_is_window_active(void)
+{
+    return true;
+}
+
 //------------------------------------------------------------------------------
 // Graphics
 
