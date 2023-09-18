@@ -564,25 +564,11 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         qu__graphics_on_display_resize(LOWORD(lp), HIWORD(lp));
         return 0;
     case WM_ACTIVATE:
-        // if (LOWORD(wp) == WA_ACTIVE && HIWORD(wp) == 0) {
-        //     // Send release message for all pressed buttons when
-        //     // switching from another window
-        //     for (int i = 0; i < QU_TOTAL_MOUSE_BUTTONS; i++) {
-        //         if (priv.mouse_buttons & (1 << i)) {
-        //             libtq_on_mouse_button_released(i);
-        //         }
-        //     }
-
-        //     priv.mouse_buttons = 0;
-        //     libtq_on_focus_gain();
-        // } else if (LOWORD(wp) == WA_INACTIVE) {
-        //     if (priv.mouse_button_ordinal > 0) {
-        //         priv.mouse_button_ordinal = 0;
-        //         ReleaseCapture();
-        //     }
-
-        //     libtq_on_focus_loss();
-        // }
+        if (LOWORD(wp) == WA_INACTIVE) {
+            qx_core_push_event(&(struct qx_event) { .type = QX_EVENT_DEACTIVATE });
+        } else {
+            qx_core_push_event(&(struct qx_event) { .type = QX_EVENT_ACTIVATE });
+        }
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:

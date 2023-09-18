@@ -170,7 +170,7 @@ void qu_set_window_size(int width, int height)
 
 bool qu_is_window_active(void)
 {
-    return true;
+    return qx_core_is_window_active();
 }
 
 //------------------------------------------------------------------------------
