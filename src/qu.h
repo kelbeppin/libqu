@@ -247,6 +247,13 @@ size_t qx_sys_get_file_size(void *file);
 //------------------------------------------------------------------------------
 // Core
 
+#define QX_EVENT_KEY_PRESSED                    (0x00)
+#define QX_EVENT_KEY_RELEASED                   (0x01)
+#define QX_EVENT_MOUSE_BUTTON_PRESSED           (0x02)
+#define QX_EVENT_MOUSE_BUTTON_RELEASED          (0x03)
+#define QX_EVENT_MOUSE_CURSOR_MOVED             (0x04)
+#define QX_EVENT_MOUSE_WHEEL_SCROLLED           (0x05)
+
 enum qu__renderer
 {
     QU__RENDERER_NULL,
@@ -295,6 +302,32 @@ extern struct qu__joystick const qu__joystick_null;
 extern struct qu__joystick const qu__joystick_win32;
 extern struct qu__joystick const qu__joystick_linux;
 
+struct qx_keyboard_event
+{
+    qu_key key;
+};
+
+struct qx_mouse_event
+{
+    qu_mouse_button button;
+    int x_cursor;
+    int y_cursor;
+    int dx_wheel;
+    int dy_wheel;
+};
+
+union qx_event_data
+{
+    struct qx_keyboard_event keyboard;
+    struct qx_mouse_event mouse;
+};
+
+struct qx_event
+{
+    int type;
+    union qx_event_data data;
+};
+
 void qu__core_initialize(qu_params const *params);
 void qu__core_terminate(void);
 bool qu__core_process(void);
@@ -302,12 +335,45 @@ void qu__core_present(void);
 enum qu__renderer qu__core_get_renderer(void);
 void *qu__core_get_gl_proc_address(char const *name);
 int qu__core_get_gl_multisample_samples(void);
-void qu__core_on_key_pressed(qu_key key);
-void qu__core_on_key_released(qu_key key);
-void qu__core_on_mouse_button_pressed(qu_mouse_button button);
-void qu__core_on_mouse_button_released(qu_mouse_button button);
-void qu__core_on_mouse_cursor_moved(int x, int y);
-void qu__core_on_mouse_wheel_scrolled(int dx, int dy);
+void qx_core_push_event(struct qx_event const *event);
+
+#define qu__core_on_key_pressed(key_) \
+    qx_core_push_event(&(struct qx_event) { \
+        .type = QX_EVENT_KEY_PRESSED, \
+        .data.keyboard.key = (key_), \
+    });
+
+#define qu__core_on_key_released(key_) \
+    qx_core_push_event(&(struct qx_event) { \
+        .type = QX_EVENT_KEY_RELEASED, \
+        .data.keyboard.key = (key_), \
+    });
+
+#define qu__core_on_mouse_button_pressed(button_) \
+    qx_core_push_event(&(struct qx_event) { \
+        .type = QX_EVENT_MOUSE_BUTTON_PRESSED, \
+        .data.mouse.button = (button_), \
+    });
+
+#define qu__core_on_mouse_button_released(button_) \
+    qx_core_push_event(&(struct qx_event) { \
+        .type = QX_EVENT_MOUSE_BUTTON_RELEASED, \
+        .data.mouse.button = (button_), \
+    });
+
+#define qu__core_on_mouse_cursor_moved(x_, y_) \
+    qx_core_push_event(&(struct qx_event) { \
+        .type = QX_EVENT_MOUSE_CURSOR_MOVED, \
+        .data.mouse.x_cursor = (x_), \
+        .data.mouse.y_cursor = (y_), \
+    });
+
+#define qu__core_on_mouse_wheel_scrolled(dx_, dy_) \
+    qx_core_push_event(&(struct qx_event) { \
+        .type = QX_EVENT_MOUSE_WHEEL_SCROLLED, \
+        .data.mouse.dx_wheel = (dx_), \
+        .data.mouse.dy_wheel = (dy_), \
+    });
 
 char const *qx_core_get_window_title(void);
 void qx_core_set_window_title(char const *title);
