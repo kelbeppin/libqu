@@ -586,32 +586,68 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
-        qu__core_on_key_pressed(key_conv(wp, lp));
+        qx_core_push_event(&(struct qx_event) {
+            .type = QX_EVENT_KEY_PRESSED,
+            .data.keyboard = {
+                .key = key_conv(wp, lp),
+            },
+        });
         return 0;
     case WM_KEYUP:
     case WM_SYSKEYUP:
-        qu__core_on_key_released(key_conv(wp, lp));
+        qx_core_push_event(&(struct qx_event) {
+            .type = QX_EVENT_KEY_RELEASED,
+            .data.keyboard = {
+                .key = key_conv(wp, lp),
+            },
+        });
         return 0;
     case WM_LBUTTONDOWN:
     case WM_RBUTTONDOWN:
     case WM_MBUTTONDOWN:
     case WM_XBUTTONDOWN:
-        qu__core_on_mouse_button_pressed(mb_conv(msg, wp));
+        qx_core_push_event(&(struct qx_event) {
+            .type = QX_EVENT_MOUSE_BUTTON_PRESSED,
+            .data.mouse = {
+                .button = mb_conv(msg, wp),
+            },
+        });
         return 0;
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
     case WM_XBUTTONUP:
-        qu__core_on_mouse_button_released(mb_conv(msg, wp));
+        qx_core_push_event(&(struct qx_event) {
+            .type = QX_EVENT_MOUSE_BUTTON_RELEASED,
+            .data.mouse = {
+                .button = mb_conv(msg, wp),
+            },
+        });
         return 0;
     case WM_MOUSEMOVE:
-        qu__core_on_mouse_cursor_moved(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
+        qx_core_push_event(&(struct qx_event) {
+            .type = QX_EVENT_MOUSE_CURSOR_MOVED,
+            .data.mouse = {
+                .x_cursor = GET_X_LPARAM(lp),
+                .y_cursor = GET_Y_LPARAM(lp),
+            },
+        });
         return 0;
     case WM_MOUSEWHEEL:
-        qu__core_on_mouse_wheel_scrolled(0, GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA);
+        qx_core_push_event(&(struct qx_event) {
+            .type = QX_EVENT_MOUSE_WHEEL_SCROLLED,
+            .data.mouse = {
+                .y_cursor = GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA,
+            },
+        });
         return 0;
     case WM_MOUSEHWHEEL:
-        qu__core_on_mouse_wheel_scrolled(GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA, 0);
+        qx_core_push_event(&(struct qx_event) {
+            .type = QX_EVENT_MOUSE_WHEEL_SCROLLED,
+            .data.mouse = {
+                .x_cursor = GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA,
+            },
+        });
         return 0;
     case WM_SETCURSOR:
         if (LOWORD(lp) == HTCLIENT) {
