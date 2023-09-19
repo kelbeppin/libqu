@@ -622,6 +622,34 @@ QU_API void QU_CALL qu_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn);
 /**@}*/
 
 //----------------------------------------------------------
+// Touch Input
+
+/**
+ * \name Touch Input
+ * @{
+ */
+
+#define QU_MAX_TOUCH_INPUTS             16
+
+/**
+ * \brief Check if touch pressed.
+ *
+ * \param index Number of touch point (starts from 0).
+ * \returns True if index is down.
+ */
+QU_API bool QU_CALL qu_is_touch_pressed(int index);
+
+/**
+ * \brief Get position of given touch input.
+ * 
+ * \param index Number of touch point (starts from 0).
+ * \returns Position of touch point.
+ */
+QU_API qu_vec2i QU_CALL qu_get_touch_position(int index);
+
+/**@}*/
+
+//----------------------------------------------------------
 // Joystick
 
 /**

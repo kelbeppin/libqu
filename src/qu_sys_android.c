@@ -214,6 +214,73 @@ static void terminate_egl(void)
 // Application thread
 
 /**
+ * Handle touchscreen events.
+ */
+static int handle_motion_event(AInputEvent const *event)
+{
+    int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+
+    if (action == AMOTION_EVENT_ACTION_MOVE) {
+        size_t pointerCount = AMotionEvent_getPointerCount(event);
+
+        for (size_t i = 0; i < pointerCount; i++) {
+            qx_core_push_event(&(struct qx_event) {
+                .type = QX_EVENT_TOUCH_MOVED,
+                .data.touch = {
+                    .index = AMotionEvent_getPointerId(event, i),
+                    .x = (int) AMotionEvent_getX(event, i),
+                    .y = (int) AMotionEvent_getY(event, i),
+                },
+            });
+        }
+
+        return 1;
+    }
+
+    int type = -1;
+
+    if (action == AMOTION_EVENT_ACTION_DOWN || action == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+        type = QX_EVENT_TOUCH_STARTED;
+    }
+
+    if (action == AMOTION_EVENT_ACTION_UP || action == AMOTION_EVENT_ACTION_POINTER_UP) {
+        type = QX_EVENT_TOUCH_ENDED;
+    }
+
+    if (type == -1) {
+        return 0;
+    }
+
+    int index = 0;
+
+    if (action == AMOTION_EVENT_ACTION_POINTER_UP || action == AMOTION_EVENT_ACTION_POINTER_DOWN) {
+        int32_t mask = AMOTION_EVENT_ACTION_POINTER_INDEX_MASK;
+        int32_t shift = AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+        index = (AMotionEvent_getAction(event) & mask) >> shift;
+    }
+
+    qx_core_push_event(&(struct qx_event) {
+        .type = type,
+        .data.touch = {
+            .index = AMotionEvent_getPointerId(event, index),
+            .x = (int) AMotionEvent_getX(event, index),
+            .y = (int) AMotionEvent_getY(event, index),
+        },
+    });
+
+    return 1;
+}
+
+/**
+ * Handle key presses.
+ * TODO: implement
+ */
+static int handle_key_event(AInputEvent const *event)
+{
+    return 0;
+}
+
+/**
  * Input callback of the ALooper. Attached when AInputQueue is available.
  * Should return 0 to stop receiving events, and 1 to continue.
  */
@@ -222,16 +289,22 @@ static int input_looper_callback(int fd, int events, void *arg)
     AInputEvent *event = NULL;
 
     while (AInputQueue_getEvent(priv.input_queue, &event) >= 0) {
-        QU_DEBUG("input event: %d\n", AInputEvent_getType(event));
-
         if (AInputQueue_preDispatchEvent(priv.input_queue, event)) {
             continue;
         }
 
-        // TODO: handle events
-        // handled is 1 if event is consumed
+        int handled = 0;
 
-        AInputQueue_finishEvent(priv.input_queue, event, 0);
+        switch (AInputEvent_getType(event)) {
+        case AINPUT_EVENT_TYPE_MOTION:
+            handled = handle_motion_event(event);
+            break;
+        case AINPUT_EVENT_TYPE_KEY:
+            handled = handle_key_event(event);
+            break;
+        }
+
+        AInputQueue_finishEvent(priv.input_queue, event, handled);
     }
 
     return 1;

@@ -255,6 +255,9 @@ size_t qx_sys_get_file_size(void *file);
 #define QX_EVENT_MOUSE_WHEEL_SCROLLED           (0x05)
 #define QX_EVENT_ACTIVATE                       (0x06)
 #define QX_EVENT_DEACTIVATE                     (0x07)
+#define QX_EVENT_TOUCH_STARTED                  (0x08)
+#define QX_EVENT_TOUCH_ENDED                    (0x09)
+#define QX_EVENT_TOUCH_MOVED                    (0x0A)
 
 enum qu__renderer
 {
@@ -318,10 +321,18 @@ struct qx_mouse_event
     int dy_wheel;
 };
 
+struct qx_touch_event
+{
+    int index;
+    int x;
+    int y;
+};
+
 union qx_event_data
 {
     struct qx_keyboard_event keyboard;
     struct qx_mouse_event mouse;
+    struct qx_touch_event touch;
 };
 
 struct qx_event
@@ -382,6 +393,9 @@ void qx_core_set_window_title(char const *title);
 void qx_core_get_window_size(int *width, int *height);
 void qx_core_set_window_size(int width, int height);
 bool qx_core_is_window_active(void);
+
+bool qx_core_is_touch_pressed(int index);
+bool qx_core_get_touch_position(int index, int *x, int *y);
 
 //------------------------------------------------------------------------------
 // Graphics
