@@ -91,6 +91,10 @@ struct qu__core_priv
     qu_mouse_cursor_fn mouse_cursor_motion_fn;
     qu_mouse_wheel_fn mouse_wheel_scroll_fn;
 
+    int touch_state[QU_MAX_TOUCH_INPUTS];
+    qu_vec2i touch_position[QU_MAX_TOUCH_INPUTS];
+    qu_vec2i touch_delta[QU_MAX_TOUCH_INPUTS];
+
     struct core_event_buffer event_buffer;
 };
 
@@ -213,6 +217,18 @@ static void handle_window_activation(bool active)
     priv.window_active = active;
 }
 
+static void handle_touch_motion(struct qx_touch_event const *event)
+{
+    int x_old = priv.touch_position[event->index].x;
+    int y_old = priv.touch_position[event->index].y;
+
+    priv.touch_position[event->index].x = event->x;
+    priv.touch_position[event->index].y = event->y;
+
+    priv.touch_delta[event->index].x = event->x - x_old;
+    priv.touch_delta[event->index].y = event->y - y_old;
+}
+
 //------------------------------------------------------------------------------
 
 void qu__core_initialize(qu_params const *params)
@@ -331,6 +347,19 @@ bool qu__core_process(void)
             break;
         case QX_EVENT_DEACTIVATE:
             handle_window_activation(false);
+            break;
+        case QX_EVENT_TOUCH_STARTED:
+            priv.touch_state[event->data.touch.index] = 1;
+            priv.touch_position[event->data.touch.index].x = event->data.touch.x;
+            priv.touch_position[event->data.touch.index].y = event->data.touch.y;
+            priv.touch_delta[event->data.touch.index].x = 0;
+            priv.touch_delta[event->data.touch.index].y = 0;
+            break;
+        case QX_EVENT_TOUCH_ENDED:
+            priv.touch_state[event->data.touch.index] = 0;
+            break;
+        case QX_EVENT_TOUCH_MOVED:
+            handle_touch_motion(&event->data.touch);
             break;
         }
     }
@@ -502,6 +531,26 @@ void qu_on_mouse_cursor_moved(qu_mouse_cursor_fn fn)
 void qu_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
 {
     priv.mouse_wheel_scroll_fn = fn;
+}
+
+bool qx_core_is_touch_pressed(int index)
+{
+    return priv.touch_state[index];
+}
+
+bool qx_core_get_touch_position(int index, int *x, int *y)
+{
+    if (!priv.touch_state[index]) {
+        return false;
+    }
+
+    qu_vec2i position = { priv.touch_position[index].x, priv.touch_position[index].y };
+    qu_vec2i conv = qu__graphics_conv_cursor(position);
+
+    *x = conv.x;
+    *y = conv.y;
+
+    return true;
 }
 
 bool qu_is_joystick_connected(int joystick)

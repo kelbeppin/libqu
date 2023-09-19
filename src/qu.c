@@ -173,6 +173,30 @@ bool qu_is_window_active(void)
     return qx_core_is_window_active();
 }
 
+bool qu_is_touch_pressed(int index)
+{
+    if (index < 0 || index >= QU_MAX_TOUCH_INPUTS) {
+        return false;
+    }
+
+    return qx_core_is_touch_pressed(index);
+}
+
+qu_vec2i qu_get_touch_position(int index)
+{
+    if (index < 0 || index >= QU_MAX_TOUCH_INPUTS) {
+        return (qu_vec2i) { -1, -1 };
+    }
+
+    int x, y;
+
+    if (qx_core_get_touch_position(index, &x, &y)) {
+        return (qu_vec2i) { x, y };
+    }
+
+    return (qu_vec2i) { -1, -1 };
+}
+
 //------------------------------------------------------------------------------
 // Graphics
 

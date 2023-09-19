@@ -2,6 +2,21 @@
 #include <math.h>
 #include <libqu.h>
 
+static qu_font font;
+
+static void draw_touch_point(int index, int x, int y)
+{
+    qu_draw_line(x, 0.f, x, 512.f, QU_COLOR(224, 224, 224));
+    qu_draw_line(0.f, y, 512.f, y, QU_COLOR(224, 224, 224));
+
+    qu_push_matrix();
+    qu_translate(x, y);
+    qu_draw_circle(0.f, 0.f, 32.f, QU_COLOR(255, 255, 255), 0);
+    qu_draw_text_fmt(font, -64.f, -64.f, QU_COLOR(128, 128, 128),
+                     "%d (%d, %d)", index, x, y);
+    qu_pop_matrix();
+}
+
 void android_main(void)
 {
     qu_initialize(&(qu_params) {
@@ -11,7 +26,7 @@ void android_main(void)
         .canvas_smooth = true,
     });
 
-    qu_font font = qu_load_font("sansation.ttf", 24.f);
+    font = qu_load_font("sansation.ttf", 24.f);
 
     if (font.id == 0) {
         return;
@@ -58,6 +73,13 @@ void android_main(void)
                          "%.2f", current_time - local_time);
         qu_draw_text_fmt(font, 32.f, 64.f, QU_COLOR(255, 255, 255),
                          "frame: %d", counter++);
+
+        for (int i = 0; i < QU_MAX_TOUCH_INPUTS; i++) {
+            if (qu_is_touch_pressed(i)) {
+                qu_vec2i position = qu_get_touch_position(i);
+                draw_touch_point(i, position.x, position.y);
+            }
+        }
 
         qu_present();
 
