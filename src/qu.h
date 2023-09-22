@@ -542,7 +542,7 @@ void qu__text_draw(int32_t id, float x, float y, qu_color color, char const *tex
 //------------------------------------------------------------------------------
 // Audio
 
-struct qu__audio
+struct qx_audio_impl
 {
     bool (*query)(qu_params const *params);
     void (*initialize)(qu_params const *params);
@@ -565,27 +565,27 @@ struct qu__audio
     void (*stop_voice)(int32_t voice_id);
 };
 
-extern struct qu__audio const qu__audio_null;
-extern struct qu__audio const qu__audio_openal;
-extern struct qu__audio const qu__audio_xaudio2;
+extern struct qx_audio_impl const qx_audio_null;
+extern struct qx_audio_impl const qx_audio_openal;
+extern struct qx_audio_impl const qx_audio_xaudio2;
 
-void qu__audio_initialize(qu_params const *params);
-void qu__audio_terminate(void);
+void qx_initialize_audio(qu_params const *params);
+void qx_terminate_audio(void);
 
-void qu__audio_set_master_volume(float volume);
-int32_t qu__audio_load_sound(qx_file *file);
-void qu__audio_delete_sound(int32_t id);
-int32_t qu__audio_play_sound(int32_t id);
-int32_t qu__audio_loop_sound(int32_t id);
+void qx_set_master_volume(float volume);
+int32_t qx_load_sound(qx_file *file);
+void qx_delete_sound(int32_t id);
+int32_t qx_play_sound(int32_t id);
+int32_t qx_loop_sound(int32_t id);
 
-int32_t qu__audio_open_music(qx_file *file);
-void qu__audio_close_music(int32_t id);
-int32_t qu__audio_play_music(int32_t id);
-int32_t qu__audio_loop_music(int32_t id);
+int32_t qx_open_music(qx_file *file);
+void qx_close_music(int32_t id);
+int32_t qx_play_music(int32_t id);
+int32_t qx_loop_music(int32_t id);
 
-void qu__audio_pause_voice(int32_t id);
-void qu__audio_unpause_voice(int32_t id);
-void qu__audio_stop_voice(int32_t id);
+void qx_pause_voice(int32_t id);
+void qx_unpause_voice(int32_t id);
+void qx_stop_voice(int32_t id);
 
 //------------------------------------------------------------------------------
 

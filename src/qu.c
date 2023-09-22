@@ -76,7 +76,7 @@ void qu_initialize(qu_params const *user_params)
     qu_platform_initialize();
     qu__core_initialize(&qu.params);
     qu__graphics_initialize(&qu.params);
-    qu__audio_initialize(&qu.params);
+    qx_initialize_audio(&qu.params);
     qu_initialize_text();
 
     qu.status = QU_STATUS_INITIALIZED;
@@ -86,7 +86,7 @@ void qu_terminate(void)
 {
     if (qu.status == QU_STATUS_INITIALIZED) {
         qu_terminate_text();
-        qu__audio_terminate();
+        qx_terminate_audio();
         qu__graphics_terminate();
         qu__core_terminate();
         qu_platform_terminate();
@@ -396,7 +396,7 @@ void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const
 
 void qu_set_master_volume(float volume)
 {
-    qu__audio_set_master_volume(volume);
+    qx_set_master_volume(volume);
 }
 
 qu_sound qu_load_sound(char const *path)
@@ -407,7 +407,7 @@ qu_sound qu_load_sound(char const *path)
         return (qu_sound) { 0 };
     }
 
-    int32_t id = qu__audio_load_sound(file);
+    int32_t id = qx_load_sound(file);
 
     qx_fclose(file);
 
@@ -416,17 +416,17 @@ qu_sound qu_load_sound(char const *path)
 
 void qu_delete_sound(qu_sound sound)
 {
-    qu__audio_delete_sound(sound.id);
+    qx_delete_sound(sound.id);
 }
 
 qu_voice qu_play_sound(qu_sound sound)
 {
-    return (qu_voice) { qu__audio_play_sound(sound.id) };
+    return (qu_voice) { qx_play_sound(sound.id) };
 }
 
 qu_voice qu_loop_sound(qu_sound sound)
 {
-    return (qu_voice) { qu__audio_loop_sound(sound.id) };
+    return (qu_voice) { qx_loop_sound(sound.id) };
 }
 
 qu_music qu_open_music(char const *path)
@@ -437,7 +437,7 @@ qu_music qu_open_music(char const *path)
         return (qu_music) { 0 };
     }
 
-    int32_t id = qu__audio_open_music(file);
+    int32_t id = qx_open_music(file);
         
     if (!id) {
         qx_fclose(file);
@@ -448,30 +448,30 @@ qu_music qu_open_music(char const *path)
 
 void qu_close_music(qu_music music)
 {
-    qu__audio_close_music(music.id);
+    qx_close_music(music.id);
 }
 
 qu_voice qu_play_music(qu_music music)
 {
-    return (qu_voice) { qu__audio_play_music(music.id) };
+    return (qu_voice) { qx_play_music(music.id) };
 }
 
 qu_voice qu_loop_music(qu_music music)
 {
-    return (qu_voice) { qu__audio_loop_music(music.id) };
+    return (qu_voice) { qx_loop_music(music.id) };
 }
 
 void qu_pause_voice(qu_voice voice)
 {
-    qu__audio_pause_voice(voice.id);
+    qx_pause_voice(voice.id);
 }
 
 void qu_unpause_voice(qu_voice voice)
 {
-    qu__audio_unpause_voice(voice.id);
+    qx_unpause_voice(voice.id);
 }
 
 void qu_stop_voice(qu_voice voice)
 {
-    qu__audio_stop_voice(voice.id);
+    qx_stop_voice(voice.id);
 }

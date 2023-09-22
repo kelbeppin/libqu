@@ -26,29 +26,29 @@
 // qu_audio.c: Audio module
 //------------------------------------------------------------------------------
 
-static struct qu__audio const *supported_audio_impl_list[] = {
+static struct qx_audio_impl const *supported_audio_impl_list[] = {
 
 #ifdef QU_WIN32
-    &qu__audio_xaudio2,
+    &qx_audio_xaudio2,
 #endif
 
 #ifdef QU_USE_OPENAL
-    &qu__audio_openal,
+    &qx_audio_openal,
 #endif
 
-    &qu__audio_null,
+    &qx_audio_null,
 };
 
-struct qu__audio_priv
+struct audio_priv
 {
-	struct qu__audio const *impl;
+	struct qx_audio_impl const *impl;
 };
 
-static struct qu__audio_priv priv;
+static struct audio_priv priv;
 
 //------------------------------------------------------------------------------
 
-void qu__audio_initialize(qu_params const *params)
+void qx_initialize_audio(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
@@ -87,69 +87,69 @@ void qu__audio_initialize(qu_params const *params)
     priv.impl->initialize(params);
 }
 
-void qu__audio_terminate(void)
+void qx_terminate_audio(void)
 {
 	priv.impl->terminate();
 }
 
 //------------------------------------------------------------------------------
 
-void qu__audio_set_master_volume(float volume)
+void qx_set_master_volume(float volume)
 {
     priv.impl->set_master_volume(volume);
 }
 
-int32_t qu__audio_load_sound(qx_file *file)
+int32_t qx_load_sound(qx_file *file)
 {
     return priv.impl->load_sound(file);
 }
 
-void qu__audio_delete_sound(int32_t id)
+void qx_delete_sound(int32_t id)
 {
     priv.impl->delete_sound(id);
 }
 
-int32_t qu__audio_play_sound(int32_t id)
+int32_t qx_play_sound(int32_t id)
 {
     return priv.impl->play_sound(id);
 }
 
-int32_t qu__audio_loop_sound(int32_t id)
+int32_t qx_loop_sound(int32_t id)
 {
     return priv.impl->loop_sound(id);
 }
 
-int32_t qu__audio_open_music(qx_file *file)
+int32_t qx_open_music(qx_file *file)
 {
     return priv.impl->open_music(file);
 }
 
-void qu__audio_close_music(int32_t id)
+void qx_close_music(int32_t id)
 {
     priv.impl->close_music(id);
 }
 
-int32_t qu__audio_play_music(int32_t id)
+int32_t qx_play_music(int32_t id)
 {
     return priv.impl->play_music(id);
 }
 
-int32_t qu__audio_loop_music(int32_t id)
+int32_t qx_loop_music(int32_t id)
 {
     return priv.impl->loop_music(id);
 }
 
-void qu__audio_pause_voice(int32_t id)
+void qx_pause_voice(int32_t id)
 {
     priv.impl->pause_voice(id);
 }
 
-void qu__audio_unpause_voice(int32_t id)
+void qx_unpause_voice(int32_t id)
 {
     priv.impl->unpause_voice(id);
 }
 
-void qu__audio_stop_voice(int32_t id)
+void qx_stop_voice(int32_t id)
 {
     priv.impl->stop_voice(id);
 }
