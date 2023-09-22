@@ -15,7 +15,7 @@ add_library(${PROJECT_NAME}
     qu_log.c
     qu_math.c
     qu_renderer_null.c
-    qu_sound_reader.c
+    qu_wave.c
     qu_text.c
     qu_util.c)
 
