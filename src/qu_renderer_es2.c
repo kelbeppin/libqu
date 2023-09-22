@@ -65,12 +65,6 @@ static void _check_gl(char const *call, char const *file, int line)
         case GL_INVALID_OPERATION:
             QU_WARNING("-- GL_INVALID_OPERATION\n");
             break;
-        case GL_STACK_OVERFLOW:
-            QU_WARNING("-- GL_STACK_OVERFLOW\n");
-            break;
-        case GL_STACK_UNDERFLOW:
-            QU_WARNING("-- GL_STACK_UNDERFLOW\n");
-            break;
         case GL_OUT_OF_MEMORY:
             QU_WARNING("-- GL_OUT_OF_MEMORY\n");
             break;

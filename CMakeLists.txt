@@ -47,13 +47,15 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     set(QU_WIN32 1)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(QU_LINUX 1)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+    set(QU_FREEBSD 1)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
     set(QU_EMSCRIPTEN 1)
 else()
     message(FATAL_ERROR "This system is not supported by ${PROJECT_NAME}: ${CMAKE_SYSTEM_NAME}.")
 endif()
 
-if(QU_LINUX OR QU_EMSCRIPTEN)
+if(QU_LINUX OR QU_FREEBSD OR QU_EMSCRIPTEN)
     set(QU_POSIX 1)
 endif()
 
@@ -77,19 +79,11 @@ endif()
 #-------------------------------------------------------------------------------
 # Set USE flags
 
-if(QU_WIN32 OR QU_LINUX)
-    set(QU_USE_GL 1)
-endif()
-
-if(QU_LINUX)
+if(QU_LINUX OR QU_FREEBSD)
     set(QU_USE_X11 1)
 endif()
 
-if(QU_EMSCRIPTEN)
-    set(QU_USE_ES2 1)
-endif()
-
-if(QU_LINUX OR QU_EMSCRIPTEN)
+if(QU_LINUX OR QU_FREEBSD OR QU_EMSCRIPTEN)
     set(QU_USE_OPENAL 1)
 endif()
 
@@ -145,16 +139,29 @@ endif()
 #-----------------------------------------------------------
 # OpenGL & OpenGL ES
 
-if(QU_USE_GL)
-    find_package(OpenGL REQUIRED)
+find_package(OpenGL)
+
+if(OpenGL_OpenGL_FOUND)
+    set(QU_USE_GL 1)
 endif()
 
-if(QU_USE_ES2)
-    if(QU_EMSCRIPTEN)
-        set(OPENGL_GLESv2_LIBRARY "")
-    else()
-        find_library(OPENGL_GLESv2_LIBRARY GLESv2 REQUIRED)
-    endif()
+find_library(OPENGL_GLESv2_LIBRARY GLESv2)
+
+if(OPENGL_GLESv2_LIBRARY)
+    message("Found OpenGL ES: ${OPENGL_GLESv2_LIBRARY}")
+    set(QU_USE_ES2 1)
+endif()
+
+# Emscripten is a special case: it doesn't require any
+# linker flags or something to use WebGL.
+if(QU_EMSCRIPTEN)
+    set(QU_USE_GL 0)
+    set(QU_USE_ES2 1)
+    set(OPENGL_GLESv2_LIBRARY "")
+endif()
+
+if(NOT QU_USE_GL AND NOT QU_USE_ES2)
+    message(FATAL_ERROR "OpenGL is not found.")
 endif()
 
 #-----------------------------------------------------------
