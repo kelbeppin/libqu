@@ -47,13 +47,15 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     set(QU_WIN32 1)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(QU_LINUX 1)
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+    set(QU_FREEBSD 1)
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
     set(QU_EMSCRIPTEN 1)
 else()
     message(FATAL_ERROR "This system is not supported by ${PROJECT_NAME}: ${CMAKE_SYSTEM_NAME}.")
 endif()
 
-if(QU_LINUX OR QU_EMSCRIPTEN)
+if(QU_LINUX OR QU_FREEBSD OR QU_EMSCRIPTEN)
     set(QU_POSIX 1)
 endif()
 
@@ -77,11 +79,11 @@ endif()
 #-------------------------------------------------------------------------------
 # Set USE flags
 
-if(QU_WIN32 OR QU_LINUX)
+if(QU_WIN32 OR QU_LINUX OR QU_FREEBSD)
     set(QU_USE_GL 1)
 endif()
 
-if(QU_LINUX)
+if(QU_LINUX OR QU_FREEBSD)
     set(QU_USE_X11 1)
 endif()
 
@@ -89,7 +91,7 @@ if(QU_EMSCRIPTEN)
     set(QU_USE_ES2 1)
 endif()
 
-if(QU_LINUX OR QU_EMSCRIPTEN)
+if(QU_LINUX OR QU_FREEBSD OR QU_EMSCRIPTEN)
     set(QU_USE_OPENAL 1)
 endif()
 

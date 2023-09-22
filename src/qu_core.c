@@ -32,7 +32,7 @@ static struct qu__core const *supported_core_impl_list[] = {
     &qu__core_win32,
 #endif
 
-#ifdef QU_LINUX
+#ifdef QU_USE_X11
     &qu__core_x11,
 #endif
 

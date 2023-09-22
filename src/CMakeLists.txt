@@ -73,6 +73,10 @@ if(QU_LINUX)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_LINUX)
 endif()
 
+if(QU_FREEBSD)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE QU_FREEBSD)
+endif()
+
 if(QU_EMSCRIPTEN)
     target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_EMSCRIPTEN)
