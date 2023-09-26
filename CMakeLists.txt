@@ -85,10 +85,6 @@ if(QU_LINUX OR QU_FREEBSD)
     set(QU_USE_X11 1)
 endif()
 
-if(QU_LINUX OR QU_EMSCRIPTEN)
-    set(QU_USE_OPENAL 1)
-endif()
-
 #-------------------------------------------------------------------------------
 # Global compile options, flags, etc.
 
@@ -167,10 +163,12 @@ if(NOT QU_USE_GL AND NOT QU_USE_ES2)
 endif()
 
 #-----------------------------------------------------------
-# OpenAL-soft [should be installed externally]
+# OpenAL [should be installed externally]
 
-if(QU_USE_OPENAL)
-    find_package(OpenAL REQUIRED)
+find_package(OpenAL)
+
+if(OPENAL_FOUND)
+    set(QU_USE_OPENAL 1)
 endif()
 
 #-----------------------------------------------------------
