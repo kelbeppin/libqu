@@ -421,12 +421,12 @@ void qu_delete_sound(qu_sound sound)
 
 qu_voice qu_play_sound(qu_sound sound)
 {
-    return (qu_voice) { qx_play_sound(sound.id) };
+    return (qu_voice) { qx_play_sound(sound.id, 0) };
 }
 
 qu_voice qu_loop_sound(qu_sound sound)
 {
-    return (qu_voice) { qx_loop_sound(sound.id) };
+    return (qu_voice) { qx_play_sound(sound.id, -1) };
 }
 
 qu_music qu_open_music(char const *path)
@@ -453,12 +453,12 @@ void qu_close_music(qu_music music)
 
 qu_voice qu_play_music(qu_music music)
 {
-    return (qu_voice) { qx_play_music(music.id) };
+    return (qu_voice) { qx_play_music(music.id, 0) };
 }
 
 qu_voice qu_loop_music(qu_music music)
 {
-    return (qu_voice) { qx_loop_music(music.id) };
+    return (qu_voice) { qx_play_music(music.id, -1) };
 }
 
 void qu_pause_voice(qu_voice voice)

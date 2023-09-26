@@ -17,99 +17,81 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_audio_null.c: dummy audio module
+//------------------------------------------------------------------------------
 
 #define QU_MODULE "audio-null"
 #include "qu.h"
 
 //------------------------------------------------------------------------------
-// qu_audio_null.c: dummy audio module
-//------------------------------------------------------------------------------
 
-static bool query(qu_params const *params)
+static qx_result check(qu_params const *params)
 {
-    return true;
+    return QX_SUCCESS;
 }
 
-static void initialize(qu_params const *params)
+static qx_result initialize(qu_params const *params)
 {
-    QU_INFO("Null audio module initialized.\n");
+    QU_INFO("Initialized.\n");
+
+    return QX_SUCCESS;
 }
 
 static void terminate(void)
 {
-    QU_INFO("Null audio module terminated.\n");
+    QU_INFO("Terminated.\n");
 }
 
 static void set_master_volume(float volume)
 {
 }
 
-static int32_t load_sound(qx_file *file)
+static qx_result create_source(qx_audio_source *source)
 {
-    return 1;
+    return QX_SUCCESS;
 }
 
-static void delete_sound(int32_t sound_id)
-{
-}
-
-static int32_t play_sound(int32_t sound_id)
-{
-    return 1;
-}
-
-static int32_t loop_sound(int32_t sound_id)
-{
-    return 1;
-}
-
-static int32_t open_music(qx_file *file)
-{
-    return 1;
-}
-
-static void close_music(int32_t music_id)
+static void destroy_source(qx_audio_source *source)
 {
 }
 
-static int32_t play_music(int32_t music_id)
+static qx_result queue_buffer(qx_audio_source *source, qx_audio_buffer *buffer)
 {
-    return 1;
+    return QX_SUCCESS;
 }
 
-static int32_t loop_music(int32_t music_id)
+static int get_queued_buffers(qx_audio_source *source)
 {
-    return 1;
+    return 0;
 }
 
-static void pause_stream(int32_t stream_id)
+static bool is_source_used(qx_audio_source *source)
 {
+    return false;
 }
 
-static void unpause_stream(int32_t stream_id)
+static qx_result start_source(qx_audio_source *source)
 {
+    return QX_SUCCESS;
 }
 
-static void stop_stream(int32_t stream_id)
+static qx_result stop_source(qx_audio_source *source)
 {
+    return QX_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
 
-struct qx_audio_impl const qx_audio_null = {
-    .query = query,
+qx_audio_impl const qx_audio_null = {
+    .check = check,
     .initialize = initialize,
     .terminate = terminate,
     .set_master_volume = set_master_volume,
-    .load_sound = load_sound,
-    .delete_sound = delete_sound,
-    .play_sound = play_sound,
-    .loop_sound = loop_sound,
-    .open_music = open_music,
-    .close_music = close_music,
-    .play_music = play_music,
-    .loop_music = loop_music,
-    .pause_voice = pause_stream,
-    .unpause_voice = unpause_stream,
-    .stop_voice = stop_stream,
+    .create_source = create_source,
+    .destroy_source = destroy_source,
+    .is_source_used = is_source_used,
+    .queue_buffer = queue_buffer,
+    .get_queued_buffers = get_queued_buffers,
+    .start_source = start_source,
+    .stop_source = stop_source,
 };

@@ -17,50 +17,33 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_wave.c: sound reader
+//------------------------------------------------------------------------------
 
-#define QU_MODULE "sound-reader"
+#define QU_MODULE "wave"
 #include "qu.h"
 
 #include <vorbis/vorbisfile.h>
 
 //------------------------------------------------------------------------------
-// qu_sound_reader.c: sound reader
-//------------------------------------------------------------------------------
 
-struct sound_data
+#define WAVE_FORMAT_RIFF                0
+#define WAVE_FORMAT_OGG                 1
+#define TOTAL_WAVE_FORMATS              2
+
+struct wave_format
 {
-    int64_t (*read)(qu_sound_reader *reader, int16_t *dst, int64_t max_samples);
-    void (*seek)(qu_sound_reader *reader, int64_t sample_offset);
-    void (*close)(qu_sound_reader *reader);
-
-    union {
-        struct {
-            int16_t bytes_per_sample;
-            int64_t data_start;
-            int64_t data_end;
-        } wav;
-
-        OggVorbis_File vorbis;
-    };
+    void *(*test)(struct qx_file *file);
+    bool (*open)(struct qx_wave *wave);
+    int64_t (*read)(struct qx_wave *wave, int16_t *dst, int64_t max_samples);
+    int64_t (*seek)(struct qx_wave *wave, int64_t sample_offset);
+    void (*close)(struct qx_wave *wave);
 };
 
 //------------------------------------------------------------------------------
 // WAV reader
 
-struct wav_chunk
-{
-    char id[4];
-    uint32_t size;
-    char format[4];
-};
-
-struct wav_subchunk
-{
-    char id[4];
-    uint32_t size;
-};
-
-struct wav_fmt
+struct riff
 {
     uint16_t audio_format;
     uint16_t num_channels;
@@ -68,78 +51,91 @@ struct wav_fmt
     uint32_t byte_rate;
     uint16_t block_align;
     uint16_t bits_per_sample;
+
+    int64_t data_start;
+    int64_t data_end;
 };
 
-static int64_t open_wav(qu_sound_reader *reader)
+static void *riff_test(struct qx_file *file)
 {
-    qx_fseek(reader->file, 0, SEEK_SET);
+    char chunk_id[4];
+    uint32_t chunk_size;
 
-    struct wav_chunk chunk;
-
-    if (qx_fread(&chunk, sizeof(chunk), reader->file) < (int64_t) sizeof(chunk)) {
-        return -1;
+    if ((qx_fread(chunk_id, 4, file) < 4) || memcmp("RIFF", chunk_id, 4)) {
+        return NULL;
     }
 
-    if (strncmp("RIFF", chunk.id, 4) || strncmp("WAVE", chunk.format, 4)) {
-        return -1;
+    if (qx_fread(&chunk_size, 4, file) < 4) {
+        return NULL;
     }
 
-    bool data_found = false;
-    struct sound_data *data = reader->data;
+    char format[4];
 
-    while (!data_found) {
-        struct wav_subchunk subchunk;
+    if ((qx_fread(format, 4, file) < 4) || memcmp("WAVE", format, 4)) {
+        return NULL;
+    }
 
-        if (qx_fread(&subchunk, sizeof(subchunk), reader->file) < (int64_t) sizeof(subchunk)) {
-            return -1;
+    return calloc(1, sizeof(struct riff));
+}
+
+static bool riff_open(struct qx_wave *wave)
+{
+    struct riff *riff = wave->priv;
+    
+    while (true) {
+        char subchunk_id[4];
+        uint32_t subchunk_size;
+
+        if (qx_fread(subchunk_id, 4, wave->file) < 4) {
+            return false;
         }
 
-        int64_t subchunk_start = qx_ftell(reader->file);
+        if (qx_fread(&subchunk_size, 4, wave->file) < 4) {
+            return false;
+        }
 
-        if (strncmp("fmt ", subchunk.id, 4) == 0) {
-            struct wav_fmt fmt;
+        int64_t subchunk_start = qx_ftell(wave->file);
 
-            if (qx_fread(&fmt, sizeof(fmt), reader->file) < (int64_t) sizeof(fmt)) {
+        if (memcmp("fmt ", subchunk_id, 4) == 0) {
+            if (qx_fread(riff, 16, wave->file) < 16) {
                 return -1;
             }
 
-            data->wav.bytes_per_sample = fmt.bits_per_sample / 8;
-            reader->num_channels = fmt.num_channels;
-            reader->sample_rate = fmt.sample_rate;
-        } else if (strncmp("data", subchunk.id, 4) == 0) {
-            reader->num_samples = subchunk.size / data->wav.bytes_per_sample;
-            data->wav.data_start = qx_ftell(reader->file);
-            data->wav.data_end = data->wav.data_start + subchunk.size;
-
-            data_found = true;
+            wave->num_channels = (int16_t) riff->num_channels;
+            wave->sample_rate = (int64_t) riff->sample_rate;
+        } else if (memcmp("data", subchunk_id, 4) == 0) {
+            wave->num_samples = subchunk_size / (riff->bits_per_sample / 8);
+            riff->data_start = qx_ftell(wave->file);
+            riff->data_end = riff->data_start + subchunk_size;
+            break;
         }
 
-        if (qx_fseek(reader->file, subchunk_start + subchunk.size, SEEK_SET) == -1) {
-            return -1;
+        if (qx_fseek(wave->file, subchunk_start + subchunk_size, SEEK_SET) == -1) {
+            return false;
         }
     }
 
-    qx_fseek(reader->file, data->wav.data_start, SEEK_SET);
+    qx_fseek(wave->file, riff->data_start, SEEK_SET);
 
-    return 0;
+    return true;
 }
 
-static int64_t read_wav(qu_sound_reader *reader, int16_t *samples, int64_t max_samples)
+static int64_t riff_read(struct qx_wave *wave, int16_t *samples, int64_t max_samples)
 {
-    struct sound_data *data = reader->data;
-    int16_t bytes_per_sample = data->wav.bytes_per_sample;
+    struct riff *riff = wave->priv;
+    int16_t bytes_per_sample = riff->bits_per_sample / 8;
     int64_t samples_read = 0;
 
     while (samples_read < max_samples) {
-        int64_t position = qx_ftell(reader->file);
+        int64_t position = qx_ftell(wave->file);
 
-        if (position >= data->wav.data_end) {
+        if (position >= riff->data_end) {
             break;
         }
 
         unsigned char bytes[4];
 
-        if (qx_fread(bytes, bytes_per_sample, reader->file) != bytes_per_sample) {
+        if (qx_fread(bytes, bytes_per_sample, wave->file) != bytes_per_sample) {
             break;
         }
 
@@ -168,21 +164,23 @@ static int64_t read_wav(qu_sound_reader *reader, int16_t *samples, int64_t max_s
     return samples_read;
 }
 
-static void seek_wav(qu_sound_reader *reader, int64_t sample_offset)
+static int64_t riff_seek(struct qx_wave *wave, int64_t sample_offset)
 {
-    struct sound_data *data = reader->data;
-    int64_t offset = data->wav.data_start + (sample_offset * data->wav.bytes_per_sample);
-    qx_fseek(reader->file, offset, SEEK_SET);
+    struct riff *riff = wave->priv;
+    int64_t offset = riff->data_start + (sample_offset * (riff->bits_per_sample / 8));
+    return qx_fseek(wave->file, offset, SEEK_SET);
 }
 
-static void close_wav(qu_sound_reader *reader)
+static void riff_close(struct qx_wave *wave)
 {
+    struct riff *riff = wave->priv;
+    free(riff);
 }
 
 //------------------------------------------------------------------------------
-// Ogg Vorbis reader
+// Ogg Vorbis
 
-static char const *ogg_err(int status)
+static char const *ogg_get_err_str(int status)
 {
     if (status >= 0) {
         return "(no error)";
@@ -202,71 +200,73 @@ static char const *ogg_err(int status)
     return "(unknown error)";
 }
 
-static size_t vorbis_read_func(void *ptr, size_t size, size_t nmemb, void *datasource)
+static size_t vorbis_read_callback(void *ptr, size_t size, size_t nmemb, void *datasource)
 {
     qx_file *file = (qx_file *) datasource;
     return qx_fread(ptr, size * nmemb, file);
 }
 
-static int vorbis_seek_func(void *datasource, ogg_int64_t offset, int whence)
+static int vorbis_seek_callback(void *datasource, ogg_int64_t offset, int whence)
 {
     qx_file *file = (qx_file *) datasource;
     return (int) qx_fseek(file, offset, whence);
 }
 
-static long vorbis_tell_func(void *datasource)
+static long vorbis_tell_callback(void *datasource)
 {
     qx_file *file = (qx_file *) datasource;
     return (long) qx_ftell(file);
 }
 
-static int64_t open_ogg(qu_sound_reader *reader)
+static void *ogg_test(struct qx_file *file)
 {
-    struct sound_data *data = reader->data;
+    OggVorbis_File *vf = calloc(1, sizeof(OggVorbis_File));
 
-    qx_fseek(reader->file, 0, SEEK_SET);
-
-    int test = ov_test_callbacks(
-        reader->file,
-        &data->vorbis,
-        NULL, 0,
-        (ov_callbacks) {
-            .read_func = vorbis_read_func,
-            .seek_func = vorbis_seek_func,
-            .close_func = NULL,
-            .tell_func = vorbis_tell_func,
-        }
-    );
-
-    if (test < 0) {
-        return -1;
+    if (!vf) {
+        return NULL;
     }
 
-    int status = ov_test_open(&data->vorbis);
+    ov_callbacks callbacks = {
+        .read_func = vorbis_read_callback,
+        .seek_func = vorbis_seek_callback,
+        .close_func = NULL,
+        .tell_func = vorbis_tell_callback,
+    };
 
-    if (status < 0) {
-        QU_ERROR("Failed to open Ogg Vorbis media: %s\n", ogg_err(status));
-        return -1;
+    if (ov_test_callbacks(file, vf, NULL, 0, callbacks) < 0) {
+        free(vf);
+        return NULL;
     }
 
-    vorbis_info *info = ov_info(&data->vorbis, -1);
-    ogg_int64_t samples_per_channel = ov_pcm_total(&data->vorbis, -1);
-
-    reader->num_channels = info->channels;
-    reader->num_samples = samples_per_channel * info->channels;
-    reader->sample_rate = info->rate;
-
-    return 0;
+    return vf;
 }
 
-static int64_t read_ogg(qu_sound_reader *reader, int16_t *samples, int64_t max_samples)
+static bool ogg_open(struct qx_wave *wave)
 {
-    struct sound_data *data = reader->data;
+    OggVorbis_File *vf = wave->priv;
+    int status = ov_test_open(vf);
+
+    if (status < 0) {
+        QU_ERROR("Failed to open Ogg Vorbis media: %s\n", ogg_get_err_str(status));
+        return false;
+    }
+
+    vorbis_info *info = ov_info(vf, -1);
+    ogg_int64_t samples_per_channel = ov_pcm_total(vf, -1);
+
+    wave->num_channels = info->channels;
+    wave->num_samples = samples_per_channel * info->channels;
+    wave->sample_rate = info->rate;
+}
+
+static int64_t ogg_read(struct qx_wave *wave, int16_t *samples, int64_t max_samples)
+{
+    OggVorbis_File *vf = wave->priv;
     long samples_read = 0;
 
     while (samples_read < max_samples) {
         int bytes_left = (max_samples - samples_read) / sizeof(int16_t);
-        long bytes_read = ov_read(&data->vorbis, (char *) samples, bytes_left, 0, 2, 1, NULL);
+        long bytes_read = ov_read(vf, (char *) samples, bytes_left, 0, 2, 1, NULL);
 
         // End of file.
         if (bytes_read == 0) {
@@ -280,7 +280,7 @@ static int64_t read_ogg(qu_sound_reader *reader, int16_t *samples, int64_t max_s
         if (bytes_read < 0) {
 #if 0
             QU_ERROR("Failed to read Ogg Vorbis from file %s. Reason: %s\n",
-                     qx_file_get_name(sound->file), ogg_err(bytes_read));
+                     qx_file_get_name(wave->file), ogg_get_err_str(bytes_read));
 #endif
             break;
         }
@@ -292,70 +292,85 @@ static int64_t read_ogg(qu_sound_reader *reader, int16_t *samples, int64_t max_s
     return samples_read;
 }
 
-static void seek_ogg(qu_sound_reader *reader, int64_t sample_offset)
+static int64_t ogg_seek(struct qx_wave *wave, int64_t sample_offset)
 {
-    struct sound_data *data = reader->data;
-    ov_pcm_seek(&data->vorbis, sample_offset / reader->num_channels);
+    OggVorbis_File *vf = wave->priv;
+    return ov_pcm_seek(vf, sample_offset / wave->num_channels);
 }
 
-static void close_ogg(qu_sound_reader *reader)
+static void ogg_close(struct qx_wave *wave)
 {
-    struct sound_data *data = reader->data;
-    ov_clear(&data->vorbis);
+    OggVorbis_File *vf = wave->priv;
+    ov_clear(vf);
+    free(vf);
 }
 
 //------------------------------------------------------------------------------
 
-qu_sound_reader *qu_open_sound_reader(qx_file *file)
+static struct wave_format const wave_formats[TOTAL_WAVE_FORMATS] = {
+    [WAVE_FORMAT_RIFF] = {
+        .test = riff_test,
+        .open = riff_open,
+        .read = riff_read,
+        .seek = riff_seek,
+        .close = riff_close,
+    },
+    [WAVE_FORMAT_OGG] = {
+        .test = ogg_test,
+        .open = ogg_open,
+        .read = ogg_read,
+        .seek = ogg_seek,
+        .close = ogg_close,
+    },
+};
+
+//------------------------------------------------------------------------------
+
+bool qx_open_wave(struct qx_wave *wave, struct qx_file *file)
 {
-    qu_sound_reader *reader = calloc(1, sizeof(qu_sound_reader));
-    struct sound_data *data = calloc(1, sizeof(struct sound_data));
+    wave->file = file;
 
-    if (reader && data) {
-        reader->file = file;
-        reader->data = data;
+    for (int i = 0; i < TOTAL_WAVE_FORMATS; i++) {
+        qx_fseek(file, 0, SEEK_SET);
+        void *priv = wave_formats[i].test(file);
 
-        if (open_wav(reader) == 0) {
-            data->close = close_wav;
-            data->read = read_wav;
-            data->seek = seek_wav;
+        if (priv) {
+            wave->priv = priv;
 
-            return reader;
-        }
-
-        if (open_ogg(reader) == 0) {
-            data->close = close_ogg;
-            data->read = read_ogg;
-            data->seek = seek_ogg;
-
-            return reader;
+            if (wave_formats[i].open(wave)) {
+                wave->format = i;
+                return true;
+            }
         }
     }
 
-    free(reader);
-    free(data);
-
-    return NULL;
+    memset(wave, 0, sizeof(struct qx_wave));
+    return false;
 }
 
-void qu_close_sound_reader(qu_sound_reader *reader)
+void qx_close_wave(struct qx_wave *wave)
 {
-    if (!reader) {
+    if (!wave || wave->format < 0 || wave->format >= TOTAL_WAVE_FORMATS) {
         return;
     }
 
-    ((struct sound_data *) reader->data)->close(reader);
-
-    free(reader->data);
-    free(reader);
+    wave_formats[wave->format].close(wave);
 }
 
-int64_t qu_sound_read(qu_sound_reader *reader, int16_t *samples, int64_t max_samples)
+int64_t qx_read_wave(struct qx_wave *wave, int16_t *samples, int64_t max_samples)
 {
-    return ((struct sound_data *) reader->data)->read(reader, samples, max_samples);
+    if (!wave || wave->format < 0 || wave->format >= TOTAL_WAVE_FORMATS) {
+        return -1;
+    }
+
+    return wave_formats[wave->format].read(wave, samples, max_samples);
 }
 
-void qu_sound_seek(qu_sound_reader *reader, int64_t sample_offset)
+int64_t qx_seek_wave(struct qx_wave *wave, int64_t sample_offset)
 {
-    ((struct sound_data *) reader->data)->seek(reader, sample_offset);
+    if (!wave || wave->format < 0 || wave->format >= TOTAL_WAVE_FORMATS) {
+        return -1;
+    }
+
+    return wave_formats[wave->format].seek(wave, sample_offset);
 }

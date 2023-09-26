@@ -54,6 +54,14 @@ extern "C" {
 #endif
 
 //------------------------------------------------------------------------------
+
+typedef enum qx_result
+{
+    QX_FAILURE = -1,
+    QX_SUCCESS = 0,
+} qx_result;
+
+//------------------------------------------------------------------------------
 // Math
 
 typedef struct
@@ -181,19 +189,23 @@ void qu__image_delete(struct qu__image *image);
 //------------------------------------------------------------------------------
 // Sound reader
 
-typedef struct
+struct qx_wave
 {
     int16_t num_channels;
     int64_t num_samples;
     int64_t sample_rate;
-    qx_file *file;
-    void *data;
-} qu_sound_reader;
 
-qu_sound_reader *qu_open_sound_reader(qx_file *file);
-void qu_close_sound_reader(qu_sound_reader *reader);
-int64_t qu_sound_read(qu_sound_reader *reader, int16_t *samples, int64_t max_samples);
-void qu_sound_seek(qu_sound_reader *reader, int64_t sample_offset);
+    struct qx_file *file;
+
+    int format;
+    void *priv;
+};
+
+bool qx_open_wave(struct qx_wave *wave, struct qx_file *file);
+void qx_close_wave(struct qx_wave *wave);
+
+int64_t qx_read_wave(struct qx_wave *wave, int16_t *samples, int64_t max_samples);
+int64_t qx_seek_wave(struct qx_wave *wave, int64_t sample_offset);
 
 //------------------------------------------------------------------------------
 // Platform
@@ -542,28 +554,37 @@ void qu__text_draw(int32_t id, float x, float y, qu_color color, char const *tex
 //------------------------------------------------------------------------------
 // Audio
 
-struct qx_audio_impl
+typedef struct qx_audio_buffer
 {
-    bool (*query)(qu_params const *params);
-    void (*initialize)(qu_params const *params);
+    int16_t *data;      // sample data
+    size_t samples;     // number of samples
+    intptr_t priv[4];   // implementation-specific data
+} qx_audio_buffer;
+
+typedef struct qx_audio_source
+{
+    int channels;       // number of channels (1 or 2)
+    int sample_rate;    // sample rate (usually 44100)
+    int loop;           // should this source loop (-1 if yes)
+    intptr_t priv[4];   // implementation-specific data
+} qx_audio_source;
+
+typedef struct qx_audio_impl
+{
+    qx_result (*check)(qu_params const *params);
+    qx_result (*initialize)(qu_params const *params);
     void (*terminate)(void);
 
     void (*set_master_volume)(float volume);
 
-    int32_t (*load_sound)(qx_file *file);
-    void (*delete_sound)(int32_t sound_id);
-    int32_t (*play_sound)(int32_t sound_id);
-    int32_t (*loop_sound)(int32_t sound_id);
-
-    int32_t (*open_music)(qx_file *file);
-    void (*close_music)(int32_t music_id);
-    int32_t (*play_music)(int32_t music_id);
-    int32_t (*loop_music)(int32_t music_id);
-
-    void (*pause_voice)(int32_t voice_id);
-    void (*unpause_voice)(int32_t voice_id);
-    void (*stop_voice)(int32_t voice_id);
-};
+    qx_result (*create_source)(qx_audio_source *source);
+    void (*destroy_source)(qx_audio_source *source);
+    bool (*is_source_used)(qx_audio_source *source);
+    qx_result (*queue_buffer)(qx_audio_source *source, qx_audio_buffer *buffer);
+    int (*get_queued_buffers)(qx_audio_source *source);
+    qx_result (*start_source)(qx_audio_source *source);
+    qx_result (*stop_source)(qx_audio_source *source);
+} qx_audio_impl;
 
 extern struct qx_audio_impl const qx_audio_null;
 extern struct qx_audio_impl const qx_audio_openal;
@@ -575,13 +596,11 @@ void qx_terminate_audio(void);
 void qx_set_master_volume(float volume);
 int32_t qx_load_sound(qx_file *file);
 void qx_delete_sound(int32_t id);
-int32_t qx_play_sound(int32_t id);
-int32_t qx_loop_sound(int32_t id);
+int32_t qx_play_sound(int32_t id, int loop);
 
 int32_t qx_open_music(qx_file *file);
 void qx_close_music(int32_t id);
-int32_t qx_play_music(int32_t id);
-int32_t qx_loop_music(int32_t id);
+int32_t qx_play_music(int32_t id, int loop);
 
 void qx_pause_voice(int32_t id);
 void qx_unpause_voice(int32_t id);
