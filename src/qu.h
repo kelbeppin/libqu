@@ -589,6 +589,7 @@ typedef struct qx_audio_impl
 extern struct qx_audio_impl const qx_audio_null;
 extern struct qx_audio_impl const qx_audio_openal;
 extern struct qx_audio_impl const qx_audio_xaudio2;
+extern qx_audio_impl const qx_audio_sles;
 
 void qx_initialize_audio(qu_params const *params);
 void qx_terminate_audio(void);

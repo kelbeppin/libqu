@@ -90,17 +90,19 @@ if(QU_EMSCRIPTEN)
 endif()
 
 if(QU_ANDROID)
-    target_sources(${PROJECT_NAME} PRIVATE qu_core_android.c qu_sys_android.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_audio_sles.c qu_core_android.c qu_sys_android.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_ANDROID)
 
     find_library(ANDROID_LIBRARY android)
     find_library(LOG_LIBRARY log)
     find_library(EGL_LIBRARY EGL)
+    find_library(OPENSLES_LIBRARY OpenSLES)
 
     target_link_libraries(${PROJECT_NAME} PUBLIC
         ${ANDROID_LIBRARY}
         ${LOG_LIBRARY}
-        ${EGL_LIBRARY})
+        ${EGL_LIBRARY}
+        ${OPENSLES_LIBRARY})
 endif()
 
 if(QU_POSIX)

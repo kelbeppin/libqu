@@ -32,6 +32,10 @@ static struct qx_audio_impl const *supported_audio_impl_list[] = {
     &qx_audio_xaudio2,
 #endif
 
+#ifdef QU_ANDROID
+    &qx_audio_sles,
+#endif
+
 #ifdef QU_USE_OPENAL
     &qx_audio_openal,
 #endif
