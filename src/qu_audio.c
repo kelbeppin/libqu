@@ -318,6 +318,8 @@ static intptr_t music_main(void *arg)
         qu_sleep(0.25);
     }
 
+    priv.impl->stop_source(&music->voice->source);
+
 end:
     // Free buffer memory.
     for (int i = 0; i < TOTAL_MUSIC_BUFFERS; i++) {
@@ -325,6 +327,9 @@ end:
     }
 
     qu_lock_mutex(priv.mutex);
+
+    // Release source. There won't be any chance where we can do that.
+    priv.impl->destroy_source(&music->voice->source);
 
     // Set this pointer to NULL to indicate that the thread
     // is stopped.
@@ -544,6 +549,7 @@ int32_t qx_open_music(qx_file *file)
     struct music music = { 0 };
 
     if (!qx_open_wave(&music.wave, file)) {
+        QU_ERROR("Unable to open music file \"%s\".\n", qx_file_get_name(file));
         return 0;
     }
 
@@ -561,6 +567,7 @@ int32_t qx_play_music(int32_t id, int loop)
     struct music *music = qu_array_get(priv.music, id);
 
     if (!music) {
+        QU_WARNING("Music track 0x%08x is invalid. Can't play.\n");
         return 0;
     }
 

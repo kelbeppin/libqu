@@ -33,6 +33,7 @@
 
 struct wave_format
 {
+    char const *name;
     void *(*test)(struct qx_file *file);
     bool (*open)(struct qx_wave *wave);
     int64_t (*read)(struct qx_wave *wave, int16_t *dst, int64_t max_samples);
@@ -257,6 +258,8 @@ static bool ogg_open(struct qx_wave *wave)
     wave->num_channels = info->channels;
     wave->num_samples = samples_per_channel * info->channels;
     wave->sample_rate = info->rate;
+
+    return true;
 }
 
 static int64_t ogg_read(struct qx_wave *wave, int16_t *samples, int64_t max_samples)
@@ -309,6 +312,7 @@ static void ogg_close(struct qx_wave *wave)
 
 static struct wave_format const wave_formats[TOTAL_WAVE_FORMATS] = {
     [WAVE_FORMAT_RIFF] = {
+        .name = "WAVE",
         .test = riff_test,
         .open = riff_open,
         .read = riff_read,
@@ -316,6 +320,7 @@ static struct wave_format const wave_formats[TOTAL_WAVE_FORMATS] = {
         .close = riff_close,
     },
     [WAVE_FORMAT_OGG] = {
+        .name = "Ogg Vorbis",
         .test = ogg_test,
         .open = ogg_open,
         .read = ogg_read,
@@ -328,21 +333,29 @@ static struct wave_format const wave_formats[TOTAL_WAVE_FORMATS] = {
 
 bool qx_open_wave(struct qx_wave *wave, struct qx_file *file)
 {
+    char const *file_name = qx_file_get_name(file);
+
     wave->file = file;
 
     for (int i = 0; i < TOTAL_WAVE_FORMATS; i++) {
         qx_fseek(file, 0, SEEK_SET);
+
         void *priv = wave_formats[i].test(file);
 
-        if (priv) {
-            wave->priv = priv;
+        if (!priv) {
+            continue;
+        }
 
-            if (wave_formats[i].open(wave)) {
-                wave->format = i;
-                return true;
-            }
+        wave->priv = priv;
+
+        if (wave_formats[i].open(wave)) {
+            QU_INFO("File \"%s\" is recognized as %s.\n", file_name, wave_formats[i].name);
+            wave->format = i;
+            return true;
         }
     }
+
+    QU_ERROR("Can't open \"%s\", format not recognized.\n", file_name);
 
     memset(wave, 0, sizeof(struct qx_wave));
     return false;
