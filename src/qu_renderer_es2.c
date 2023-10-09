@@ -798,9 +798,7 @@ static void es2_apply_blend_mode(qu_blend_mode mode)
 
 static void es2_exec_resize(int width, int height)
 {
-    if (!priv.bound_surface) {
-        CHECK_GL(glViewport(0, 0, width, height));
-    }
+    CHECK_GL(glViewport(0, 0, width, height));
 }
 
 static void es2_exec_clear(void)

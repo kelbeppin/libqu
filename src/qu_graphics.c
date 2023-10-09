@@ -623,7 +623,7 @@ static void initialize_renderer(qu_params const *params)
     priv.renderer->apply_surface(priv.current_surface);
     priv.renderer->apply_texture(priv.current_texture);
 
-    // Trigger resize.
+    // Set default viewport.
     priv.renderer->exec_resize(params->display_width, params->display_height);
 
     // Enable alpha blend by default.
