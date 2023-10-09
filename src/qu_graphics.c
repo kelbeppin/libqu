@@ -711,8 +711,8 @@ void qu__graphics_initialize(qu_params const *params)
 
         priv.canvas = (struct qu__surface) {
             .texture = {
-                .image.width = params->display_width,
-                .image.height = params->display_height,
+                .image.width = params->canvas_width,
+                .image.height = params->canvas_height,
             },
             .sample_count = params->canvas_antialiasing_level,
         };
