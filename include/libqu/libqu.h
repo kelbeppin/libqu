@@ -1051,6 +1051,8 @@ QU_API void QU_CALL qu_draw_surface(qu_surface surface, float x, float y, float 
 
 QU_API qu_font QU_CALL qu_load_font(char const *path, float pt);
 QU_API void QU_CALL qu_delete_font(qu_font font);
+QU_API qu_vec2f QU_CALL qu_calculate_text_box(qu_font font, char const *str);
+QU_API qu_vec2f QU_CALL qu_calculate_text_box_fmt(qu_font font, char const *fmt, ...);
 QU_API void QU_CALL qu_draw_text(qu_font font, float x, float y, qu_color color, char const *str);
 QU_API void QU_CALL qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const *fmt, ...);
 

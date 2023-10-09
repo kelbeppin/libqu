@@ -362,6 +362,46 @@ void qu_delete_font(qu_font font)
     qu__text_delete_font(font.id);
 }
 
+qu_vec2f qu_calculate_text_box(qu_font font, char const *str)
+{
+    float width = 0.f;
+    float height = 0.f;
+
+    qx_calculate_text_box(font.id, str, &width, &height);
+
+    return (qu_vec2f) { width, height };
+}
+
+qu_vec2f qu_calculate_text_box_fmt(qu_font font, char const *fmt, ...)
+{
+    va_list ap;
+    char buffer[256];
+    char *heap = NULL;
+
+    va_start(ap, fmt);
+    int required = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+    va_end(ap);
+
+    if ((size_t) required >= sizeof(buffer)) {
+        heap = malloc(required + 1);
+
+        if (heap) {
+            va_start(ap, fmt);
+            vsnprintf(heap, required + 1, fmt, ap);
+            va_end(ap);
+        }
+    }
+
+    float width = 0.f;
+    float height = 0.f;
+
+    qx_calculate_text_box(font.id, heap ? heap : buffer, &width, &height);
+
+    free(heap);
+
+    return (qu_vec2f) { width, height };
+}
+
 void qu_draw_text(qu_font font, float x, float y, qu_color color, char const *str)
 {
     qu__text_draw(font.id, x, y, color, str);

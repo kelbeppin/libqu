@@ -34,6 +34,21 @@
 
 //------------------------------------------------------------------------------
 
+struct text_calculate_state
+{
+    float width;
+    float height;
+};
+
+struct text_draw_state
+{
+    float x_current;
+    float y_current;
+    float *vertices;
+    int count;
+    qu_color color;
+};
+
 struct atlas
 {
     int texture_id;                 // texture identifier
@@ -328,6 +343,117 @@ static float *maintain_vertex_buffer(int required_size)
     return impl.vertex_buffer;
 }
 
+static void calculate_glyph_callback(struct font *font, struct glyph *glyph, void *data)
+{
+    struct text_calculate_state *state = (struct text_calculate_state *) data;
+
+    state->width += glyph->x_advance;
+    state->height += glyph->y_advance;
+}
+
+static void calculate_text_callback(struct font *font, void *data)
+{
+    struct text_calculate_state *state = (struct text_calculate_state *) data;
+
+    state->height += font->height;
+}
+
+static void draw_glyph_callback(struct font *font, struct glyph *glyph, void *data)
+{
+    struct text_draw_state *state = (struct text_draw_state *) data;
+
+    float x0 = state->x_current + glyph->x_bearing;
+    float y0 = state->y_current - glyph->y_bearing + font->height;
+    float x1 = x0 + glyph->s1 - glyph->s0;
+    float y1 = y0 + glyph->t1 - glyph->t0;
+
+    float s0 = glyph->s0 / (float) font->atlas.width;
+    float t0 = glyph->t0 / (float) font->atlas.height;
+    float s1 = glyph->s1 / (float) font->atlas.width;
+    float t1 = glyph->t1 / (float) font->atlas.height;
+
+    maintain_vertex_buffer(24 * (state->count + 100));
+
+    float *v;
+
+    if (state->vertices) {
+        v = state->vertices;
+    } else {
+        v = impl.vertex_buffer;
+    }
+
+    *v++ = x0;  *v++ = y0;  *v++ = s0;  *v++ = t0;
+    *v++ = x1;  *v++ = y0;  *v++ = s1;  *v++ = t0;
+    *v++ = x1;  *v++ = y1;  *v++ = s1;  *v++ = t1;
+    *v++ = x1;  *v++ = y1;  *v++ = s1;  *v++ = t1;
+    *v++ = x0;  *v++ = y1;  *v++ = s0;  *v++ = t1;
+    *v++ = x0;  *v++ = y0;  *v++ = s0;  *v++ = t0;
+
+    state->x_current += glyph->x_advance;
+    state->y_current += glyph->y_advance;
+    state->vertices = v;
+    state->count++;
+}
+
+static void draw_text_callback(struct font *font, void *data)
+{
+    struct text_draw_state *state = (struct text_draw_state *) data;
+
+    qu__graphics_draw_text(font->atlas.texture_id, state->color, impl.vertex_buffer, 6 * state->count);
+}
+
+static qx_result process_text(int32_t font_id, char const *text, void *data,
+                              void (*glyph_callback)(struct font *, struct glyph *, void *),
+                              void (*text_callback)(struct font *, void *))
+{
+    int font_index = font_id - 1;
+
+    if (font_index < 0 || font_index >= impl.font_count) {
+        return QX_FAILURE;
+    }
+
+    struct font *font = &impl.fonts[font_index];
+
+    if (!font->face) {
+        return QX_FAILURE;
+    }
+
+    hb_buffer_t *buffer = hb_buffer_create();
+
+    hb_buffer_add_utf8(buffer, text, -1, 0, -1);
+    hb_buffer_guess_segment_properties(buffer);
+
+    hb_shape(font->font, buffer, NULL, 0);
+
+    hb_glyph_info_t *info = hb_buffer_get_glyph_infos(buffer, NULL);
+    hb_glyph_position_t *pos = hb_buffer_get_glyph_positions(buffer, NULL);
+
+    unsigned int length = hb_buffer_get_length(buffer);
+
+    for (unsigned int i = 0; i < length; i++) {
+        float x_adv = pos[i].x_advance / 64.0f;
+        float y_adv = pos[i].y_advance / 64.0f;
+        
+        int glyph_index = cache_glyph(font_index, info[i].codepoint, x_adv, y_adv);
+
+        if (glyph_index == -1) {
+            continue;
+        }
+
+        if (glyph_callback) {
+            glyph_callback(font, &font->glyphs[glyph_index], data);
+        }
+    }
+
+    hb_buffer_destroy(buffer);
+
+    if (text_callback) {
+        text_callback(font, data);
+    }
+
+    return QX_SUCCESS;
+}
+
 //------------------------------------------------------------------------------
 
 /**
@@ -495,93 +621,31 @@ void qu__text_delete_font(int32_t id)
     fontp->face = NULL;
 }
 
+void qx_calculate_text_box(int32_t font_id, char const *text, float *width, float *height)
+{
+    struct text_calculate_state state = {
+        .width = 0.f,
+        .height = 0.f,
+    };
+
+    process_text(font_id, text, &state, calculate_glyph_callback, calculate_text_callback);
+
+    *width = state.width;
+    *height = state.height;
+}
+
 /**
  * Draw the text using a specified font.
  */
-void qu__text_draw(int32_t id, float x, float y, qu_color color, char const *text)
+void qu__text_draw(int32_t font_id, float x, float y, qu_color color, char const *text)
 {
-    int index = id - 1;
+    struct text_draw_state state = {
+        .x_current = x,
+        .y_current = y,
+        .vertices = NULL,
+        .count = 0,
+        .color = color,
+    };
 
-    if (index < 0 || index >= impl.font_count) {
-        return;
-    }
-
-    struct font *fontp = &impl.fonts[index];
-
-    if (!fontp->face) {
-        return;
-    }
-
-    float x_offset = 0.0f;
-    unsigned int length = 0;
-    int quad_count = 0;
-
-    // TODO: add bidi
-
-    hb_buffer_t *buffer = hb_buffer_create();
-
-    hb_buffer_add_utf8(buffer, text, -1, 0, -1);
-    hb_buffer_guess_segment_properties(buffer);
-
-    hb_shape(fontp->font, buffer, NULL, 0);
-
-    length = hb_buffer_get_length(buffer);
-    hb_glyph_info_t *info = hb_buffer_get_glyph_infos(buffer, NULL);
-    hb_glyph_position_t *pos = hb_buffer_get_glyph_positions(buffer, NULL);
-
-    // if (hb_buffer_get_direction(buffer) == HB_DIRECTION_RTL) {
-    //     for (unsigned int i = 0; i < length; i++) {
-    //         x_offset -= pos[i].x_advance / 64.0f;
-    //     }
-    // }
-
-    float x_current = x + x_offset;
-    float y_current = y;
-
-    float *v = maintain_vertex_buffer(24 * length);
-
-    for (unsigned int i = 0; i < length; i++) {
-        // Special case for newline character.
-        if (text[i] == '\n') {
-            x_current = x + x_offset;
-            y_current += fontp->height;
-            continue;
-        }
-
-        float x_adv = pos[i].x_advance / 64.0f;
-        float y_adv = pos[i].y_advance / 64.0f;
-        int glyph_index = cache_glyph(index, info[i].codepoint, x_adv, y_adv);
-
-        if (glyph_index == -1) {
-            continue;
-        }
-
-        struct glyph *glyph = &fontp->glyphs[glyph_index];
-
-        float x0 = x_current + glyph->x_bearing;
-        float y0 = y_current - glyph->y_bearing + fontp->height;
-        float x1 = x0 + glyph->s1 - glyph->s0;
-        float y1 = y0 + glyph->t1 - glyph->t0;
-
-        float s0 = glyph->s0 / (float) fontp->atlas.width;
-        float t0 = glyph->t0 / (float) fontp->atlas.height;
-        float s1 = glyph->s1 / (float) fontp->atlas.width;
-        float t1 = glyph->t1 / (float) fontp->atlas.height;
-
-        *v++ = x0;  *v++ = y0;  *v++ = s0;  *v++ = t0;
-        *v++ = x1;  *v++ = y0;  *v++ = s1;  *v++ = t0;
-        *v++ = x1;  *v++ = y1;  *v++ = s1;  *v++ = t1;
-        *v++ = x1;  *v++ = y1;  *v++ = s1;  *v++ = t1;
-        *v++ = x0;  *v++ = y1;  *v++ = s0;  *v++ = t1;
-        *v++ = x0;  *v++ = y0;  *v++ = s0;  *v++ = t0;
-
-        x_current += glyph->x_advance;
-        y_current += glyph->y_advance;
-
-        quad_count++;
-    }
-
-    hb_buffer_destroy(buffer);
-
-    qu__graphics_draw_text(fontp->atlas.texture_id, color, impl.vertex_buffer, 6 * quad_count);
+    process_text(font_id, text, &state, draw_glyph_callback, draw_text_callback);
 }

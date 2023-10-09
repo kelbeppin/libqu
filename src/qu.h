@@ -549,6 +549,7 @@ void qu_initialize_text(void);
 void qu_terminate_text(void);
 int32_t qu__text_load_font(qx_file *file, float pt);
 void qu__text_delete_font(int32_t id);
+void qx_calculate_text_box(int32_t font_id, char const *text, float *width, float *height);
 void qu__text_draw(int32_t id, float x, float y, qu_color color, char const *text);
 
 //------------------------------------------------------------------------------
