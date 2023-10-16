@@ -528,16 +528,16 @@ static void graphics__flush_canvas(void)
 
 static void texture_dtor(void *ptr)
 {
+    struct qu__texture *texture = ptr;
+
+    qu__image_delete(&texture->image);
+
     if (!priv.renderer) {
         return;
     }
 
     // This won't be called on surface textures.
-
-    struct qu__texture *texture = ptr;
-
     priv.renderer->unload_texture(texture);
-    qu__image_delete(&texture->image);
 }
 
 static void surface_dtor(void *ptr)
