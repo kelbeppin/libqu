@@ -134,10 +134,6 @@ if(QU_USE_X11)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_USE_X11)
     target_include_directories(${PROJECT_NAME} PRIVATE ${X11_INCLUDE_DIR})
     target_link_libraries(${PROJECT_NAME} PRIVATE ${X11_LIBRARIES})
-
-    if(QU_USE_GL OR QU_USE_ES2)
-        target_link_libraries(${PROJECT_NAME} PRIVATE OpenGL::GLX)
-    endif()
 endif()
 
 #-------------------------------------------------------------------------------
