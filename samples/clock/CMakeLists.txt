@@ -15,7 +15,7 @@ else()
     install(DIRECTORY assets DESTINATION "share/libqu/samples/clock")
 endif()
 
-if(NOT ${CMAKE_VERSION} VERSION_LESS "3.21")
+if(WIN32 AND NOT ${CMAKE_VERSION} VERSION_LESS "3.21")
     add_custom_command(TARGET clock POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:clock> $<TARGET_RUNTIME_DLLS:clock>
         COMMAND_EXPAND_LISTS)
