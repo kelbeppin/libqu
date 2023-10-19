@@ -346,17 +346,19 @@ static void graphics__grow_render_command_buffer(void)
 
 static void graphics__append_render_command(struct qu__render_command_info const *info)
 {
-    size_t last_index = priv.command_buffer.size;
-    struct qu__render_command_info *last = &priv.command_buffer.data[last_index];
+    if (priv.command_buffer.size > 0) {
+        size_t last_index = priv.command_buffer.size - 1;
+        struct qu__render_command_info *last = &priv.command_buffer.data[last_index];
 
-    if (last->command == info->command) {
-        switch (last->command) {
-        case QU__RENDER_COMMAND_RESIZE:
-            last->args.resize.width = info->args.resize.width;
-            last->args.resize.height = info->args.resize.height;
-            return;
-        default:
-            break;
+        if (last->command == info->command) {
+            switch (last->command) {
+            case QU__RENDER_COMMAND_RESIZE:
+                last->args.resize.width = info->args.resize.width;
+                last->args.resize.height = info->args.resize.height;
+                return;
+            default:
+                break;
+            }
         }
     }
 
