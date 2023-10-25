@@ -18,6 +18,7 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
 
+#include "libqu.h"
 #define QU_MODULE "core"
 
 #include "qu.h"
@@ -104,6 +105,10 @@ static struct qu__core_priv priv;
 
 static void handle_key_press(struct qx_keyboard_event const *event)
 {
+    if (event->key == QU_KEY_INVALID) {
+        return;
+    }
+
     switch (priv.keyboard.keys[event->key]) {
     case QU_KEY_IDLE:
         priv.keyboard.keys[event->key] = QU_KEY_PRESSED;
@@ -124,6 +129,10 @@ static void handle_key_press(struct qx_keyboard_event const *event)
 
 static void handle_key_release(struct qx_keyboard_event const *event)
 {
+    if (event->key == QU_KEY_INVALID) {
+        return;
+    }
+
     if (priv.keyboard.keys[event->key] == QU_KEY_PRESSED) {
         priv.keyboard.keys[event->key] = QU_KEY_RELEASED;
 
@@ -135,6 +144,10 @@ static void handle_key_release(struct qx_keyboard_event const *event)
 
 static void handle_mouse_button_press(struct qx_mouse_event const *event)
 {
+    if (event->button == QU_MOUSE_BUTTON_INVALID) {
+        return;
+    }
+
     unsigned int mask = (1 << event->button);
 
     if ((priv.mouse_buttons & mask) == 0) {
@@ -148,6 +161,10 @@ static void handle_mouse_button_press(struct qx_mouse_event const *event)
 
 static void handle_mouse_button_release(struct qx_mouse_event const *event)
 {
+    if (event->button == QU_MOUSE_BUTTON_INVALID) {
+        return;
+    }
+    
     unsigned int mask = (1 << event->button);
 
     if ((priv.mouse_buttons & mask) == mask) {
