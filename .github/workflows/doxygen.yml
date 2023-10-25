@@ -19,7 +19,7 @@ jobs:
       run: sudo apt-get install -y doxygen
 
     - name: Run Doxygen
-      run: doxygen docs/Doxyfile
+      run: DOXYGEN_PROJECT_NUMBER=$(docs/get-version.sh include/libqu/libqu.h) doxygen docs/Doxyfile
 
     - uses: actions/upload-pages-artifact@v1
       with:
