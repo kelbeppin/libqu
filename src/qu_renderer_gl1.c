@@ -171,11 +171,6 @@ static void color_conv(GLfloat *dst, qu_color color)
     dst[3] = ((color >> 0x18) & 0xFF) / 255.f;
 }
 
-static bool check_glext(char const *extension)
-{
-    return qu__is_entry_in_list((char const *) glGetString(GL_EXTENSIONS), extension);
-}
-
 static void load_gl_functions(void)
 {
     ext.glBlendFuncSeparate = qu__core_get_gl_proc_address("glBlendFuncSeparate");

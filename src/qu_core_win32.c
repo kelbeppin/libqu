@@ -156,34 +156,31 @@ static int init_wgl_extensions(void)
         wglGetProcAddress("wglGetExtensionsStringARB");
 
     if (wgl.wglGetExtensionsStringARB) {
-        char const *extensions = wgl.wglGetExtensionsStringARB(dc);
+        char *extensions = qu_strdup(wgl.wglGetExtensionsStringARB(dc));
+        char *token = strtok(extensions, " ");
 
-        if (qu__is_entry_in_list(extensions, "WGL_ARB_pixel_format")) {
-            wgl.wglGetPixelFormatAttribivARB = (PFNWGLGETPIXELFORMATATTRIBIVARBPROC)
-                wglGetProcAddress("wglGetPixelFormatAttribivARB");
-            wgl.wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)
-                wglGetProcAddress("wglChoosePixelFormatARB");
-            wgl.extensions |= EXT_WGL_ARB_PIXEL_FORMAT;
-        }
+        while (token) {
+            if (strcmp(token, "WGL_ARB_pixel_format") == 0) {
+                wgl.wglGetPixelFormatAttribivARB = (PFNWGLGETPIXELFORMATATTRIBIVARBPROC)
+                    wglGetProcAddress("wglGetPixelFormatAttribivARB");
+                wgl.wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)
+                    wglGetProcAddress("wglChoosePixelFormatARB");
+                wgl.extensions |= EXT_WGL_ARB_PIXEL_FORMAT;
+            } else if (strcmp(token, "WGL_ARB_create_context") == 0) {
+                wgl.wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)
+                    wglGetProcAddress("wglCreateContextAttribsARB");
+                wgl.extensions |= EXT_WGL_ARB_CREATE_CONTEXT;
+            } else if (strcmp(token, "WGL_ARB_create_context_profile") == 0) {
+                wgl.extensions |= EXT_WGL_ARB_CREATE_CONTEXT_PROFILE;
+            } else if (strcmp(token, "WGL_EXT_swap_control") == 0) {
+                wgl.wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)
+                    wglGetProcAddress("wglSwapIntervalEXT");
+                wgl.extensions |= EXT_WGL_EXT_SWAP_CONTROL;
+            } else if (strcmp(token, "WGL_EXT_create_context_es2_profile") == 0) {
+                wgl.extensions |= EXT_WGL_EXT_CREATE_CONTEXT_ES2_PROFILE;
+            }
 
-        if (qu__is_entry_in_list(extensions, "WGL_ARB_create_context")) {
-            wgl.wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)
-                wglGetProcAddress("wglCreateContextAttribsARB");
-            wgl.extensions |= EXT_WGL_ARB_CREATE_CONTEXT;
-        }
-
-        if (qu__is_entry_in_list(extensions, "WGL_ARB_create_context_profile")) {
-            wgl.extensions |= EXT_WGL_ARB_CREATE_CONTEXT_PROFILE;
-        }
-
-        if (qu__is_entry_in_list(extensions, "WGL_EXT_swap_control")) {
-            wgl.wglSwapIntervalEXT = (PFNWGLSWAPINTERVALEXTPROC)
-                wglGetProcAddress("wglSwapIntervalEXT");
-            wgl.extensions |= EXT_WGL_EXT_SWAP_CONTROL;
-        }
-
-        if (qu__is_entry_in_list(extensions, "WGL_EXT_create_context_es2_profile")) {
-            wgl.extensions |= EXT_WGL_EXT_CREATE_CONTEXT_ES2_PROFILE;
+            token = strtok(NULL, " ");
         }
     }
 
