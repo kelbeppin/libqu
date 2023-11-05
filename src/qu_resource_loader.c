@@ -132,6 +132,7 @@ qu_image_loader *qu_open_image_loader(qu_file *file)
 void qu_close_image_loader(struct qu_image_loader *loader)
 {
     image_loader_callbacks[loader->format].close(loader);
+    pl_free(loader);
 }
 
 int qu_image_loader_load(struct qu_image_loader *loader, unsigned char *pixels)

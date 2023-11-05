@@ -1187,30 +1187,28 @@ qu_texture qu_load_texture(char const *path)
         return (qu_texture) { .id = 0 };
     }
 
-    unsigned char *pixels = pl_malloc(loader->width * loader->height * loader->channels);
+    qu_texture_obj texture = {
+        .width = loader->width,
+        .height = loader->height,
+        .channels = loader->channels,
+        .pixels = pl_malloc(loader->width * loader->height * loader->channels),
+    };
 
-    if (!pixels) {
+    if (!texture.pixels) {
         qu_close_image_loader(loader);
         qu_close_file(file);
         return (qu_texture) { .id = 0 };
     }
 
-    qu_result status = qu_image_loader_load(loader, pixels);
+    qu_result status = qu_image_loader_load(loader, texture.pixels);
 
     qu_close_image_loader(loader);
     qu_close_file(file);
 
     if (status != QU_SUCCESS) {
-        pl_free(pixels);
+        pl_free(texture.pixels);
         return (qu_texture) { .id = 0 };
     }
-
-    qu_texture_obj texture = {
-        .width = loader->width,
-        .height = loader->height,
-        .channels = loader->channels,
-        .pixels = pixels,
-    };
 
     priv.renderer->load_texture(&texture);
 
