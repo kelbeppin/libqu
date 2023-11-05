@@ -399,7 +399,7 @@ static void initialize(qu_params const *params)
         glx_extension = strtok(NULL, " ");
     }
 
-    free(glx_extension_list);
+    pl_free(glx_extension_list);
 
     // (6) Create GLX context and surface
 

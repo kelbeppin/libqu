@@ -122,14 +122,14 @@ static void *thread_main(void *thread_ptr)
 {
     pl_thread *thread = thread_ptr;
     intptr_t retval = thread->func(thread->arg);
-    free(thread);
+    pl_free(thread);
 
     return (void *) retval;
 }
 
 pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *arg)
 {
-    pl_thread *thread = calloc(1, sizeof(pl_thread));
+    pl_thread *thread = pl_calloc(1, sizeof(pl_thread));
 
     if (!thread) {
         QU_LOGE("Failed to allocate memory for thread \'%s\'.\n", name);
@@ -149,7 +149,7 @@ pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *ar
 
     if (error) {
         QU_LOGE("Error (code %d) occured while attempting to create thread \'%s\'.\n", error, thread->name);
-        free(thread);
+        pl_free(thread);
 
         return NULL;
     }
@@ -184,7 +184,7 @@ intptr_t pl_wait_thread(pl_thread *thread)
 
 pl_mutex *pl_create_mutex(void)
 {
-    pl_mutex *mutex = calloc(1, sizeof(pl_mutex));
+    pl_mutex *mutex = pl_calloc(1, sizeof(pl_mutex));
 
     if (!mutex) {
         return NULL;
@@ -212,7 +212,7 @@ void pl_destroy_mutex(pl_mutex *mutex)
         QU_LOGE("Failed to destroy mutex, error code: %d.\n", error);
     }
 
-    free(mutex);
+    pl_free(mutex);
 }
 
 void pl_lock_mutex(pl_mutex *mutex)

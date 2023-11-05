@@ -336,7 +336,7 @@ static void graphics__grow_render_command_buffer(void)
 {
     size_t next_capacity = priv.command_buffer.capacity * 2;
     size_t data_bytes = sizeof(struct qu__render_command_info) * next_capacity;
-    struct qu__render_command_info *next_data = realloc(priv.command_buffer.data, data_bytes);
+    struct qu__render_command_info *next_data = pl_realloc(priv.command_buffer.data, data_bytes);
 
     QU_HALT_IF(!next_data);
 
@@ -435,7 +435,7 @@ static void graphics__grow_vertex_buffer(struct qu__vertex_buffer *buffer, size_
     }
 
     size_t data_bytes = sizeof(float) * next_capacity;
-    float *next_data = realloc(buffer->data, data_bytes);
+    float *next_data = pl_realloc(buffer->data, data_bytes);
 
     QU_HALT_IF(!next_data);
 
@@ -532,7 +532,7 @@ static void texture_dtor(void *ptr)
 {
     qu_texture_obj *texture = ptr;
 
-    free(texture->pixels);
+    pl_free(texture->pixels);
 
     if (!priv.renderer) {
         return;
@@ -737,16 +737,16 @@ void qu_terminate_graphics(void)
 {
     terminate_renderer();
 
-    free(priv.command_buffer.data);
+    pl_free(priv.command_buffer.data);
 
     for (int i = 0; i < QU_TOTAL_VERTEX_FORMATS; i++) {
-        free(priv.vertex_buffers[i].data);
+        pl_free(priv.vertex_buffers[i].data);
     }
 
     qu_destroy_handle_list(priv.textures);
     qu_destroy_handle_list(priv.surfaces);
 
-    free(priv.circle_vertices);
+    pl_free(priv.circle_vertices);
 }
 
 void qu_flush_graphics(void)
@@ -1148,7 +1148,7 @@ qu_texture qu_create_texture(int width, int height, int channels, unsigned char 
         .width = width,
         .height = height,
         .channels = channels,
-        .pixels = malloc(width * height * channels),
+        .pixels = pl_malloc(width * height * channels),
     };
 
     if (!texture.pixels) {
@@ -1187,7 +1187,7 @@ qu_texture qu_load_texture(char const *path)
         return (qu_texture) { .id = 0 };
     }
 
-    unsigned char *pixels = malloc(loader->width * loader->height * loader->channels);
+    unsigned char *pixels = pl_malloc(loader->width * loader->height * loader->channels);
 
     if (!pixels) {
         qu_close_image_loader(loader);
@@ -1201,7 +1201,7 @@ qu_texture qu_load_texture(char const *path)
     qu_close_file(file);
 
     if (status != QU_SUCCESS) {
-        free(pixels);
+        pl_free(pixels);
         return (qu_texture) { .id = 0 };
     }
 

@@ -113,7 +113,7 @@ static struct image_loader_callbacks const image_loader_callbacks[] = {
 
 qu_image_loader *qu_open_image_loader(qu_file *file)
 {
-    qu_image_loader *loader = calloc(1, sizeof(*loader));
+    qu_image_loader *loader = pl_calloc(1, sizeof(*loader));
 
     loader->file = file;
 
@@ -124,7 +124,7 @@ qu_image_loader *qu_open_image_loader(qu_file *file)
         }
     }
 
-    free(loader);
+    pl_free(loader);
 
     return NULL;
 }
@@ -174,7 +174,7 @@ static qu_result wave_loader_open(qu_audio_loader *loader)
         return QU_FAILURE;
     }
 
-    struct riff *riff = calloc(1, sizeof(*riff));
+    struct riff *riff = pl_calloc(1, sizeof(*riff));
     
     while (true) {
         char subchunk_id[4];
@@ -270,7 +270,7 @@ static int64_t wave_loader_seek(qu_audio_loader *loader, int64_t sample_offset)
 static void wave_loader_close(qu_audio_loader *loader)
 {
     struct riff *riff = loader->context;
-    free(riff);
+    pl_free(riff);
 }
 
 //------------------------------------------------------------------------------
@@ -313,7 +313,7 @@ static long vorbis_loader_io_tell(void *datasource)
 
 static qu_result vorbis_loader_open(qu_audio_loader *loader)
 {
-    OggVorbis_File *vf = calloc(1, sizeof(*vf));
+    OggVorbis_File *vf = pl_calloc(1, sizeof(*vf));
 
     if (!vf) {
         return QU_FAILURE;
@@ -330,7 +330,7 @@ static qu_result vorbis_loader_open(qu_audio_loader *loader)
 
     if (status < 0) {
         QU_LOGE("Failed to open Ogg Vorbis media: %s\n", vorbis_loader_err_str(status));
-        free(vf);
+        pl_free(vf);
         return QU_FAILURE;
     }
 
@@ -388,7 +388,7 @@ static int64_t vorbis_loader_seek(qu_audio_loader *loader, int64_t sample_offset
 static void vorbis_loader_close(qu_audio_loader *loader)
 {
     ov_clear((OggVorbis_File *) loader->context);
-    free(loader->context);
+    pl_free(loader->context);
 }
 
 //------------------------------------------------------------------------------
@@ -424,7 +424,7 @@ static char const *audio_loader_names[] = {
 
 qu_audio_loader *qu_open_audio_loader(qu_file *file)
 {
-    qu_audio_loader *loader = calloc(1, sizeof(*loader));
+    qu_audio_loader *loader = pl_calloc(1, sizeof(*loader));
 
     if (!loader) {
         return NULL;
@@ -445,7 +445,7 @@ qu_audio_loader *qu_open_audio_loader(qu_file *file)
 
     QU_LOGE("Can't open \"%s\", format not recognized.\n", file->name);
 
-    free(loader);
+    pl_free(loader);
 
     return NULL;
 }

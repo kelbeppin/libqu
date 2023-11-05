@@ -135,7 +135,7 @@ static void thread_end(pl_thread *thread)
         DeleteCriticalSection(&thread->cs);
     }
 
-    HeapFree(GetProcessHeap(), 0, thread);
+    pl_free(thread);
 }
 
 static DWORD WINAPI thread_main(LPVOID param)
@@ -150,7 +150,7 @@ static DWORD WINAPI thread_main(LPVOID param)
 
 pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *arg)
 {
-    pl_thread *thread = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(pl_thread));
+    pl_thread *thread = pl_calloc(1, sizeof(*thread));
 
     if (!thread) {
         return NULL;
@@ -166,7 +166,7 @@ pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *ar
     thread->handle = CreateThread(NULL, 0, thread_main, thread, 0, &thread->id);
 
     if (!thread->handle) {
-        HeapFree(GetProcessHeap(), 0, thread);
+        pl_free(thread);
         return NULL;
     }
 
@@ -207,7 +207,7 @@ intptr_t pl_wait_thread(pl_thread *thread)
 
 pl_mutex *pl_create_mutex(void)
 {
-    pl_mutex *mutex = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(pl_mutex));
+    pl_mutex *mutex = pl_calloc(1, sizeof(*mutex));
 
     if (!mutex) {
         return NULL;
@@ -221,7 +221,7 @@ pl_mutex *pl_create_mutex(void)
 void pl_destroy_mutex(pl_mutex *mutex)
 {
     DeleteCriticalSection(&mutex->cs);
-    HeapFree(GetProcessHeap(), 0, mutex);
+    pl_free(mutex);
 }
 
 void pl_lock_mutex(pl_mutex *mutex)
@@ -246,7 +246,7 @@ void pl_sleep(double seconds)
 static wchar_t *conv_str(char const *str)
 {
     int size = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
-    wchar_t *str_w = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size * sizeof(wchar_t));
+    wchar_t *str_w = pl_calloc(size, sizeof(*str_w));
 
     if (!str_w) {
         return NULL;
@@ -255,7 +255,7 @@ static wchar_t *conv_str(char const *str)
     int result = MultiByteToWideChar(CP_UTF8, 0, str, -1, str_w, size);
 
     if (result == 0) {
-        HeapFree(GetProcessHeap(), 0, str_w);
+        pl_free(str_w);
         return NULL;
     }
 
@@ -271,7 +271,7 @@ void *pl_open_dll(char const *path)
     }
 
     HMODULE library = LoadLibraryExW(path_w, NULL, 0);
-    HeapFree(GetProcessHeap(), 0, path_w);
+    pl_free(path_w);
 
     if (!library) {
         return NULL;

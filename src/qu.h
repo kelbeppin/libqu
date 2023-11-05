@@ -90,7 +90,7 @@
     sizeof(array) / sizeof(array[0])
 
 #define QU_ALLOC_ARRAY(ptr, size) \
-    ptr = malloc(sizeof(*(ptr)) * (size))
+    ptr = pl_malloc(sizeof(*(ptr)) * (size))
 
 //------------------------------------------------------------------------------
 

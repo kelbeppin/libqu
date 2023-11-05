@@ -190,12 +190,12 @@ static void al_destroy_source(qu_audio_source *source)
     QU_LOGD("destroy_source: buffersQueued = %d\n", buffersQueued);
 
     if (buffersQueued > 0) {
-        ALuint *buffers = malloc(sizeof(ALuint) * buffersQueued);
+        ALuint *buffers = pl_malloc(sizeof(ALuint) * buffersQueued);
 
         if (buffers) {
             CHECK_AL(alSourceUnqueueBuffers(alSource, buffersQueued, buffers));
             CHECK_AL(alDeleteBuffers(buffersQueued, buffers));
-            free(buffers);
+            pl_free(buffers);
         }
     }
 

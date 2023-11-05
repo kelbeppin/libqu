@@ -353,7 +353,7 @@ static bool check_extension(char const *extension)
         token = strtok(NULL, " ");
     }
 
-    free(extensions);
+    pl_free(extensions);
 
     return found;
 }

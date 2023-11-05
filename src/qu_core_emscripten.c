@@ -498,7 +498,7 @@ static void initialize(qu_params const *params)
 static void terminate(void)
 {
     emscripten_webgl_destroy_context(priv.gl);
-    free(priv.events.array);
+    pl_free(priv.events.array);
 
     QU_LOGI("Terminated.\n");
 }

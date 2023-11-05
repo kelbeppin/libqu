@@ -106,7 +106,7 @@ static void sound_dtor(void *ptr)
 {
     struct sound *sound = ptr;
 
-    free(sound->buffer.data);
+    pl_free(sound->buffer.data);
 }
 
 static void music_dtor(void *ptr)
@@ -198,7 +198,7 @@ static struct voice *id_to_voice(int32_t id)
 static int64_t read_sound_buffer(qu_audio_loader *loader, int16_t **data)
 {
     // Try to allocate memory to store all audio samples.
-    *data = malloc(sizeof(*data) * loader->num_samples);
+    *data = pl_malloc(sizeof(*data) * loader->num_samples);
 
     // Out of memory?
     if (!(*data)) {
@@ -321,7 +321,7 @@ static intptr_t music_main(void *arg)
 
     // Decode first few buffers upfront.
     for (int i = 0; i < TOTAL_MUSIC_BUFFERS; i++) {
-        buffers[i].data = malloc(sizeof(int16_t) * MUSIC_BUFFER_LENGTH);
+        buffers[i].data = pl_malloc(sizeof(int16_t) * MUSIC_BUFFER_LENGTH);
         buffers[i].samples = qu_audio_loader_read(music->loader, buffers[i].data, MUSIC_BUFFER_LENGTH);
 
         if (buffers[i].samples == 0) {
@@ -426,7 +426,7 @@ static intptr_t music_main(void *arg)
 end:
     // Free buffer memory.
     for (int i = 0; i < TOTAL_MUSIC_BUFFERS; i++) {
-        free(buffers[i].data);
+        pl_free(buffers[i].data);
     }
 
     pl_lock_mutex(priv.mutex);

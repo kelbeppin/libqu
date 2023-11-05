@@ -71,7 +71,7 @@ struct fs_memory_buffer
 static void fs_memory_buffer_close(void *context)
 {
     // Actual data remains intact; this only frees fs_memory_buffer struct.
-    free(context);
+    pl_free(context);
 }
 
 static int64_t fs_memory_buffer_read(void *dst, size_t size, void *context)
@@ -187,7 +187,7 @@ qu_file *qu_open_file_from_path(char const *path)
         return NULL;
     }
 
-    qu_file *file = malloc(sizeof(*file));
+    qu_file *file = pl_malloc(sizeof(*file));
 
     file->source = source;
     file->context = context;
@@ -204,13 +204,13 @@ qu_file *qu_open_file_from_path(char const *path)
 
 qu_file *qu_open_file_from_buffer(void const *data, size_t size)
 {
-    struct fs_memory_buffer *buffer = malloc(sizeof(*buffer));
+    struct fs_memory_buffer *buffer = pl_malloc(sizeof(*buffer));
 
     buffer->data = data;
     buffer->size = size;
     buffer->offset = 0;
 
-    qu_file *file = malloc(sizeof(*file));
+    qu_file *file = pl_malloc(sizeof(*file));
     
     file->source = QU_FILE_SOURCE_MEMORY_BUFFER;
     file->context = buffer;
@@ -225,7 +225,7 @@ void qu_close_file(qu_file *file)
     fs_callbacks[file->source].close(file->context);
     QU_LOGD("Closed file %s.\n", file->name);
 
-    free(file);
+    pl_free(file);
 }
 
 int64_t qu_file_read(void *buffer, size_t size, qu_file *file)

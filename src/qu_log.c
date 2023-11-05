@@ -75,7 +75,7 @@ void qu_log_printf(qu_log_level level, char const *tag, char const *fmt, ...)
     va_end(ap);
 
     if ((size_t) count >= sizeof(buffer)) {
-        heap = malloc(count + 1);
+        heap = pl_malloc(count + 1);
 
         if (heap) {
             va_start(ap, fmt);
@@ -85,5 +85,5 @@ void qu_log_printf(qu_log_level level, char const *tag, char const *fmt, ...)
     }
 
     qu_log_puts(level, tag, heap ? heap : buffer);
-    free(heap);
+    pl_free(heap);
 }

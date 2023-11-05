@@ -136,7 +136,7 @@ static int get_font_index(void)
     }
 
     int next_count = QU_MAX(impl.font_count * 2, INITIAL_FONT_COUNT);
-    struct font *next_array = realloc(impl.fonts, sizeof(struct font) * next_count);
+    struct font *next_array = pl_realloc(impl.fonts, sizeof(struct font) * next_count);
 
     if (!next_array) {
         return -1;
@@ -169,7 +169,7 @@ static int get_glyph_index(int font_index)
     }
 
     int next_count = QU_MAX(impl.fonts[font_index].glyph_count * 2, INITIAL_GLYPH_COUNT);
-    struct glyph *next_array = realloc(impl.fonts[font_index].glyphs, sizeof(struct glyph) * next_count);
+    struct glyph *next_array = pl_realloc(impl.fonts[font_index].glyphs, sizeof(struct glyph) * next_count);
     
     if (!next_array) {
         return -1;
@@ -196,7 +196,7 @@ static int get_glyph_index(int font_index)
 static bool grow_atlas(struct atlas *atlas)
 {
     int next_height = atlas->height * 2;
-    unsigned char *next_bitmap = realloc(atlas->bitmap, atlas->width * next_height);
+    unsigned char *next_bitmap = pl_realloc(atlas->bitmap, atlas->width * next_height);
 
     if (!next_bitmap) {
         return false;
@@ -329,7 +329,7 @@ static float *maintain_vertex_buffer(int required_size)
         next_size *= 2;
     }
 
-    float *next_buffer = realloc(impl.vertex_buffer, sizeof(float) * next_size);
+    float *next_buffer = pl_realloc(impl.vertex_buffer, sizeof(float) * next_size);
     
     if (!next_buffer) {
         return NULL;
@@ -483,8 +483,8 @@ void qu_terminate_text(void)
         qu_delete_font((qu_font) { i });
     }
 
-    free(impl.vertex_buffer);
-    free(impl.fonts);
+    pl_free(impl.vertex_buffer);
+    pl_free(impl.fonts);
 
     if (impl.initialized) {
         QU_LOGI("Text module terminated.\n");
@@ -560,10 +560,10 @@ qu_font qu_load_font(char const *path, float pt)
     unsigned char fill = 0x00;
     fontp->atlas.texture = qu_create_texture(width, height, 1, &fill);
     qu_set_texture_smooth(fontp->atlas.texture, true);
-    fontp->atlas.bitmap = calloc(width * height, sizeof(unsigned char));
+    fontp->atlas.bitmap = pl_calloc(width * height, sizeof(unsigned char));
 
     if (fontp->atlas.texture.id == 0 || !fontp->atlas.bitmap) {
-        free(fontp->atlas.bitmap);
+        pl_free(fontp->atlas.bitmap);
         fontp->face = NULL;
 
         hb_font_destroy(fontp->font);
@@ -624,8 +624,8 @@ void qu_delete_font(qu_font font)
         return;
     }
 
-    free(fontp->glyphs);
-    free(fontp->atlas.bitmap);
+    pl_free(fontp->glyphs);
+    pl_free(fontp->atlas.bitmap);
     qu_delete_texture(fontp->atlas.texture);
 
     hb_font_destroy(fontp->font);
@@ -658,7 +658,7 @@ qu_vec2f qu_calculate_text_box_fmt(qu_font font, char const *fmt, ...)
     va_end(ap);
 
     if ((size_t) required >= sizeof(buffer)) {
-        heap = malloc(required + 1);
+        heap = pl_malloc(required + 1);
 
         if (heap) {
             va_start(ap, fmt);
@@ -669,7 +669,7 @@ qu_vec2f qu_calculate_text_box_fmt(qu_font font, char const *fmt, ...)
 
     qu_vec2f box = qu_calculate_text_box(font, heap ? heap : buffer);
 
-    free(heap);
+    pl_free(heap);
 
     return box;
 }
@@ -701,7 +701,7 @@ void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const
     va_end(ap);
 
     if ((size_t) required >= sizeof(buffer)) {
-        heap = malloc(required + 1);
+        heap = pl_malloc(required + 1);
 
         if (heap) {
             va_start(ap, fmt);
@@ -711,5 +711,5 @@ void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const
     }
 
     qu_draw_text(font, x, y, color, heap ? heap : buffer);
-    free(heap);
+    pl_free(heap);
 }

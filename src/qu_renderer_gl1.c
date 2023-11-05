@@ -200,7 +200,7 @@ static void load_gl_functions(void)
         token = strtok(NULL, " ");
     }
 
-    free(extensions);
+    pl_free(extensions);
 }
 
 static void surface_add_multisample_buffer(qu_surface_obj *surface)

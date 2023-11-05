@@ -434,7 +434,7 @@ void qu_enqueue_event(qu_event const *event)
 
     if (buffer->length == buffer->capacity) {
         size_t next_capacity = buffer->capacity == 0 ? 256 : buffer->capacity * 2;
-        void *next_array = realloc(buffer->array, sizeof(*(buffer->array)) * next_capacity);
+        void *next_array = pl_realloc(buffer->array, sizeof(*(buffer->array)) * next_capacity);
 
         if (!next_array) {
             QU_HALT("Out of memory: unable to grow event buffer.");

@@ -31,7 +31,7 @@
 char *qu_strdup(char const *str)
 {
     size_t size = strlen(str) + 1;
-    char *dup = malloc(size);
+    char *dup = pl_malloc(size);
 
     if (dup) {
         memcpy(dup, str, size);
@@ -109,12 +109,12 @@ static bool handle_list_grow_array(qu_handle_list *array)
 {
     size_t next_size = array->size ? (array->size * 2) : 16;
 
-    struct handle_list_control *next_control = realloc(
+    struct handle_list_control *next_control = pl_realloc(
         array->control,
         sizeof(struct handle_list_control) * next_size
     );
 
-    void *next_data = realloc(
+    void *next_data = pl_realloc(
         array->data,
         array->element_size * next_size
     );
@@ -146,7 +146,7 @@ static void *handle_list_get_data(qu_handle_list *array, int index)
 
 qu_handle_list *qu_create_handle_list(size_t element_size, void (*dtor)(void *))
 {
-    qu_handle_list *array = malloc(sizeof(qu_handle_list));
+    qu_handle_list *array = pl_malloc(sizeof(qu_handle_list));
 
     if (!array) {
         return NULL;
@@ -180,9 +180,9 @@ void qu_destroy_handle_list(qu_handle_list *array)
         }
     }
 
-    free(array->control);
-    free(array->data);
-    free(array);
+    pl_free(array->control);
+    pl_free(array->data);
+    pl_free(array);
 }
 
 int32_t qu_handle_list_add(qu_handle_list *array, void *data)
