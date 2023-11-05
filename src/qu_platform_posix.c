@@ -74,6 +74,28 @@ void pl_terminate(void)
 }
 
 //------------------------------------------------------------------------------
+
+void *pl_malloc(size_t size)
+{
+    return malloc(size);
+}
+
+void *pl_calloc(size_t count, size_t size)
+{
+    return calloc(count, size);
+}
+
+void *pl_realloc(void *data, size_t size)
+{
+    return realloc(data, size);
+}
+
+void pl_free(void *data)
+{
+    free(data);
+}
+
+//------------------------------------------------------------------------------
 // Clock
 
 float qu_get_time_mediump(void)

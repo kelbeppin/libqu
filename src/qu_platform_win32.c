@@ -74,6 +74,28 @@ void pl_terminate(void)
 }
 
 //------------------------------------------------------------------------------
+
+void *pl_malloc(size_t size)
+{
+    return HeapAlloc(GetProcessHeap(), 0, size);
+}
+
+void *pl_calloc(size_t count, size_t size)
+{
+    return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size);
+}
+
+void *pl_realloc(void *data, size_t size)
+{
+    return HeapReAlloc(GetProcessHeap(), 0, data, size);
+}
+
+void pl_free(void *data)
+{
+    HeapFree(GetProcessHeap(), 0, data);
+}
+
+//------------------------------------------------------------------------------
 // Clock
 
 float qu_get_time_mediump(void)
