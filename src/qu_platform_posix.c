@@ -17,35 +17,38 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_platform_posix.c: POSIX-specific platform code 
+//------------------------------------------------------------------------------
 
 #ifdef __linux__
 #define _GNU_SOURCE
 #endif
 
 #define QU_MODULE "platform-posix"
-#include "qu.h"
+
+//------------------------------------------------------------------------------
 
 #include <dlfcn.h>
 #include <errno.h>
 #include <pthread.h>
 
-//------------------------------------------------------------------------------
-// qu_platform_posix.c: POSIX-specific platform code 
+#include "qu.h"
+
 //------------------------------------------------------------------------------
 
 #define THREAD_NAME_LENGTH          256
 
 //------------------------------------------------------------------------------
 
-struct qu_thread
+struct pl_thread
 {
     pthread_t id;
     char name[THREAD_NAME_LENGTH];
-    qu_thread_func func;
+    intptr_t (*func)(void *);
     void *arg;
 };
 
-struct qu_mutex
+struct pl_mutex
 {
     pthread_mutex_t id;
 };
@@ -57,7 +60,7 @@ static double start_highp;
 
 //------------------------------------------------------------------------------
 
-void qu_platform_initialize(void)
+void pl_initialize(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -66,7 +69,7 @@ void qu_platform_initialize(void)
     start_highp = (double) ts.tv_sec + (ts.tv_nsec / 1.0e9);
 }
 
-void qu_platform_terminate(void)
+void pl_terminate(void)
 {
 }
 
@@ -95,19 +98,19 @@ double qu_get_time_highp(void)
 
 static void *thread_main(void *thread_ptr)
 {
-    qu_thread *thread = thread_ptr;
+    pl_thread *thread = thread_ptr;
     intptr_t retval = thread->func(thread->arg);
     free(thread);
 
     return (void *) retval;
 }
 
-qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg)
+pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *arg)
 {
-    qu_thread *thread = calloc(1, sizeof(qu_thread));
+    pl_thread *thread = calloc(1, sizeof(pl_thread));
 
     if (!thread) {
-        QU_ERROR("Failed to allocate memory for thread \'%s\'.\n", name);
+        QU_LOGE("Failed to allocate memory for thread \'%s\'.\n", name);
         return NULL;
     }
 
@@ -123,7 +126,7 @@ qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg)
     int error = pthread_create(&thread->id, NULL, thread_main, thread);
 
     if (error) {
-        QU_ERROR("Error (code %d) occured while attempting to create thread \'%s\'.\n", error, thread->name);
+        QU_LOGE("Error (code %d) occured while attempting to create thread \'%s\'.\n", error, thread->name);
         free(thread);
 
         return NULL;
@@ -136,30 +139,30 @@ qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg)
     return thread;
 }
 
-void qu_detach_thread(qu_thread *thread)
+void pl_detach_thread(pl_thread *thread)
 {
     int error = pthread_detach(thread->id);
 
     if (error) {
-        QU_ERROR("Failed to detach thread \'%s\', error code: %d.\n", thread->name, error);
+        QU_LOGE("Failed to detach thread \'%s\', error code: %d.\n", thread->name, error);
     }
 }
 
-intptr_t qu_wait_thread(qu_thread *thread)
+intptr_t pl_wait_thread(pl_thread *thread)
 {
     void *retval;
     int error = pthread_join(thread->id, &retval);
 
     if (error) {
-        QU_ERROR("Failed to join thread \'%s\', error code: %d.\n", thread->name, error);
+        QU_LOGE("Failed to join thread \'%s\', error code: %d.\n", thread->name, error);
     }
 
     return (intptr_t) retval;
 }
 
-qu_mutex *qu_create_mutex(void)
+pl_mutex *pl_create_mutex(void)
 {
-    qu_mutex *mutex = calloc(1, sizeof(qu_mutex));
+    pl_mutex *mutex = calloc(1, sizeof(pl_mutex));
 
     if (!mutex) {
         return NULL;
@@ -168,14 +171,14 @@ qu_mutex *qu_create_mutex(void)
     int error = pthread_mutex_init(&mutex->id, NULL);
 
     if (error) {
-        QU_ERROR("Failed to create mutex, error code: %d.\n", error);
+        QU_LOGE("Failed to create mutex, error code: %d.\n", error);
         return NULL;
     }
 
     return mutex;
 }
 
-void qu_destroy_mutex(qu_mutex *mutex)
+void pl_destroy_mutex(pl_mutex *mutex)
 {
     if (!mutex) {
         return;
@@ -184,23 +187,23 @@ void qu_destroy_mutex(qu_mutex *mutex)
     int error = pthread_mutex_destroy(&mutex->id);
 
     if (error) {
-        QU_ERROR("Failed to destroy mutex, error code: %d.\n", error);
+        QU_LOGE("Failed to destroy mutex, error code: %d.\n", error);
     }
 
     free(mutex);
 }
 
-void qu_lock_mutex(qu_mutex *mutex)
+void pl_lock_mutex(pl_mutex *mutex)
 {
     pthread_mutex_lock(&mutex->id);
 }
 
-void qu_unlock_mutex(qu_mutex *mutex)
+void pl_unlock_mutex(pl_mutex *mutex)
 {
     pthread_mutex_unlock(&mutex->id);
 }
 
-void qu_sleep(double seconds)
+void pl_sleep(double seconds)
 {
     uint64_t s = (uint64_t) floor(seconds);
 
@@ -217,19 +220,19 @@ void qu_sleep(double seconds)
 //------------------------------------------------------------------------------
 // Dynamic loading libraries
 
-qu__library qu__platform_open_library(char const *path)
+void *pl_open_dll(char const *path)
 {
     return dlopen(path, RTLD_LAZY);
 }
 
-void qu__platform_close_library(qu__library library)
+void pl_close_dll(void *library)
 {
     if (library) {
         dlclose(library);
     }
 }
 
-qu__procedure qu__platform_get_procedure(qu__library library, char const *name)
+void *pl_get_dll_proc(void *library, char const *name)
 {
     if (library) {
         return dlsym(library, name);

@@ -17,12 +17,15 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_platform_win32.c: Win32-specific platform code
+//------------------------------------------------------------------------------
 
 #define QU_MODULE "platform-win32"
-#include "qu.h"
 
 //------------------------------------------------------------------------------
-// qu_platform_win32.c: Win32-specific platform code
+
+#include "qu.h"
+
 //------------------------------------------------------------------------------
 
 #define THREAD_FLAG_WAIT            0x01
@@ -30,25 +33,20 @@
 
 //------------------------------------------------------------------------------
 
-struct qu_thread
+struct pl_thread
 {
     DWORD id;
     HANDLE handle;
     CRITICAL_SECTION cs;
     UINT flags;
     char const *name;
-    qu_thread_func func;
+    intptr_t (*func)(void *);
     void *arg;
 };
 
-struct qu_mutex
+struct pl_mutex
 {
     CRITICAL_SECTION cs;
-};
-
-struct qu__library
-{
-    HMODULE module;
 };
 
 //------------------------------------------------------------------------------
@@ -59,7 +57,7 @@ static float       start_mediump;
 
 //------------------------------------------------------------------------------
 
-void qu_platform_initialize(void)
+void pl_initialize(void)
 {
     LARGE_INTEGER perf_clock_frequency, perf_clock_count;
 
@@ -71,7 +69,7 @@ void qu_platform_initialize(void)
     start_mediump = (float) GetTickCount() / 1000.f;
 }
 
-void qu_platform_terminate(void)
+void pl_terminate(void)
 {
 }
 
@@ -96,7 +94,7 @@ double qu_get_time_highp(void)
 //------------------------------------------------------------------------------
 // Threads
 
-static void thread_end(qu_thread *thread)
+static void thread_end(pl_thread *thread)
 {
     // If the thread is detached, then only its info struct should be freed.
     if (!(thread->flags & THREAD_FLAG_DETACHED)) {
@@ -120,7 +118,7 @@ static void thread_end(qu_thread *thread)
 
 static DWORD WINAPI thread_main(LPVOID param)
 {
-    qu_thread *thread = (qu_thread *) param;
+    pl_thread *thread = (pl_thread *) param;
     intptr_t retval = thread->func(thread->arg);
 
     thread_end(thread);
@@ -128,9 +126,9 @@ static DWORD WINAPI thread_main(LPVOID param)
     return retval;
 }
 
-qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg)
+pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *arg)
 {
-    qu_thread *thread = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(qu_thread));
+    pl_thread *thread = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(pl_thread));
 
     if (!thread) {
         return NULL;
@@ -153,7 +151,7 @@ qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg)
     return thread;
 }
 
-void qu_detach_thread(qu_thread *thread)
+void pl_detach_thread(pl_thread *thread)
 {
     EnterCriticalSection(&thread->cs);
     thread->flags |= THREAD_FLAG_DETACHED;
@@ -163,7 +161,7 @@ void qu_detach_thread(qu_thread *thread)
     DeleteCriticalSection(&thread->cs);
 }
 
-intptr_t qu_wait_thread(qu_thread *thread)
+intptr_t pl_wait_thread(pl_thread *thread)
 {
     EnterCriticalSection(&thread->cs);
 
@@ -185,9 +183,9 @@ intptr_t qu_wait_thread(qu_thread *thread)
     return (intptr_t) retval;
 }
 
-qu_mutex *qu_create_mutex(void)
+pl_mutex *pl_create_mutex(void)
 {
-    qu_mutex *mutex = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(qu_mutex));
+    pl_mutex *mutex = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(pl_mutex));
 
     if (!mutex) {
         return NULL;
@@ -198,23 +196,23 @@ qu_mutex *qu_create_mutex(void)
     return mutex;
 }
 
-void qu_destroy_mutex(qu_mutex *mutex)
+void pl_destroy_mutex(pl_mutex *mutex)
 {
     DeleteCriticalSection(&mutex->cs);
     HeapFree(GetProcessHeap(), 0, mutex);
 }
 
-void qu_lock_mutex(qu_mutex *mutex)
+void pl_lock_mutex(pl_mutex *mutex)
 {
     EnterCriticalSection(&mutex->cs);
 }
 
-void qu_unlock_mutex(qu_mutex *mutex)
+void pl_unlock_mutex(pl_mutex *mutex)
 {
     LeaveCriticalSection(&mutex->cs);
 }
 
-void qu_sleep(double seconds)
+void pl_sleep(double seconds)
 {
     DWORD milliseconds = (DWORD) (seconds * 1000);
     Sleep(milliseconds);
@@ -242,7 +240,7 @@ static wchar_t *conv_str(char const *str)
     return str_w;
 }
 
-qu__library qu__platform_open_library(char const *path)
+void *pl_open_dll(char const *path)
 {
     wchar_t *path_w = conv_str(path);
 
@@ -257,22 +255,21 @@ qu__library qu__platform_open_library(char const *path)
         return NULL;
     }
 
-    return (qu__library) library;
+    return library;
 }
 
-void qu__platform_close_library(qu__library library)
+void pl_close_dll(void *library)
 {
     if (library) {
         FreeLibrary(library);
     }
 }
 
-qu__procedure qu__platform_get_procedure(qu__library library, char const *name)
+void *pl_get_dll_proc(void *library, char const *name)
 {
     if (library) {
-        return (qu__procedure) GetProcAddress(library, name);
+        return GetProcAddress(library, name);
     }
 
     return NULL;
 }
-

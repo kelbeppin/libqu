@@ -4,18 +4,16 @@
 add_library(${PROJECT_NAME}
     qu.c
     qu.h
-    qu_array.c
     qu_audio.c
     qu_audio_null.c
     qu_core.c
     qu_fs.c
     qu_graphics.c
-    qu_image.c
     qu_joystick_null.c
     qu_log.c
     qu_math.c
     qu_renderer_null.c
-    qu_wave.c
+    qu_resource_loader.c
     qu_text.c
     qu_util.c)
 
@@ -62,15 +60,14 @@ if(QU_WIN32)
         qu_audio_xaudio2.cpp
         qu_core_win32.c
         qu_joystick_win32.cpp
-        qu_platform_win32.c
-        qu_sys_win32.c)
+        qu_platform_win32.c)
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE dwmapi XInput)
 endif()
 
 if(QU_LINUX)
-    target_sources(${PROJECT_NAME} PRIVATE qu_joystick_linux.c qu_sys_linux.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_joystick_linux.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_LINUX)
 endif()
 
@@ -79,7 +76,7 @@ if(QU_FREEBSD)
 endif()
 
 if(QU_EMSCRIPTEN)
-    target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c qu_sys_emscripten.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_core_emscripten.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_EMSCRIPTEN)
     target_compile_options(${PROJECT_NAME} PUBLIC -sUSE_SDL)
     target_link_options(${PROJECT_NAME} PUBLIC
@@ -90,7 +87,7 @@ if(QU_EMSCRIPTEN)
 endif()
 
 if(QU_ANDROID)
-    target_sources(${PROJECT_NAME} PRIVATE qu_audio_sles.c qu_core_android.c qu_sys_android.c)
+    target_sources(${PROJECT_NAME} PRIVATE qu_audio_sles.c qu_core_android.c qu_np_android.c)
     target_compile_definitions(${PROJECT_NAME} PRIVATE QU_ANDROID)
 
     find_library(ANDROID_LIBRARY android)

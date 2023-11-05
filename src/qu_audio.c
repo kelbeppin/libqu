@@ -26,21 +26,21 @@
 // qu_audio.c: Audio module
 //------------------------------------------------------------------------------
 
-static struct qx_audio_impl const *supported_audio_impl_list[] = {
+static struct qu_audio_impl const *supported_audio_impl_list[] = {
 
 #ifdef QU_WIN32
-    &qx_audio_xaudio2,
+    &qu_xaudio2_audio_impl,
 #endif
 
 #ifdef QU_ANDROID
-    &qx_audio_sles,
+    &qu_sles_audio_impl,
 #endif
 
 #ifdef QU_USE_OPENAL
-    &qx_audio_openal,
+    &qu_openal_audio_impl,
 #endif
 
-    &qx_audio_null,
+    &qu_null_audio_impl,
 };
 
 //------------------------------------------------------------------------------
@@ -65,14 +65,15 @@ struct sound
 {
     int channels;
     int sample_rate;
-    qx_audio_buffer buffer;
+    qu_audio_buffer buffer;
+    char name[QU_FILE_NAME_LENGTH];
 };
 
 struct music
 {
-    struct qx_wave wave;
+    qu_audio_loader *loader;
     struct voice *voice;
-    qu_thread *thread;
+    pl_thread *thread;
     int loop_count;
 };
 
@@ -82,16 +83,16 @@ struct voice
     int gen;
     int type;
     int state;
-    qx_audio_source source;
+    qu_audio_source source;
 };
 
 struct audio_priv
 {
-    struct qx_audio_impl const *impl;
-    qu_mutex *mutex;
+    struct qu_audio_impl const *impl;
+    pl_mutex *mutex;
 
-    qu_array *sounds;
-    qu_array *music;
+    qu_handle_list *sounds;
+    qu_handle_list *music;
     struct voice voices[MAX_VOICES];
 };
 
@@ -114,11 +115,11 @@ static void music_dtor(void *ptr)
 
     // If the music is playing, wait until thread ends.
     if (music->thread) {
-        qu_wait_thread(music->thread);
+        pl_wait_thread(music->thread);
     }
 
     // Close sound reader.
-    qx_close_wave(&music->wave);
+    qu_close_audio_loader(music->loader);
 }
 
 //------------------------------------------------------------------------------
@@ -151,7 +152,7 @@ static struct voice *find_voice(void)
     }
 
     if (!voice) {
-        QU_WARNING("Can't find free voice.\n");
+        QU_LOGW("Can't find free voice.\n");
         return NULL;
     }
 
@@ -162,7 +163,7 @@ static struct voice *find_voice(void)
     voice->type = VOICE_TYPE_NONE;
     voice->state = VOICE_STATE_INACTIVE;
 
-    memset(&voice->source, 0, sizeof(qx_audio_source));
+    memset(&voice->source, 0, sizeof(qu_audio_source));
 
     return voice;
 }
@@ -194,16 +195,118 @@ static struct voice *id_to_voice(int32_t id)
 
 //------------------------------------------------------------------------------
 
+static int64_t read_sound_buffer(qu_audio_loader *loader, int16_t **data)
+{
+    // Try to allocate memory to store all audio samples.
+    *data = malloc(sizeof(*data) * loader->num_samples);
+
+    // Out of memory?
+    if (!(*data)) {
+        return -1;
+    }
+
+    // Attempt to read and decode the whole file.
+    // Some decoders return smaller number than .num_samples even
+    // if the whole file is read, so we don't check its value.
+    return qu_audio_loader_read(loader, *data, loader->num_samples);
+}
+
+static int32_t load_sound_from_file(qu_file *file)
+{
+    // Initialize sound decoder to read from the given file.
+    qu_audio_loader *loader = qu_open_audio_loader(file);
+
+    if (!loader) {
+        return 0;
+    }
+
+    // read_sound_buffer() will allocate memory.
+    int16_t *data = NULL;
+    int64_t samples_read = read_sound_buffer(loader, &data);
+
+    // Close decoder as it won't be used anymore.
+    qu_close_audio_loader(loader);
+
+    if (samples_read == -1) {
+        return 0;
+    }
+
+    // Create sound object.
+    struct sound sound = {
+        .channels = loader->num_channels,
+        .sample_rate = loader->sample_rate,
+        .buffer = {
+            .data = data,
+            .samples = loader->num_samples,
+        },
+    };
+
+    strncpy(sound.name, file->name, QU_FILE_NAME_LENGTH - 1);
+
+    // Copy sound object to the sound array.
+    return qu_handle_list_add(priv.sounds, &sound);
+}
+
+static int32_t play_sound(struct sound *sound, int loop)
+{
+    // Search for unused voice.
+    struct voice *voice = find_voice();
+
+    // Nothing found.
+    if (!voice) {
+        QU_LOGE("Free voice not found. Can't play sound \"%s\".\n", sound->name);
+        return 0;
+    }
+
+    // Clear audio source struct just in case.
+    memset(&voice->source, 0, sizeof(qu_audio_source));
+
+    // Set the correct format for source.
+    voice->source.channels = sound->channels;
+    voice->source.sample_rate = sound->sample_rate;
+
+    // -1 means looping enabled, 0 is not.
+    voice->source.loop = loop;
+
+    // Attempt to create audio source.
+    if (priv.impl->create_source(&voice->source) != QU_SUCCESS) {
+        QU_LOGE("Failed to create audio source. Can't play sound \"%s\".\n", sound->name);
+        return 0;
+    }
+
+    // Queue the only buffer.
+    if (priv.impl->queue_buffer(&voice->source, &sound->buffer) != QU_SUCCESS) {
+        QU_LOGE("Failed to queue sample buffer. Can't play sound \"%s\".\n", sound->name);
+        priv.impl->destroy_source(&voice->source);
+        return 0;
+    }
+
+    // Play voice now.
+    if (priv.impl->start_source(&voice->source) != QU_SUCCESS) {
+        QU_LOGE("Failed to play audio source. Can't play sound \"%s\".\n", sound->name);
+        priv.impl->destroy_source(&voice->source);
+        return 0;
+    }
+
+    // Set voice state and return its identifier.
+    voice->type = VOICE_TYPE_SOUND;
+    voice->state = VOICE_STATE_PLAYING;
+
+    return voice_to_id(voice);
+}
+
+//------------------------------------------------------------------------------
+
 static intptr_t music_main(void *arg)
 {
     struct music *music = (struct music *) arg;
-    char const *name = qx_file_get_name(music->wave.file);
+    char const *name = music->loader->file->name;
 
     // Rewind the music file.
-    qx_seek_wave(&music->wave, 0);
+    qu_audio_loader_seek(music->loader, 0);
 
     // Sample buffers. These will be updated on the fly.
-    qx_audio_buffer buffers[TOTAL_MUSIC_BUFFERS];
+    qu_audio_buffer buffers[TOTAL_MUSIC_BUFFERS];
     memset(buffers, 0, sizeof(buffers));
 
     music->voice->type = VOICE_TYPE_MUSIC;
@@ -211,29 +314,29 @@ static intptr_t music_main(void *arg)
 
     // Special case: don't even try to play music if
     // dummy audio engine is in use.
-    if (priv.impl == &qx_audio_null) {
-        qu_sleep(1.0);
+    if (priv.impl == &qu_null_audio_impl) {
+        pl_sleep(1.0);
         goto end;
     }
 
     // Decode first few buffers upfront.
     for (int i = 0; i < TOTAL_MUSIC_BUFFERS; i++) {
         buffers[i].data = malloc(sizeof(int16_t) * MUSIC_BUFFER_LENGTH);
-        buffers[i].samples = qx_read_wave(&music->wave, buffers[i].data, MUSIC_BUFFER_LENGTH);
+        buffers[i].samples = qu_audio_loader_read(music->loader, buffers[i].data, MUSIC_BUFFER_LENGTH);
 
         if (buffers[i].samples == 0) {
-            QU_ERROR("Music track %s is too short.\n", name);
+            QU_LOGE("Music track %s is too short.\n", name);
             goto end;
         }
 
-        if (priv.impl->queue_buffer(&music->voice->source, &buffers[i]) != QX_SUCCESS) {
-            QU_ERROR("Failed to read music track %s.\n", name);
+        if (priv.impl->queue_buffer(&music->voice->source, &buffers[i]) != QU_SUCCESS) {
+            QU_LOGE("Failed to read music track %s.\n", name);
         }
     }
 
     // Start playing first buffers of audio.
-    if (priv.impl->start_source(&music->voice->source) != QX_SUCCESS) {
-        QU_ERROR("Failed to start music track %s.\n", name);
+    if (priv.impl->start_source(&music->voice->source) != QU_SUCCESS) {
+        QU_LOGE("Failed to start music track %s.\n", name);
         goto end;
     }
 
@@ -243,7 +346,7 @@ static intptr_t music_main(void *arg)
     while (running) {
         bool paused = false;
 
-        qu_lock_mutex(priv.mutex);
+        pl_lock_mutex(priv.mutex);
 
         // This way we determine if the voice state was
         // changed from another thread using API functions
@@ -257,14 +360,14 @@ static intptr_t music_main(void *arg)
             break;
         }
 
-        qu_unlock_mutex(priv.mutex);
+        pl_unlock_mutex(priv.mutex);
 
         if (!running) {
             break;
         }
 
         if (paused) {
-            qu_sleep(0.1);
+            pl_sleep(0.1);
             continue;
         }
 
@@ -274,16 +377,16 @@ static intptr_t music_main(void *arg)
         // ...and determine amount of buffers which were played.
         int played = TOTAL_MUSIC_BUFFERS - queued;
 
-        QU_DEBUG("queued=%d,played=%d\n", queued, played);
+        QU_LOGD("queued=%d,played=%d\n", queued, played);
 
         // Keep reading audio file as we playing it.
         for (int i = 0; i < played; i++) {
             // Read another portion of samples.
-            int64_t samples_read = qx_read_wave(
-                &music->wave, buffers[current_buffer].data, MUSIC_BUFFER_LENGTH
+            int64_t samples_read = qu_audio_loader_read(
+                music->loader, buffers[current_buffer].data, MUSIC_BUFFER_LENGTH
             );
 
-            QU_DEBUG("[%d, %d] read... %d\n", i, current_buffer, samples_read);
+            QU_LOGD("[%d, %d] read... %d\n", i, current_buffer, samples_read);
 
             // If reached end of file...
             if (samples_read == 0) {
@@ -302,7 +405,7 @@ static intptr_t music_main(void *arg)
                 // is true, therefore the loop never ends.
 
                 // Rewind and go back, don't submit this empty buffer.
-                qx_seek_wave(&music->wave, 0);
+                qu_audio_loader_seek(music->loader, 0);
                 continue;
             }
 
@@ -315,7 +418,7 @@ static intptr_t music_main(void *arg)
         }
 
         // Don't overload CPU.
-        qu_sleep(0.25);
+        pl_sleep(0.25);
     }
 
     priv.impl->stop_source(&music->voice->source);
@@ -326,7 +429,7 @@ end:
         free(buffers[i].data);
     }
 
-    qu_lock_mutex(priv.mutex);
+    pl_lock_mutex(priv.mutex);
 
     // Release source. There won't be any chance where we can do that.
     priv.impl->destroy_source(&music->voice->source);
@@ -342,20 +445,62 @@ end:
     // This will tell that this particular music track isn't used now.
     music->voice = NULL;
 
-    qu_unlock_mutex(priv.mutex);
+    pl_unlock_mutex(priv.mutex);
 
     return 0;
 }
 
+static int32_t play_music(struct music *music, int loop)
+{
+    char const *name = music->loader->file->name;
+
+    if (music->voice) {
+        QU_LOGW("Music track \"%s\" is already playing.\n", name);
+        return voice_to_id(music->voice);
+    }
+
+    // Search for unused voice.
+    struct voice *voice = find_voice();
+
+    // Nothing found.
+    if (!voice) {
+        QU_LOGE("Free voice not found. Can't play music track \"%s\".\n", name);
+        return 0;
+    }
+
+    // Clear audio source struct just in case.
+    memset(&voice->source, 0, sizeof(qu_audio_source));
+
+    // Set correct source format.
+    voice->source.channels = music->loader->num_channels;
+    voice->source.sample_rate = music->loader->sample_rate;
+
+    // This should always be 0 even if music is looped.
+    voice->source.loop = 0;
+
+    // Attempt to create audio source.
+    if (priv.impl->create_source(&voice->source) != QU_SUCCESS) {
+        QU_LOGE("Failed to create audio source. Can't play music track \"%s\".\n", name);
+        return 0;
+    }
+
+    // Start music playback in another thread.
+    music->voice = voice;
+    music->loop_count = loop;
+    music->thread = pl_create_thread("music", music_main, music);
+
+    return voice_to_id(voice);
+}
+
 //------------------------------------------------------------------------------
 
-void qx_initialize_audio(qu_params const *params)
+void qu_initialize_audio(qu_params const *params)
 {
     memset(&priv, 0, sizeof(priv));
 
     // Select audio engine implementation.
 
-    int audio_impl_count = QU__ARRAY_SIZE(supported_audio_impl_list);
+    int audio_impl_count = QU_ARRAY_SIZE(supported_audio_impl_list);
 
     if (audio_impl_count == 0) {
         QU_HALT("audio_impl_count == 0");
@@ -366,8 +511,8 @@ void qx_initialize_audio(qu_params const *params)
 
         QU_HALT_IF(!priv.impl->check);
 
-        if (priv.impl->check(params) == QX_SUCCESS) {
-            QU_DEBUG("Selected audio implementation #%d.\n", i);
+        if (priv.impl->check(params) == QU_SUCCESS) {
+            QU_LOGD("Selected audio implementation #%d.\n", i);
             break;
         }
     }
@@ -385,19 +530,19 @@ void qx_initialize_audio(qu_params const *params)
     QU_HALT_IF(!priv.impl->stop_source);
 
     // Initialize audio engine.
-    if (priv.impl->initialize(params) != QX_SUCCESS) {
+    if (priv.impl->initialize(params) != QU_SUCCESS) {
         QU_HALT("Illegal audio engine state.");
     }
 
     // Initialize dynamic arrays which are to hold sound and music data.
 
-    priv.sounds = qu_create_array(sizeof(struct sound), sound_dtor);
+    priv.sounds = qu_create_handle_list(sizeof(struct sound), sound_dtor);
 
     if (!priv.sounds) {
         QU_HALT("Out of memory: unable to initialize sound array.");
     }
 
-    priv.music = qu_create_array(sizeof(struct music), music_dtor);
+    priv.music = qu_create_handle_list(sizeof(struct music), music_dtor);
 
     if (!priv.music) {
         QU_HALT("Out of memory: unable to initialize music array.");
@@ -413,10 +558,10 @@ void qx_initialize_audio(qu_params const *params)
     // Initialize common mutex. It's used when altering voice state,
     // such as pausing and resuming. Thus we can assure that music
     // playback in the background is more robust.
-    priv.mutex = qu_create_mutex();
+    priv.mutex = pl_create_mutex();
 }
 
-void qx_terminate_audio(void)
+void qu_terminate_audio(void)
 {
     for (int i = 0; i < MAX_VOICES; i++) {
         if (priv.voices[i].type == VOICE_TYPE_NONE) {
@@ -426,258 +571,189 @@ void qx_terminate_audio(void)
         priv.impl->stop_source(&priv.voices[i].source);
     }
 
-    qu_destroy_array(priv.sounds);
-    qu_destroy_array(priv.music);
+    qu_destroy_handle_list(priv.sounds);
+    qu_destroy_handle_list(priv.music);
 
     priv.impl->terminate();
 }
 
 //------------------------------------------------------------------------------
+// Public API
 
-void qx_set_master_volume(float volume)
+void qu_set_master_volume(float volume)
 {
     priv.impl->set_master_volume(volume);
 }
 
-//------------------------------------------------------------------------------
-
-int32_t qx_load_sound(qx_file *file)
+qu_sound qu_load_sound(char const *path)
 {
-    struct qx_wave wave = { 0 };
+    qu_file *file = qu_open_file_from_path(path);
 
-    // Initialize sound decoder to read from the given file.
-    if (!qx_open_wave(&wave, file)) {
-        return 0;
+    if (!file) {
+        return (qu_sound) { 0 };
     }
 
-    // Create sound object and allocate memory to store
-    // all audio samples from the file.
-    struct sound sound = {
-        .channels = wave.num_channels,
-        .sample_rate = wave.sample_rate,
-        .buffer = {
-            .data = malloc(sizeof(int16_t) * wave.num_samples),
-            .samples = wave.num_samples,
-        },
-    };
+    int32_t id = load_sound_from_file(file);
 
-    // Attempt to read and decode the whole file.
-    // Some decoders return smaller number than .num_samples even
-    // if the whole file is read, so we don't check its value.
-    int samples_read = qx_read_wave(&wave, sound.buffer.data, sound.buffer.samples);
+    qu_close_file(file);
 
-    // Close decoder as it won't be used anymore.
-    qx_close_wave(&wave);
-
-    // Bail out if no samples were read at all.
-    if (samples_read == 0) {
-        free(sound.buffer.data); // Don't forget to clean up.
-        return 0;
-    }
-
-    // Copy sound object to the sound array.
-    return qu_array_add(priv.sounds, &sound);
+    return (qu_sound) { id };
 }
 
-void qx_delete_sound(int32_t id)
+void qu_delete_sound(qu_sound handle)
 {
     // Destructor will be triggered, see sound_dtor().
-    qu_array_remove(priv.sounds, id);
+    qu_handle_list_remove(priv.sounds, handle.id);
 }
 
-int32_t qx_play_sound(int32_t id, int loop)
+qu_voice qu_play_sound(qu_sound handle)
 {
     // Get sound object from the sound array.
-    struct sound *sound = qu_array_get(priv.sounds, id);
+    struct sound *sound = qu_handle_list_get(priv.sounds, handle.id);
 
     // NULL is returned, id is invalid.
     if (!sound) {
-        QU_ERROR("Invalid sound identifier: 0x%08x.\n", id);
-        return 0;
+        QU_LOGE("Invalid sound identifier: 0x%08x.\n", handle.id);
+        return (qu_voice) { 0 };
     }
 
-    // Search for unused voice.
-    struct voice *voice = find_voice();
-
-    // Nothing found.
-    if (!voice) {
-        QU_ERROR("Free voice not found. Can't play sound 0x%08x.\n", id);
-        return 0;
-    }
-
-    // Clear audio source struct just in case.
-    memset(&voice->source, 0, sizeof(qx_audio_source));
-
-    // Set the correct format for source.
-    voice->source.channels = sound->channels;
-    voice->source.sample_rate = sound->sample_rate;
-
-    // -1 means looping enabled, 0 is not.
-    voice->source.loop = loop;
-
-    // Attempt to create audio source.
-    if (priv.impl->create_source(&voice->source) != QX_SUCCESS) {
-        QU_ERROR("Failed to create audio source. Can't play sound 0x%08x.\n", id);
-        return 0;
-    }
-
-    // Queue the only buffer.
-    if (priv.impl->queue_buffer(&voice->source, &sound->buffer) != QX_SUCCESS) {
-        QU_ERROR("Failed to queue sample buffer. Can't play sound 0x%08x.\n", id);
-        priv.impl->destroy_source(&voice->source);
-        return 0;
-    }
-
-    // Play voice now.
-    if (priv.impl->start_source(&voice->source) != QX_SUCCESS) {
-        QU_ERROR("Failed to play audio source. Can't play sound 0x%08x.\n", id);
-        priv.impl->destroy_source(&voice->source);
-        return 0;
-    }
-
-    // Set voice state and return its identifier.
-    voice->type = VOICE_TYPE_SOUND;
-    voice->state = VOICE_STATE_PLAYING;
-
-    return voice_to_id(voice);
+    return (qu_voice) { play_sound(sound, 0) };
 }
 
-//------------------------------------------------------------------------------
-
-int32_t qx_open_music(qx_file *file)
+qu_voice qu_loop_sound(qu_sound handle)
 {
-    struct music music = { 0 };
+    // Get sound object from the sound array.
+    struct sound *sound = qu_handle_list_get(priv.sounds, handle.id);
 
-    if (!qx_open_wave(&music.wave, file)) {
-        QU_ERROR("Unable to open music file \"%s\".\n", qx_file_get_name(file));
-        return 0;
+    // NULL is returned, id is invalid.
+    if (!sound) {
+        QU_LOGE("Invalid sound identifier: 0x%08x.\n", handle.id);
+        return (qu_voice) { 0 };
     }
 
-    return qu_array_add(priv.music, &music);
+    return (qu_voice) { play_sound(sound, -1) };
 }
 
-void qx_close_music(int32_t id)
+qu_music qu_open_music(char const *path)
+{
+    qu_file *file = qu_open_file_from_path(path);
+
+    if (!file) {
+        return (qu_music) { 0 };
+    }
+
+    qu_audio_loader *loader = qu_open_audio_loader(file);
+
+    if (!loader) {
+        QU_LOGE("Unable to open music file \"%s\".\n", file->name);
+        qu_close_file(file);
+        return (qu_music) { 0 };
+    }
+
+    int32_t id = qu_handle_list_add(priv.music, &(struct music) {
+        .loader = loader,
+    });
+
+    return (qu_music) { id };
+}
+
+void qu_close_music(qu_music handle)
 {
     // Destructor will be triggered, see music_dtor().
-    qu_array_remove(priv.music, id);
+    qu_handle_list_remove(priv.music, handle.id);
 }
 
-int32_t qx_play_music(int32_t id, int loop)
+qu_voice qu_play_music(qu_music handle)
 {
-    struct music *music = qu_array_get(priv.music, id);
+    struct music *music = qu_handle_list_get(priv.music, handle.id);
 
     if (!music) {
-        QU_WARNING("Music track 0x%08x is invalid. Can't play.\n");
-        return 0;
+        QU_LOGW("Music track 0x%08x is invalid. Can't play.\n", handle.id);
+        return (qu_voice) { 0 };
     }
 
-    if (music->voice) {
-        QU_WARNING("Music track \"%s\" is already playing.\n", qx_file_get_name(music->wave.file));
-        return voice_to_id(music->voice);
-    }
-
-    // Search for unused voice.
-    struct voice *voice = find_voice();
-
-    // Nothing found.
-    if (!voice) {
-        QU_ERROR("Free voice not found. Can't play music 0x%08x.\n", id);
-        return 0;
-    }
-
-    // Clear audio source struct just in case.
-    memset(&voice->source, 0, sizeof(qx_audio_source));
-
-    // Set correct source format.
-    voice->source.channels = music->wave.num_channels;
-    voice->source.sample_rate = music->wave.sample_rate;
-
-    // This should always be 0 even if music is looped.
-    voice->source.loop = 0;
-
-    // Attempt to create audio source.
-    if (priv.impl->create_source(&voice->source) != QX_SUCCESS) {
-        QU_ERROR("Failed to create audio source. Can't play music 0x%08x.\n", id);
-        return 0;
-    }
-
-    // Start music playback in another thread.
-    music->voice = voice;
-    music->loop_count = loop;
-    music->thread = qu_create_thread("music", music_main, music);
-
-    return voice_to_id(voice);
+    return (qu_voice) { play_music(music, 0) };
 }
 
-//------------------------------------------------------------------------------
-
-void qx_pause_voice(int32_t id)
+qu_voice qu_loop_music(qu_music handle)
 {
-    struct voice *voice = id_to_voice(id);
+    struct music *music = qu_handle_list_get(priv.music, handle.id);
+
+    if (!music) {
+        QU_LOGW("Music track 0x%08x is invalid. Can't play.\n", handle.id);
+        return (qu_voice) { 0 };
+    }
+
+    return (qu_voice) { play_music(music, -1) };
+}
+
+void qu_pause_voice(qu_voice handle)
+{
+    struct voice *voice = id_to_voice(handle.id);
 
     if (!voice) {
-        QU_ERROR("Invalid voice identifier: 0x%08x. Can't pause.\n", id);
+        QU_LOGE("Invalid voice identifier: 0x%08x. Can't pause.\n", handle.id);
         return;
     }
 
-    qu_lock_mutex(priv.mutex);
+    pl_lock_mutex(priv.mutex);
 
     if (voice->state == VOICE_STATE_PLAYING) {
-        if (priv.impl->stop_source(&voice->source) != QX_SUCCESS) {
-            QU_WARNING("Failed to pause voice 0x%08x.\n", id);
+        if (priv.impl->stop_source(&voice->source) != QU_SUCCESS) {
+            QU_LOGW("Failed to pause voice 0x%08x.\n", handle.id);
         } else {
             voice->state = VOICE_STATE_PAUSED;
         }
     } else {
-        QU_WARNING("Voice 0x%08x is not playing, can't be paused.\n", id);
+        QU_LOGW("Voice 0x%08x is not playing, can't be paused.\n", handle.id);
     }
 
-    qu_unlock_mutex(priv.mutex);
+    pl_unlock_mutex(priv.mutex);
 }
 
-void qx_unpause_voice(int32_t id)
+void qu_unpause_voice(qu_voice handle)
 {
-    struct voice *voice = id_to_voice(id);
+    struct voice *voice = id_to_voice(handle.id);
 
     if (!voice) {
-        QU_ERROR("Invalid voice identifier: 0x%08x. Can't resume.\n", id);
+        QU_LOGE("Invalid voice identifier: 0x%08x. Can't resume.\n", handle.id);
         return;
     }
 
-    qu_lock_mutex(priv.mutex);
+    pl_lock_mutex(priv.mutex);
 
     if (voice->state == VOICE_STATE_PAUSED) {
-        if (priv.impl->start_source(&voice->source) != QX_SUCCESS) {
-            QU_WARNING("Failed to resume voice 0x%08x.\n", id);
+        if (priv.impl->start_source(&voice->source) != QU_SUCCESS) {
+            QU_LOGW("Failed to resume voice 0x%08x.\n", handle.id);
         } else {
             voice->state = VOICE_STATE_PLAYING;
         }
     } else {
-        QU_WARNING("Voice 0x%08x is not paused, can't be resumed.\n", id);
+        QU_LOGW("Voice 0x%08x is not paused, can't be resumed.\n", handle.id);
     }
 
-    qu_unlock_mutex(priv.mutex);
+    pl_unlock_mutex(priv.mutex);
 }
 
-void qx_stop_voice(int32_t id)
+void qu_stop_voice(qu_voice handle)
 {
-    struct voice *voice = id_to_voice(id);
+    struct voice *voice = id_to_voice(handle.id);
 
     if (!voice) {
-        QU_ERROR("Invalid voice identifier: 0x%08x. Can't stop.\n", id);
+        QU_LOGE("Invalid voice identifier: 0x%08x. Can't stop.\n", handle.id);
         return;
     }
 
     if (voice->type == VOICE_TYPE_NONE) {
-        QU_WARNING("Voice 0x%08x is not active, can't be stopped.\n", id);
+        QU_LOGW("Voice 0x%08x is not active, can't be stopped.\n", handle.id);
         return;
     }
 
-    qu_lock_mutex(priv.mutex);
+    pl_lock_mutex(priv.mutex);
 
     priv.impl->stop_source(&voice->source);
     priv.impl->destroy_source(&voice->source);
     voice->state = VOICE_STATE_DESTROYED;
 
-    qu_unlock_mutex(priv.mutex);
+    pl_unlock_mutex(priv.mutex);
 }

@@ -115,7 +115,7 @@ public:
 
 struct xa2_priv
 {
-    qu__library library;
+    void *library;
     PFNXAUDIO2CREATEPROC XAudio2Create;
 
     IXAudio2 *engine;
@@ -131,37 +131,37 @@ static struct xa2_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qx_result xa2_check(qu_params const *params)
+static qu_result xa2_check(qu_params const *params)
 {
     for (int i = 0; i < ARRAYSIZE(xa2_modules); i++) {
         struct xa2_module const *module = &xa2_modules[i];
-        priv.library = qu__platform_open_library(module->name);
+        priv.library = pl_open_dll(module->name);
         // priv.libver = module->major * 100 + module->minor;
 
         if (!priv.library) {
-            QU_WARNING("Unable to load %s.\n", module->name);
+            QU_LOGW("Unable to load %s.\n", module->name);
             continue;
         }
 
-        QU_INFO("Loaded %s.\n", module->name);
+        QU_LOGI("Loaded %s.\n", module->name);
 
         priv.XAudio2Create = (PFNXAUDIO2CREATEPROC)
-            qu__platform_get_procedure(priv.library, "XAudio2Create");
+            pl_get_dll_proc(priv.library, "XAudio2Create");
 
         if (!priv.XAudio2Create) {
-            QU_ERROR("XAudio2Create() procedure is not found in %s.\n", module->name);
+            QU_LOGE("XAudio2Create() procedure is not found in %s.\n", module->name);
             continue;
         }
 
-        QU_INFO("XAudio %d.%d is found in %s.\n", module->major, module->minor, module->name);
-        return QX_SUCCESS;
+        QU_LOGI("XAudio %d.%d is found in %s.\n", module->major, module->minor, module->name);
+        return QU_SUCCESS;
     }
 
-    QU_ERROR("XAudio2 is not found.\n");
-    return QX_FAILURE;
+    QU_LOGE("XAudio2 is not found.\n");
+    return QU_FAILURE;
 }
 
-static qx_result xa2_initialize(qu_params const *params)
+static qu_result xa2_initialize(qu_params const *params)
 {
     HRESULT hResult;
 
@@ -171,8 +171,8 @@ static qx_result xa2_initialize(qu_params const *params)
     hResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
 
     if (FAILED(hResult)) {
-        QU_ERROR("Failed to initialize COM [0x%08x].\n", hResult);
-        return QX_FAILURE;
+        QU_LOGE("Failed to initialize COM [0x%08x].\n", hResult);
+        return QU_FAILURE;
     }
 
     // Create XAudio2 engine.
@@ -180,8 +180,8 @@ static qx_result xa2_initialize(qu_params const *params)
     hResult = priv.XAudio2Create(&priv.engine, 0, XAUDIO2_DEFAULT_PROCESSOR);
 
     if (FAILED(hResult)) {
-        QU_ERROR("Failed to create XAudio2 engine instance [0x%08x].\n", hResult);
-        return QX_FAILURE;
+        QU_LOGE("Failed to create XAudio2 engine instance [0x%08x].\n", hResult);
+        return QU_FAILURE;
     }
 
     priv.engine->RegisterForCallbacks(&priv.engine_callback);
@@ -197,13 +197,13 @@ static qx_result xa2_initialize(qu_params const *params)
     );
 
     if (FAILED(hResult)) {
-        QU_ERROR("Failed to create XAudio2 mastering voice [0x%08x].\n", hResult);
-        return QX_FAILURE;
+        QU_LOGE("Failed to create XAudio2 mastering voice [0x%08x].\n", hResult);
+        return QU_FAILURE;
     }
 
     // Done.
-    QU_INFO("Initialized.\n");
-    return QX_SUCCESS;
+    QU_LOGI("Initialized.\n");
+    return QU_SUCCESS;
 }
 
 static void xa2_terminate(void)
@@ -214,7 +214,7 @@ static void xa2_terminate(void)
     CoUninitialize();
 
     // Done.
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
 //------------------------------------------------------------------------------
@@ -226,7 +226,7 @@ static void xa2_set_master_volume(float volume)
 
 //------------------------------------------------------------------------------
 
-static qx_result xa2_create_source(qx_audio_source *source)
+static qu_result xa2_create_source(qu_audio_source *source)
 {
     WAVEFORMATEX wfex = { 0 };
 
@@ -248,22 +248,22 @@ static qx_result xa2_create_source(qx_audio_source *source)
     );
 
     if (FAILED(result)) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
     source->priv[0] = reinterpret_cast<intptr_t>(x_source);
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static void xa2_destroy_source(qx_audio_source *source)
+static void xa2_destroy_source(qu_audio_source *source)
 {
     IXAudio2SourceVoice *x_source = reinterpret_cast<IXAudio2SourceVoice *>(source->priv[0]);
 
     x_source->DestroyVoice();
 }
 
-static bool xa2_is_source_used(qx_audio_source *source)
+static bool xa2_is_source_used(qu_audio_source *source)
 {
     IXAudio2SourceVoice *x_source = reinterpret_cast<IXAudio2SourceVoice *>(source->priv[0]);
 
@@ -277,7 +277,7 @@ static bool xa2_is_source_used(qx_audio_source *source)
     return false;
 }
 
-static qx_result xa2_queue_buffer(qx_audio_source *source, qx_audio_buffer *buffer)
+static qu_result xa2_queue_buffer(qu_audio_source *source, qu_audio_buffer *buffer)
 {
     IXAudio2SourceVoice *x_source = reinterpret_cast<IXAudio2SourceVoice *>(source->priv[0]);
 
@@ -289,7 +289,7 @@ static qx_result xa2_queue_buffer(qx_audio_source *source, qx_audio_buffer *buff
 
     if (source->loop == -1) {
         if (source->priv[1] == 1) {
-            return QX_FAILURE;
+            return QU_FAILURE;
         }
 
         x_buffer.LoopCount = XAUDIO2_LOOP_INFINITE;
@@ -299,13 +299,13 @@ static qx_result xa2_queue_buffer(qx_audio_source *source, qx_audio_buffer *buff
     HRESULT result = x_source->SubmitSourceBuffer(&x_buffer);
 
     if (FAILED(result)) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static int xa2_get_queued_buffers(qx_audio_source *source)
+static int xa2_get_queued_buffers(qu_audio_source *source)
 {
     IXAudio2SourceVoice *x_source = reinterpret_cast<IXAudio2SourceVoice *>(source->priv[0]);
 
@@ -315,23 +315,23 @@ static int xa2_get_queued_buffers(qx_audio_source *source)
     return state.BuffersQueued;
 }
 
-static qx_result xa2_start_source(qx_audio_source *source)
+static qu_result xa2_start_source(qu_audio_source *source)
 {
     IXAudio2SourceVoice *x_source = reinterpret_cast<IXAudio2SourceVoice *>(source->priv[0]);
-    QU_DEBUG("start_source(): %p\n", x_source);
-    return SUCCEEDED(x_source->Start()) ? QX_SUCCESS : QX_FAILURE;
+    QU_LOGD("start_source(): %p\n", x_source);
+    return SUCCEEDED(x_source->Start()) ? QU_SUCCESS : QU_FAILURE;
 }
 
-static qx_result xa2_stop_source(qx_audio_source *source)
+static qu_result xa2_stop_source(qu_audio_source *source)
 {
     IXAudio2SourceVoice *x_source = reinterpret_cast<IXAudio2SourceVoice *>(source->priv[0]);
-    QU_DEBUG("stop_source(): %p\n", x_source);
-    return SUCCEEDED(x_source->Stop()) ? QX_SUCCESS : QX_FAILURE;
+    QU_LOGD("stop_source(): %p\n", x_source);
+    return SUCCEEDED(x_source->Stop()) ? QU_SUCCESS : QU_FAILURE;
 }
 
 //------------------------------------------------------------------------------
 
-qx_audio_impl const qx_audio_xaudio2 = {
+qu_audio_impl const qu_xaudio2_audio_impl = {
     xa2_check,
     xa2_initialize,
     xa2_terminate,

@@ -75,7 +75,7 @@ static struct
     UINT        mouse_buttons;
     int         gl_samples;
     int         gl_version;
-    int         renderer;
+    int         gl_profile;
 } dpy;
 
 //------------------------------------------------------------------------------
@@ -85,7 +85,7 @@ static int init_wgl_extensions(void)
     // Create dummy window and OpenGL context and check for
     // available WGL extensions
 
-    QU_INFO("Creating dummy invisible window to check supported WGL extensions.\n");
+    QU_LOGI("Creating dummy invisible window to check supported WGL extensions.\n");
 
     WNDCLASSEXW wc = {
         .cbSize         = sizeof(WNDCLASSEXW),
@@ -96,7 +96,7 @@ static int init_wgl_extensions(void)
     };
 
     if (!RegisterClassExW(&wc)) {
-        QU_ERROR("Unable to register dummy window class.\n");
+        QU_LOGE("Unable to register dummy window class.\n");
         return -1;
     }
 
@@ -105,14 +105,14 @@ static int init_wgl_extensions(void)
         NULL, NULL, wc.hInstance, NULL);
 
     if (!window) {
-        QU_ERROR("Unable to create dummy window.\n");
+        QU_LOGE("Unable to create dummy window.\n");
         return -1;
     }
 
     HDC dc = GetDC(window);
 
     if (!dc) {
-        QU_ERROR("Dummy window has invalid Device Context.\n");
+        QU_LOGE("Dummy window has invalid Device Context.\n");
 
         DestroyWindow(window);
         return -1;
@@ -131,7 +131,7 @@ static int init_wgl_extensions(void)
     int format = ChoosePixelFormat(dc, &pfd);
 
     if (!format || !SetPixelFormat(dc, format, &pfd)) {
-        QU_ERROR("Invalid pixel format.\n");
+        QU_LOGE("Invalid pixel format.\n");
 
         ReleaseDC(window, dc);
         DestroyWindow(window);
@@ -141,7 +141,7 @@ static int init_wgl_extensions(void)
     HGLRC rc = wglCreateContext(dc);
 
     if (!rc || !wglMakeCurrent(dc, rc)) {
-        QU_ERROR("Failed to create dummy OpenGL context.\n");
+        QU_LOGE("Failed to create dummy OpenGL context.\n");
 
         if (rc) {
             wglDeleteContext(rc);
@@ -189,11 +189,11 @@ static int init_wgl_extensions(void)
     ReleaseDC(window, dc);
     DestroyWindow(window);
 
-    QU_DEBUG("Pointers to required functions acquired:\n");
-    QU_DEBUG(":: wglGetExtensionsStringARB -> %p\n", wgl.wglGetExtensionsStringARB);
-    QU_DEBUG(":: wglGetPixelFormatAttribivARB -> %p\n", wgl.wglGetPixelFormatAttribivARB);
-    QU_DEBUG(":: wglChoosePixelFormatARB -> %p\n", wgl.wglChoosePixelFormatARB);
-    QU_DEBUG(":: wglCreateContextAttribsARB -> %p\n", wgl.wglCreateContextAttribsARB);
+    QU_LOGD("Pointers to required functions acquired:\n");
+    QU_LOGD(":: wglGetExtensionsStringARB -> %p\n", wgl.wglGetExtensionsStringARB);
+    QU_LOGD(":: wglGetPixelFormatAttribivARB -> %p\n", wgl.wglGetPixelFormatAttribivARB);
+    QU_LOGD(":: wglChoosePixelFormatARB -> %p\n", wgl.wglChoosePixelFormatARB);
+    QU_LOGD(":: wglCreateContextAttribsARB -> %p\n", wgl.wglCreateContextAttribsARB);
 
     return 0;
 }
@@ -221,7 +221,7 @@ static int set_pixel_format(HDC dc)
         wgl.wglChoosePixelFormatARB(dc, format_attribs, NULL, 256, formats, &total_formats);
 
         if (!total_formats) {
-            QU_ERROR("No suitable Pixel Format found.\n");
+            QU_LOGE("No suitable Pixel Format found.\n");
             return 0;
         }
 
@@ -272,8 +272,8 @@ static int set_pixel_format(HDC dc)
     }
     
     if (!SetPixelFormat(dc, format, &pfd)) {
-        QU_ERROR("Failed to set Pixel Format.\n");
-        QU_ERROR(":: GetLastError -> 0x%08x\n", GetLastError());
+        QU_LOGE("Failed to set Pixel Format.\n");
+        QU_LOGE(":: GetLastError -> 0x%08x\n", GetLastError());
         return 0;
     }
 
@@ -298,7 +298,7 @@ static HGLRC create_context_with_profile(HDC dc, int version, int profile)
         } else if (profile == 'e' && (wgl.extensions & EXT_WGL_EXT_CREATE_CONTEXT_ES2_PROFILE)) {
             profile_mask = WGL_CONTEXT_ES2_PROFILE_BIT_EXT;
         } else {
-            QU_ERROR("Internal error: selected invalid OpenGL profile.\n");
+            QU_LOGE("Internal error: selected invalid OpenGL profile.\n");
             return NULL;
         }
     }
@@ -334,14 +334,7 @@ static HGLRC create_context(HDC dc)
 
             if (rc && wglMakeCurrent(dc, rc)) {
                 dpy.gl_version = version;
-
-                if (profile == 'c') {
-                    dpy.renderer = QU__RENDERER_GL_CORE;
-                } else if (profile == 'l') {
-                    dpy.renderer = QU__RENDERER_GL_COMPAT;
-                } else if (profile == 'e') {
-                    dpy.renderer = QU__RENDERER_ES2;
-                }
+                dpy.gl_profile = profile;
 
                 break;
             }
@@ -351,14 +344,14 @@ static HGLRC create_context(HDC dc)
 
         if (wglMakeCurrent(dc, rc)) {
             dpy.gl_version = -1;
-            dpy.renderer = QU__RENDERER_GL_COMPAT;
+            dpy.gl_profile = 'l';
         } else {
             rc = NULL;
         }
     }
 
     if (!rc) {
-        QU_ERROR("Unable to create OpenGL context.\n");
+        QU_LOGE("Unable to create OpenGL context.\n");
         return NULL;
     }
 
@@ -368,17 +361,17 @@ static HGLRC create_context(HDC dc)
 
         char const *profile;
 
-        if (dpy.renderer == QU__RENDERER_GL_CORE) {
+        if (dpy.gl_profile == 'c') {
             profile = "core";
-        } else if (dpy.renderer == QU__RENDERER_GL_COMPAT) {
+        } else if (dpy.gl_profile == 'l') {
             profile = "compatibility";
-        } else if (dpy.renderer == QU__RENDERER_ES2) {
+        } else if (dpy.gl_profile == 'e') {
             profile = "ES";
         }
 
-        QU_INFO("Created OpenGL context: version %d.%d, %s profile.\n", major, minor, profile);
+        QU_LOGI("Created OpenGL context: version %d.%d, %s profile.\n", major, minor, profile);
     } else {
-        QU_INFO("Created OpenGL context: unknown version.\n");
+        QU_LOGI("Created OpenGL context: unknown version.\n");
     }
 
     return rc;
@@ -394,7 +387,7 @@ static int init_wgl_context(HWND window)
 
     if (dc) {
         if (wgl.wglGetExtensionsStringARB) {
-            QU_INFO("Available WGL extensions: %s\n", wgl.wglGetExtensionsStringARB(dc));
+            QU_LOGI("Available WGL extensions: %s\n", wgl.wglGetExtensionsStringARB(dc));
         }
 
         if (set_pixel_format(dc)) {
@@ -414,7 +407,7 @@ static int init_wgl_context(HWND window)
 
         ReleaseDC(window, dc);
     } else {
-        QU_ERROR("Failed to get Device Context for main window.");
+        QU_LOGE("Failed to get Device Context for main window.");
     }
 
     return -1;
@@ -558,19 +551,19 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         PostQuitMessage(0);
         return 0;
     case WM_SIZE:
-        qu__graphics_on_display_resize(LOWORD(lp), HIWORD(lp));
+        qu_event_window_resize(LOWORD(lp), HIWORD(lp));
         return 0;
     case WM_ACTIVATE:
         if (LOWORD(wp) == WA_INACTIVE) {
-            qx_core_push_event(&(struct qx_event) { .type = QX_EVENT_DEACTIVATE });
+            qu_enqueue_event(&(qu_event) { .type = QU_EVENT_TYPE_DEACTIVATE });
         } else {
-            qx_core_push_event(&(struct qx_event) { .type = QX_EVENT_ACTIVATE });
+            qu_enqueue_event(&(qu_event) { .type = QU_EVENT_TYPE_ACTIVATE });
         }
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
-        qx_core_push_event(&(struct qx_event) {
-            .type = QX_EVENT_KEY_PRESSED,
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_KEY_PRESSED,
             .data.keyboard = {
                 .key = key_conv(wp, lp),
             },
@@ -578,8 +571,8 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         return 0;
     case WM_KEYUP:
     case WM_SYSKEYUP:
-        qx_core_push_event(&(struct qx_event) {
-            .type = QX_EVENT_KEY_RELEASED,
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_KEY_RELEASED,
             .data.keyboard = {
                 .key = key_conv(wp, lp),
             },
@@ -589,8 +582,8 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
     case WM_RBUTTONDOWN:
     case WM_MBUTTONDOWN:
     case WM_XBUTTONDOWN:
-        qx_core_push_event(&(struct qx_event) {
-            .type = QX_EVENT_MOUSE_BUTTON_PRESSED,
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_MOUSE_BUTTON_PRESSED,
             .data.mouse = {
                 .button = mb_conv(msg, wp),
             },
@@ -600,16 +593,16 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
     case WM_XBUTTONUP:
-        qx_core_push_event(&(struct qx_event) {
-            .type = QX_EVENT_MOUSE_BUTTON_RELEASED,
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_MOUSE_BUTTON_RELEASED,
             .data.mouse = {
                 .button = mb_conv(msg, wp),
             },
         });
         return 0;
     case WM_MOUSEMOVE:
-        qx_core_push_event(&(struct qx_event) {
-            .type = QX_EVENT_MOUSE_CURSOR_MOVED,
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_MOUSE_CURSOR_MOVED,
             .data.mouse = {
                 .x_cursor = GET_X_LPARAM(lp),
                 .y_cursor = GET_Y_LPARAM(lp),
@@ -617,16 +610,16 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         });
         return 0;
     case WM_MOUSEWHEEL:
-        qx_core_push_event(&(struct qx_event) {
-            .type = QX_EVENT_MOUSE_WHEEL_SCROLLED,
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED,
             .data.mouse = {
                 .y_cursor = GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA,
             },
         });
         return 0;
     case WM_MOUSEHWHEEL:
-        qx_core_push_event(&(struct qx_event) {
-            .type = QX_EVENT_MOUSE_WHEEL_SCROLLED,
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED,
             .data.mouse = {
                 .x_cursor = GET_WHEEL_DELTA_WPARAM(wp) / WHEEL_DELTA,
             },
@@ -678,18 +671,18 @@ static void initialize(qu_params const *params)
     
     // DPI awareness
 
-    qu__library shcore_dll = qu__platform_open_library("shcore.dll");
+    void *shcore_dll = pl_open_dll("shcore.dll");
 
     if (shcore_dll) {
         SETPROCESSDPIAWARENESSPROC pfnSetProcessDpiAwareness =
-            qu__platform_get_procedure(shcore_dll, "SetProcessDpiAwareness");
+            pl_get_dll_proc(shcore_dll, "SetProcessDpiAwareness");
 
         if (pfnSetProcessDpiAwareness) {
             // 2: PROCESS_PER_MONITOR_DPI_AWARE
             pfnSetProcessDpiAwareness(2);
         }
 
-        qu__platform_close_library(shcore_dll);
+        pl_close_dll(shcore_dll);
     }
 
     // Set cursor and keyboard
@@ -745,7 +738,7 @@ static void initialize(qu_params const *params)
 
     // Done.
 
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 }
 
 static void terminate(void)
@@ -763,7 +756,7 @@ static void terminate(void)
         DestroyWindow(dpy.window);
     }
 
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
 static bool process(void)
@@ -787,9 +780,18 @@ static void present(void)
     SwapBuffers(dpy.dc);
 }
 
-static enum qu__renderer get_renderer(void)
+static char const *get_graphics_context_name(void)
 {
-    return dpy.renderer;
+    switch (dpy.gl_profile) {
+    case 'c':
+        return "OpenGL";
+    case 'e':
+        return "OpenGL ES 2.0";
+    case 'l':
+        return "OpenGL (Compatibility Profile)";
+    default:
+        return NULL;
+    }
 }
 
 static void *gl_proc_address(char const *name)
@@ -827,12 +829,12 @@ static bool w32_set_window_size(int width, int height)
 
 //------------------------------------------------------------------------------
 
-struct qu__core const qu__core_win32 = {
+qu_core_impl const qu_win32_core_impl = {
     .initialize = initialize,
     .terminate = terminate,
-    .process = process,
-    .present = present,
-    .get_renderer = get_renderer,
+    .process_input = process,
+    .swap_buffers = present,
+    .get_graphics_context_name = get_graphics_context_name,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
     .set_window_title = w32_set_window_title,

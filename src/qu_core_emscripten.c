@@ -326,16 +326,16 @@ static EM_BOOL keyboard_callback(int type, EmscriptenKeyboardEvent const *event,
 
     switch (type) {
     case EMSCRIPTEN_EVENT_KEYDOWN:
-        conv_type = QX_EVENT_KEY_PRESSED;
+        conv_type = QU_EVENT_TYPE_KEY_PRESSED;
         break;
     case EMSCRIPTEN_EVENT_KEYUP:
-        conv_type = QX_EVENT_KEY_RELEASED;
+        conv_type = QU_EVENT_TYPE_KEY_RELEASED;
         break;
     default:
         return EM_FALSE;
     }
 
-    qx_core_push_event(&(struct qx_event) {
+    qu_enqueue_event(&(qu_event) {
         .type = conv_type,
         .data.keyboard = {
             .key = key_conv(event->code),
@@ -351,19 +351,19 @@ static EM_BOOL mouse_callback(int type, EmscriptenMouseEvent const *event, void 
 
     switch (type) {
     case EMSCRIPTEN_EVENT_MOUSEDOWN:
-        conv_type = QX_EVENT_MOUSE_BUTTON_PRESSED;
+        conv_type = QU_EVENT_TYPE_MOUSE_BUTTON_PRESSED;
         break;
     case EMSCRIPTEN_EVENT_MOUSEUP:
-        conv_type = QX_EVENT_MOUSE_BUTTON_RELEASED;
+        conv_type = QU_EVENT_TYPE_MOUSE_BUTTON_RELEASED;
         break;
     case EMSCRIPTEN_EVENT_MOUSEMOVE:
-        conv_type = QX_EVENT_MOUSE_CURSOR_MOVED;
+        conv_type = QU_EVENT_TYPE_MOUSE_CURSOR_MOVED;
         break;
     default:
         return EM_FALSE;
     }
 
-    qx_core_push_event(&(struct qx_event) {
+    qu_enqueue_event(&(qu_event) {
         .type = conv_type,
         .data.mouse = {
             .button = mouse_button_conv(event->button),
@@ -381,7 +381,7 @@ static EM_BOOL wheel_callback(int type, EmscriptenWheelEvent const *event, void 
 
     switch (type) {
     case EMSCRIPTEN_EVENT_WHEEL:
-        conv_type = QX_EVENT_MOUSE_WHEEL_SCROLLED;
+        conv_type = QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED;
         break;
     default:
         return EM_FALSE;
@@ -404,7 +404,7 @@ static EM_BOOL wheel_callback(int type, EmscriptenWheelEvent const *event, void 
         break;
     }
 
-    qx_core_push_event(&(struct qx_event) {
+    qu_enqueue_event(&(qu_event) {
         .type = conv_type,
         .data.mouse = {
             .dx_wheel = (int) (event->deltaX * scale),
@@ -479,7 +479,7 @@ static void initialize(qu_params const *params)
     // Enable required WebGL extensions.
 
     if (!emscripten_webgl_enable_extension(priv.gl, "OES_vertex_array_object")) {
-        QU_INFO("OES_vertex_array_object is not available.\n");
+        QU_LOGI("OES_vertex_array_object is not available.\n");
     }
 
     // Set proper canvas size.
@@ -492,7 +492,7 @@ static void initialize(qu_params const *params)
 
     // Done.
 
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 }
 
 static void terminate(void)
@@ -500,7 +500,7 @@ static void terminate(void)
     emscripten_webgl_destroy_context(priv.gl);
     free(priv.events.array);
 
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
 static bool process(void)
@@ -513,9 +513,9 @@ static void present(void)
     emscripten_webgl_commit_frame();
 }
 
-static enum qu__renderer get_renderer(void)
+static char const *get_graphics_context_name(void)
 {
-    return QU__RENDERER_ES2;
+    return "OpenGL ES 2.0";
 }
 
 static void *gl_proc_address(char const *name)
@@ -541,12 +541,12 @@ static bool set_window_size(int width, int height)
 
 //------------------------------------------------------------------------------
 
-struct qu__core const qu__core_emscripten = {
+qu_core_impl const qu_emscripten_core_impl = {
     .initialize = initialize,
     .terminate = terminate,
-    .process = process,
-    .present = present,
-    .get_renderer = get_renderer,
+    .process_input = process,
+    .swap_buffers = present,
+    .get_graphics_context_name = get_graphics_context_name,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
     .set_window_title = set_window_title,

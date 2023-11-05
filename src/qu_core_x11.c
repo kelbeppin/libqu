@@ -310,7 +310,7 @@ static void initialize(qu_params const *params)
     }
 
     if (best_fbc >= 0) {
-        QU_INFO("Selected FBConfig with %d samples.\n", best_sample_count);
+        QU_LOGI("Selected FBConfig with %d samples.\n", best_sample_count);
     }
 
     GLXFBConfig fbconfig = fbc_list[(best_fbc < 0) ? 0 : best_fbc];
@@ -379,21 +379,21 @@ static void initialize(qu_params const *params)
                 (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB(
                     (GLubyte const *)"glXCreateContextAttribsARB");
 
-            QU_INFO("GLX_ARB_create_context is supported.\n");
+            QU_LOGI("GLX_ARB_create_context is supported.\n");
         } else if (!strcmp(glx_extension, "GLX_ARB_create_context_profile")) {
             impl.extensions |= ARB_CREATE_CONTEXT_PROFILE;
 
-            QU_INFO("GLX_ARB_create_context_profile is supported.\n");
+            QU_LOGI("GLX_ARB_create_context_profile is supported.\n");
         } else if (!strcmp(glx_extension, "GLX_EXT_swap_control")) {
             impl.extensions |= EXT_SWAP_CONTROL;
             impl.ext_glXSwapIntervalEXT =
                 (PFNGLXSWAPINTERVALEXTPROC)glXGetProcAddressARB(
                     (GLubyte const *)"glXSwapIntervalEXT");
 
-            QU_INFO("GLX_EXT_swap_control is supported.\n");
+            QU_LOGI("GLX_EXT_swap_control is supported.\n");
         } else if (!strcmp(glx_extension, "GLX_EXT_create_context_es2_profile")) {
             impl.extensions |= EXT_CREATE_CONTEXT_ES2_PROFILE;
-            QU_INFO("GLX_EXT_create_context_es2_profile is supported.\n");
+            QU_LOGI("GLX_EXT_create_context_es2_profile is supported.\n");
         }
 
         glx_extension = strtok(NULL, " ");
@@ -417,7 +417,7 @@ static void initialize(qu_params const *params)
         }
 #endif
 
-        QU_INFO("Creating %s %d.%d context...\n",
+        QU_LOGI("Creating %s %d.%d context...\n",
             impl.gl_profile == 1 ? "OpenGL ES" : "OpenGL",
             major_version, minor_version);
 
@@ -434,7 +434,7 @@ static void initialize(qu_params const *params)
     }
 
     if (!impl.context) {
-        QU_INFO("Creating legacy OpenGL context...\n");
+        QU_LOGI("Creating legacy OpenGL context...\n");
         impl.context = glXCreateContext(impl.display, vi, NULL, True);
         impl.gl_profile = -1;
     }
@@ -471,7 +471,7 @@ static void initialize(qu_params const *params)
 
     // (9) Done.
 
-    QU_INFO("Xlib-based core module initialized.\n");
+    QU_LOGI("Xlib-based core module initialized.\n");
 }
 
 static void terminate(void)
@@ -485,7 +485,7 @@ static void terminate(void)
         XCloseDisplay(impl.display);
     }
 
-    QU_INFO("Xlib-based core module terminated.\n");
+    QU_LOGI("Xlib-based core module terminated.\n");
 }
 
 static bool process(void)
@@ -503,40 +503,72 @@ static bool process(void)
         case Expose:
             break;
         case KeyPress:
-            qu__core_on_key_pressed(key_conv(XLookupKeysym(&event.xkey, ShiftMapIndex)));
+            qu_enqueue_event(&(qu_event) {
+                .type = QU_EVENT_TYPE_KEY_PRESSED,
+                .data.keyboard.key = key_conv(XLookupKeysym(&event.xkey, ShiftMapIndex)),
+            });
             break;
         case KeyRelease:
-            qu__core_on_key_released(key_conv(XLookupKeysym(&event.xkey, ShiftMapIndex)));
+            qu_enqueue_event(&(qu_event) {
+                .type = QU_EVENT_TYPE_KEY_RELEASED,
+                .data.keyboard.key = key_conv(XLookupKeysym(&event.xkey, ShiftMapIndex)),
+            });
             break;
         case MotionNotify:
-            qu__core_on_mouse_cursor_moved(event.xmotion.x, event.xmotion.y);
+            qu_enqueue_event(&(qu_event) {
+                .type = QU_EVENT_TYPE_MOUSE_CURSOR_MOVED,
+                .data.mouse.x_cursor = event.xmotion.x,
+                .data.mouse.y_cursor = event.xmotion.y,
+            });
             break;
         case ButtonPress:
             if (event.xbutton.button == Button4) {
-                qu__core_on_mouse_wheel_scrolled(0, 1);
+                qu_enqueue_event(&(qu_event) {
+                    .type = QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED,
+                    .data.mouse.dx_wheel = 0,
+                    .data.mouse.dy_wheel = 1,
+                });
             } else if (event.xbutton.button == Button5) {
-                qu__core_on_mouse_wheel_scrolled(0, -1);
+                qu_enqueue_event(&(qu_event) {
+                    .type = QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED,
+                    .data.mouse.dx_wheel = 0,
+                    .data.mouse.dy_wheel = -1,
+                });
             } else if (event.xbutton.button == 6) {
-                qu__core_on_mouse_wheel_scrolled(-1, 0);
+                qu_enqueue_event(&(qu_event) {
+                    .type = QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED,
+                    .data.mouse.dx_wheel = -1,
+                    .data.mouse.dy_wheel = 0,
+                });
             } else if (event.xbutton.button == 7) {
-                qu__core_on_mouse_wheel_scrolled(1, 0);
+                qu_enqueue_event(&(qu_event) {
+                    .type = QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED,
+                    .data.mouse.dx_wheel = 1,
+                    .data.mouse.dy_wheel = 0,
+                });
             } else {
-                qu__core_on_mouse_button_pressed(mouse_button_conv(event.xbutton.button));
+                qu_enqueue_event(&(qu_event) {
+                    .type = QU_EVENT_TYPE_MOUSE_BUTTON_PRESSED,
+                    .data.mouse.button = mouse_button_conv(event.xbutton.button),
+                });
             }
             break;
         case ButtonRelease:
-            qu__core_on_mouse_button_released(mouse_button_conv(event.xbutton.button));
+            qu_enqueue_event(&(qu_event) {
+                .type = QU_EVENT_TYPE_MOUSE_BUTTON_RELEASED,
+                .data.mouse.button = mouse_button_conv(event.xbutton.button),
+            });
             break;
         case ConfigureNotify:
             if (event.xconfigure.width != impl.width || event.xconfigure.height != impl.height) {
                 impl.width = event.xconfigure.width;
                 impl.height = event.xconfigure.height;
-                qu__graphics_on_display_resize(impl.width, impl.height);
+                qu_event_window_resize(impl.width, impl.height);
             }
 
             break;
         default:
-            QU_DEBUG("Unhandled event: 0x%04x\n", event.type);
+            QU_LOGD("Unhandled event: 0x%04x\n", event.type);
             break;
         }
     }
@@ -549,15 +581,15 @@ static void present(void)
     glXSwapBuffers(impl.display, impl.surface);
 }
 
-static enum qu__renderer get_renderer(void)
+static char const *get_graphics_context_name(void)
 {
     switch (impl.gl_profile) {
     case 0:
-        return QU__RENDERER_GL_CORE;
+        return "OpenGL";
     case 1:
-        return QU__RENDERER_ES2;
+        return "OpenGL ES 2.0";
     default:
-        return QU__RENDERER_GL_COMPAT;
+        return "OpenGL (Compatibility Profile)";
     }
 }
 
@@ -583,12 +615,12 @@ static bool set_window_size(int width, int height)
 
 //------------------------------------------------------------------------------
 
-struct qu__core const qu__core_x11 = {
+qu_core_impl const qu_x11_core_impl = {
     .initialize = initialize,
     .terminate = terminate,
-    .process = process,
-    .present = present,
-    .get_renderer = get_renderer,
+    .process_input = process,
+    .swap_buffers = present,
+    .get_graphics_context_name = get_graphics_context_name,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
     .set_window_title = set_window_title,

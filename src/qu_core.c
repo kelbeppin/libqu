@@ -17,61 +17,68 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_core.c: Core module
+//------------------------------------------------------------------------------
 
-#include "libqu.h"
 #define QU_MODULE "core"
+
+//------------------------------------------------------------------------------
 
 #include "qu.h"
 
 //------------------------------------------------------------------------------
-// qu_core.c: Core module
-//------------------------------------------------------------------------------
 
 #define WINDOW_TITLE_LENGTH         256
 
-static struct qu__core const *supported_core_impl_list[] = {
+//------------------------------------------------------------------------------
+
+static qu_core_impl const *core_impl_list[] = {
 
 #ifdef QU_WIN32
-    &qu__core_win32,
+    &qu_win32_core_impl,
 #endif
 
 #ifdef QU_USE_X11
-    &qu__core_x11,
+    &qu_x11_core_impl,
 #endif
 
 #ifdef QU_EMSCRIPTEN
-    &qu__core_emscripten,
+    &qu_emscripten_core_impl,
 #endif
 
 #ifdef QU_ANDROID
-    &qu__core_android,
+    &qu_android_core_impl,
 #endif
 };
 
-static struct qu__joystick const *supported_joystick_impl_list[] = {
+//------------------------------------------------------------------------------
+
+static qu_joystick_impl const *joystick_impl_list[] = {
 
 #ifdef QU_WIN32
-    &qu__joystick_win32,
+    &qu_win32_joystick_impl,
 #endif
 
 #ifdef QU_LINUX
-    &qu__joystick_linux,
+    &qu_linux_joystick_impl,
 #endif
 
-    &qu__joystick_null,
+    &qu_null_joystick_impl,
 };
 
-struct core_event_buffer
+//------------------------------------------------------------------------------
+
+struct event_buffer
 {
-    struct qx_event *array;
+    qu_event *array;
     size_t length;
     size_t capacity;
 };
 
-struct qu__core_priv
+struct core_priv
 {
-	struct qu__core const *impl;
-    struct qu__joystick const *joystick;
+	qu_core_impl const *impl;
+    qu_joystick_impl const *joystick;
 
     char window_title[WINDOW_TITLE_LENGTH];
     int window_width;
@@ -96,14 +103,14 @@ struct qu__core_priv
     qu_vec2i touch_position[QU_MAX_TOUCH_INPUTS];
     qu_vec2i touch_delta[QU_MAX_TOUCH_INPUTS];
 
-    struct core_event_buffer event_buffer;
+    struct event_buffer event_buffer;
 };
 
-static struct qu__core_priv priv;
+static struct core_priv priv;
 
 //------------------------------------------------------------------------------
 
-static void handle_key_press(struct qx_keyboard_event const *event)
+static void handle_key_press(qu_keyboard_event const *event)
 {
     if (event->key == QU_KEY_INVALID) {
         return;
@@ -127,7 +134,7 @@ static void handle_key_press(struct qx_keyboard_event const *event)
     }
 }
 
-static void handle_key_release(struct qx_keyboard_event const *event)
+static void handle_key_release(qu_keyboard_event const *event)
 {
     if (event->key == QU_KEY_INVALID) {
         return;
@@ -142,7 +149,7 @@ static void handle_key_release(struct qx_keyboard_event const *event)
     }
 }
 
-static void handle_mouse_button_press(struct qx_mouse_event const *event)
+static void handle_mouse_button_press(qu_mouse_event const *event)
 {
     if (event->button == QU_MOUSE_BUTTON_INVALID) {
         return;
@@ -159,7 +166,7 @@ static void handle_mouse_button_press(struct qx_mouse_event const *event)
     }
 }
 
-static void handle_mouse_button_release(struct qx_mouse_event const *event)
+static void handle_mouse_button_release(qu_mouse_event const *event)
 {
     if (event->button == QU_MOUSE_BUTTON_INVALID) {
         return;
@@ -176,7 +183,7 @@ static void handle_mouse_button_release(struct qx_mouse_event const *event)
     }
 }
 
-static void handle_mouse_cursor_motion(struct qx_mouse_event const *event)
+static void handle_mouse_cursor_motion(qu_mouse_event const *event)
 {
     int x_old = priv.mouse_cursor_position.x;
     int y_old = priv.mouse_cursor_position.y;
@@ -188,7 +195,7 @@ static void handle_mouse_cursor_motion(struct qx_mouse_event const *event)
     priv.mouse_cursor_delta.y = event->y_cursor - y_old;
 }
 
-static void handle_mouse_wheel_scroll(struct qx_mouse_event const *event)
+static void handle_mouse_wheel_scroll(qu_mouse_event const *event)
 {
     priv.mouse_wheel_delta.x += event->dx_wheel;
     priv.mouse_wheel_delta.y += event->dy_wheel;
@@ -234,7 +241,7 @@ static void handle_window_activation(bool active)
     priv.window_active = active;
 }
 
-static void handle_touch_motion(struct qx_touch_event const *event)
+static void handle_touch_motion(qu_touch_event const *event)
 {
     int x_old = priv.touch_position[event->index].x;
     int y_old = priv.touch_position[event->index].y;
@@ -247,13 +254,14 @@ static void handle_touch_motion(struct qx_touch_event const *event)
 }
 
 //------------------------------------------------------------------------------
+// Internal API
 
-void qu__core_initialize(qu_params const *params)
+void qu_initialize_core(qu_params const *params)
 {
 	memset(&priv, 0, sizeof(priv));
 
-    int core_impl_count = QU__ARRAY_SIZE(supported_core_impl_list);
-    int joystick_impl_count = QU__ARRAY_SIZE(supported_joystick_impl_list);
+    int core_impl_count = QU_ARRAY_SIZE(core_impl_list);
+    int joystick_impl_count = QU_ARRAY_SIZE(joystick_impl_list);
 
     if (core_impl_count == 0) {
         QU_HALT("core_impl_count == 0");
@@ -264,7 +272,7 @@ void qu__core_initialize(qu_params const *params)
     }
 
     for (int i = 0; i < core_impl_count; i++) {
-        priv.impl = supported_core_impl_list[i];
+        priv.impl = core_impl_list[i];
 
         // if (priv.impl->query()) {
             break;
@@ -273,16 +281,16 @@ void qu__core_initialize(qu_params const *params)
 
     QU_HALT_IF(!priv.impl->initialize);
     QU_HALT_IF(!priv.impl->terminate);
-    QU_HALT_IF(!priv.impl->process);
-    QU_HALT_IF(!priv.impl->present);
-    QU_HALT_IF(!priv.impl->get_renderer);
+    QU_HALT_IF(!priv.impl->process_input);
+    QU_HALT_IF(!priv.impl->swap_buffers);
+    QU_HALT_IF(!priv.impl->get_graphics_context_name);
     QU_HALT_IF(!priv.impl->gl_proc_address);
     QU_HALT_IF(!priv.impl->get_gl_multisample_samples);
     QU_HALT_IF(!priv.impl->set_window_title);
     QU_HALT_IF(!priv.impl->set_window_size);
 
     for (int i = 0; i < joystick_impl_count; i++) {
-        priv.joystick = supported_joystick_impl_list[i];
+        priv.joystick = joystick_impl_list[i];
 
         // if (priv.joystick->query()) {
             break;
@@ -311,13 +319,13 @@ void qu__core_initialize(qu_params const *params)
     priv.window_active = true;
 }
 
-void qu__core_terminate(void)
+void qu_terminate_core(void)
 {
     priv.joystick->terminate();
 	priv.impl->terminate();
 }
 
-bool qu__core_process(void)
+bool qu_handle_events(void)
 {
     priv.mouse_cursor_delta.x = 0;
     priv.mouse_cursor_delta.y = 0;
@@ -331,51 +339,51 @@ bool qu__core_process(void)
         }
     }
 
-    if (!priv.impl->process()) {
+    if (!priv.impl->process_input()) {
         return false;
     }
 
-    struct core_event_buffer *buffer = &priv.event_buffer;
+    struct event_buffer *buffer = &priv.event_buffer;
 
     for (size_t i = 0; i < buffer->length; i++) {
-        struct qx_event *event = &buffer->array[i];
+        qu_event *event = &buffer->array[i];
 
         switch (event->type) {
-        case QX_EVENT_KEY_PRESSED:
+        case QU_EVENT_TYPE_KEY_PRESSED:
             handle_key_press(&event->data.keyboard);
             break;
-        case QX_EVENT_KEY_RELEASED:
+        case QU_EVENT_TYPE_KEY_RELEASED:
             handle_key_release(&event->data.keyboard);
             break;
-        case QX_EVENT_MOUSE_BUTTON_PRESSED:
+        case QU_EVENT_TYPE_MOUSE_BUTTON_PRESSED:
             handle_mouse_button_press(&event->data.mouse);
             break;
-        case QX_EVENT_MOUSE_BUTTON_RELEASED:
+        case QU_EVENT_TYPE_MOUSE_BUTTON_RELEASED:
             handle_mouse_button_release(&event->data.mouse);
             break;
-        case QX_EVENT_MOUSE_CURSOR_MOVED:
+        case QU_EVENT_TYPE_MOUSE_CURSOR_MOVED:
             handle_mouse_cursor_motion(&event->data.mouse);
             break;
-        case QX_EVENT_MOUSE_WHEEL_SCROLLED:
+        case QU_EVENT_TYPE_MOUSE_WHEEL_SCROLLED:
             handle_mouse_wheel_scroll(&event->data.mouse);
             break;
-        case QX_EVENT_ACTIVATE:
+        case QU_EVENT_TYPE_ACTIVATE:
             handle_window_activation(true);
             break;
-        case QX_EVENT_DEACTIVATE:
+        case QU_EVENT_TYPE_DEACTIVATE:
             handle_window_activation(false);
             break;
-        case QX_EVENT_TOUCH_STARTED:
+        case QU_EVENT_TYPE_TOUCH_STARTED:
             priv.touch_state[event->data.touch.index] = 1;
             priv.touch_position[event->data.touch.index].x = event->data.touch.x;
             priv.touch_position[event->data.touch.index].y = event->data.touch.y;
             priv.touch_delta[event->data.touch.index].x = 0;
             priv.touch_delta[event->data.touch.index].y = 0;
             break;
-        case QX_EVENT_TOUCH_ENDED:
+        case QU_EVENT_TYPE_TOUCH_ENDED:
             priv.touch_state[event->data.touch.index] = 0;
             break;
-        case QX_EVENT_TOUCH_MOVED:
+        case QU_EVENT_TYPE_TOUCH_MOVED:
             handle_touch_motion(&event->data.touch);
             break;
         }
@@ -400,33 +408,33 @@ bool qu__core_process(void)
     return true;
 }
 
-void qu__core_present(void)
+void qu_swap_buffers(void)
 {
-    priv.impl->present();
+    priv.impl->swap_buffers();
 }
 
-enum qu__renderer qu__core_get_renderer(void)
+char const *qu_get_graphics_context_name(void)
 {
-    return priv.impl->get_renderer();
+    return priv.impl->get_graphics_context_name();
 }
 
-void *qu__core_get_gl_proc_address(char const *name)
+void *qu_gl_get_proc_address(char const *name)
 {
     return priv.impl->gl_proc_address(name);
 }
 
-int qu__core_get_gl_multisample_samples(void)
+int qu_gl_get_samples(void)
 {
     return priv.impl->get_gl_multisample_samples();
 }
 
-void qx_core_push_event(struct qx_event const *event)
+void qu_enqueue_event(qu_event const *event)
 {
-    struct core_event_buffer *buffer = &priv.event_buffer;
+    struct event_buffer *buffer = &priv.event_buffer;
 
     if (buffer->length == buffer->capacity) {
         size_t next_capacity = buffer->capacity == 0 ? 256 : buffer->capacity * 2;
-        void *next_array = realloc(buffer->array, sizeof(struct qx_event) * next_capacity);
+        void *next_array = realloc(buffer->array, sizeof(*(buffer->array)) * next_capacity);
 
         if (!next_array) {
             QU_HALT("Out of memory: unable to grow event buffer.");
@@ -436,31 +444,30 @@ void qx_core_push_event(struct qx_event const *event)
         buffer->capacity = next_capacity;
     }
 
-    memcpy(&buffer->array[buffer->length++], event, sizeof(struct qx_event));
+    memcpy(&buffer->array[buffer->length++], event, sizeof(*event));
 }
 
 //------------------------------------------------------------------------------
-// API entries
+// Public API
 
-char const *qx_core_get_window_title(void)
+char const *qu_get_window_title(void)
 {
     return priv.window_title;
 }
 
-void qx_core_set_window_title(char const *title)
+void qu_set_window_title(char const *title)
 {
     if (priv.impl->set_window_title(title)) {
         strncpy(priv.window_title, title, WINDOW_TITLE_LENGTH);
     }
 }
 
-void qx_core_get_window_size(int *width, int *height)
+qu_vec2i qu_get_window_size(void)
 {
-    *width = priv.window_width;
-    *height = priv.window_height;
+    return (qu_vec2i) { priv.window_width, priv.window_height };
 }
 
-void qx_core_set_window_size(int width, int height)
+void qu_set_window_size(int width, int height)
 {
     if (priv.impl->set_window_size(width, height)) {
         priv.window_width = width;
@@ -468,7 +475,7 @@ void qx_core_set_window_size(int width, int height)
     }
 }
 
-bool qx_core_is_window_active(void)
+bool qu_is_window_active(void)
 {
     return priv.window_active;
 }
@@ -517,12 +524,12 @@ bool qu_is_mouse_button_pressed(qu_mouse_button button)
 
 qu_vec2i qu_get_mouse_cursor_position(void)
 {
-    return qu__graphics_conv_cursor(priv.mouse_cursor_position);
+    return qu_convert_window_pos_to_canvas_pos(priv.mouse_cursor_position);
 }
 
 qu_vec2i qu_get_mouse_cursor_delta(void)
 {
-    return qu__graphics_conv_cursor_delta(priv.mouse_cursor_delta);
+    return qu_convert_window_delta_to_canvas_delta(priv.mouse_cursor_delta);
 }
 
 qu_vec2i qu_get_mouse_wheel_delta(void)
@@ -550,24 +557,24 @@ void qu_on_mouse_wheel_scrolled(qu_mouse_wheel_fn fn)
     priv.mouse_wheel_scroll_fn = fn;
 }
 
-bool qx_core_is_touch_pressed(int index)
+bool qu_is_touch_pressed(int index)
 {
     return priv.touch_state[index];
 }
 
-bool qx_core_get_touch_position(int index, int *x, int *y)
+qu_vec2i qu_get_touch_position(int index)
 {
+    if (index < 0 || index >= QU_MAX_TOUCH_INPUTS) {
+        return (qu_vec2i) { -1, -1 };
+    }
+
     if (!priv.touch_state[index]) {
-        return false;
+        return (qu_vec2i) { -1, -1 };
     }
 
     qu_vec2i position = { priv.touch_position[index].x, priv.touch_position[index].y };
-    qu_vec2i conv = qu__graphics_conv_cursor(position);
 
-    *x = conv.x;
-    *y = conv.y;
-
-    return true;
+    return qu_convert_window_pos_to_canvas_pos(position);
 }
 
 bool qu_is_joystick_connected(int joystick)

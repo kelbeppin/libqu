@@ -108,7 +108,7 @@ static void joystick_linux__process(void)
         if (errno != EAGAIN) {
             close(priv.device[i].fd);
 
-            QU_INFO("Joystick '%s' disconnected.\n", priv.device[i].id);
+            QU_LOGI("Joystick '%s' disconnected.\n", priv.device[i].id);
 
             memset(&priv.device[i], 0, sizeof(priv.device[i]));
 
@@ -154,9 +154,9 @@ static bool joystick_linux__is_connected(int id)
 
     priv.device[id].fd = fd;
 
-    QU_INFO("Joystick '%s' connected.\n", priv.device[id].id);
-    QU_INFO("# of buttons: %d.\n", priv.device[id].button_count);
-    QU_INFO("# of axes: %d.\n", priv.device[id].axis_count);
+    QU_LOGI("Joystick '%s' connected.\n", priv.device[id].id);
+    QU_LOGI("# of buttons: %d.\n", priv.device[id].button_count);
+    QU_LOGI("# of axes: %d.\n", priv.device[id].axis_count);
 
     return true;
 }
@@ -310,7 +310,7 @@ static float joystick_linux__get_axis_value(int id, int axis)
 
 //------------------------------------------------------------------------------
 
-struct qu__joystick const qu__joystick_linux = {
+qu_joystick_impl const qu_linux_joystick_impl = {
 	.initialize = joystick_linux__initialize,
 	.terminate = joystick_linux__terminate,
     .process = joystick_linux__process,
