@@ -147,6 +147,35 @@ static bool is_joystick_impl_valid(qu_joystick_impl const *joystick)
         && joystick->get_axis_value;
 }
 
+static void initialize_joystick(void)
+{
+    if (priv.joystick) {
+        return;
+    }
+
+    int impl_count = QU_ARRAY_SIZE(joystick_impl_list);
+
+    if (impl_count == 0) {
+        QU_HALT("No joystick implementation found.");
+    }
+
+    for (int i = 0; i < impl_count; i++) {
+        priv.joystick = joystick_impl_list[i];
+
+        if (priv.joystick->precheck(NULL) == QU_SUCCESS) {
+            break;
+        }
+    }
+
+    if (!is_joystick_impl_valid(priv.joystick)) {
+        QU_HALT("Joystick module implementation is invalid.");
+    }
+
+    if (priv.joystick->initialize(NULL) != QU_SUCCESS) {
+        QU_HALT("Failed to initialize joystick module.");
+    }
+}
+
 static void initialize_clock(void)
 {
     if (priv.clock.initialized) {
@@ -307,14 +336,9 @@ static void handle_touch_motion(qu_touch_event const *event)
 void qu_initialize_core(qu_params const *params)
 {
     int core_impl_count = QU_ARRAY_SIZE(core_impl_list);
-    int joystick_impl_count = QU_ARRAY_SIZE(joystick_impl_list);
 
     if (core_impl_count == 0) {
         QU_HALT("core_impl_count == 0");
-    }
-
-    if (joystick_impl_count == 0) {
-        QU_HALT("joystick_impl_count == 0");
     }
 
     for (int i = 0; i < core_impl_count; i++) {
@@ -325,28 +349,12 @@ void qu_initialize_core(qu_params const *params)
         }
     }
 
-    for (int i = 0; i < joystick_impl_count; i++) {
-        priv.joystick = joystick_impl_list[i];
-
-        if (priv.joystick->precheck(params) == QU_SUCCESS) {
-            break;
-        }
-    }
-
     if (!is_core_impl_valid(priv.impl)) {
         QU_HALT("Core module implementation is invalid.");
     }
 
-    if (!is_joystick_impl_valid(priv.joystick)) {
-        QU_HALT("Joystick module implementation is invalid.");
-    }
-
 	if (priv.impl->initialize(params) != QU_SUCCESS) {
         QU_HALT("Failed to initialize core module.");
-    }
-
-    if (priv.joystick->initialize(params) != QU_SUCCESS) {
-        QU_HALT("Failed to initialize joystick module.");
     }
 
     // Temporary:
@@ -358,7 +366,10 @@ void qu_initialize_core(qu_params const *params)
 
 void qu_terminate_core(void)
 {
-    priv.joystick->terminate();
+    if (priv.joystick) {
+        priv.joystick->terminate();
+    }
+
 	priv.impl->terminate();
 
     memset(&priv, 0, sizeof(priv));
@@ -442,7 +453,9 @@ bool qu_handle_events(void)
         }
     }
 
-    priv.joystick->process();
+    if (priv.joystick) {
+        priv.joystick->process();
+    }
 
     return true;
 }
@@ -618,41 +631,73 @@ qu_vec2i qu_get_touch_position(int index)
 
 bool qu_is_joystick_connected(int joystick)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->is_connected(joystick);
 }
 
 char const *qu_get_joystick_id(int joystick)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->get_name(joystick);
 }
 
 int qu_get_joystick_button_count(int joystick)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->get_button_count(joystick);
 }
 
 int qu_get_joystick_axis_count(int joystick)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->get_axis_count(joystick);
 }
 
 char const *qu_get_joystick_button_id(int joystick, int button)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->get_button_name(joystick, button);
 }
 
 char const *qu_get_joystick_axis_id(int joystick, int axis)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->get_axis_name(joystick, axis);
 }
 
 bool qu_is_joystick_button_pressed(int joystick, int button)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->is_button_pressed(joystick, button);
 }
 
 float qu_get_joystick_axis_value(int joystick, int axis)
 {
+    if (!priv.joystick) {
+        initialize_joystick();
+    }
+
     return priv.joystick->get_axis_value(joystick, axis);
 }
 
