@@ -99,7 +99,6 @@ void qu_initialize(qu_params const *user_params)
 
     qu_initialize_core(&qu.params);
     qu_initialize_graphics(&qu.params);
-    qu_initialize_audio(&qu.params);
     qu_initialize_text();
 
     qu.status = QU_STATUS_INITIALIZED;
@@ -109,7 +108,6 @@ void qu_terminate(void)
 {
     if (qu.status == QU_STATUS_INITIALIZED) {
         qu_terminate_text();
-        qu_terminate_audio();
         qu_terminate_graphics();
         qu_terminate_core();
 
@@ -119,6 +117,8 @@ void qu_terminate(void)
     for (int i = (priv.total_exit_handlers - 1); i >= 0; i--) {
         priv.exit_handlers[i]();
     }
+
+    memset(&priv, 0, sizeof(priv));
 }
 
 bool qu_process(void)

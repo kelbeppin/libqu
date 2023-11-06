@@ -88,6 +88,8 @@ struct voice
 
 struct audio_priv
 {
+    bool initialized;
+
     struct qu_audio_impl const *impl;
     pl_mutex *mutex;
 
@@ -496,7 +498,10 @@ static int32_t play_music(struct music *music, int loop)
 
 void qu_initialize_audio(qu_params const *params)
 {
-    memset(&priv, 0, sizeof(priv));
+    if (priv.initialized) {
+        QU_LOGW("Attempt to initialized audio, but it's initialized already.\n");
+        return;
+    }
 
     // Select audio engine implementation.
 
@@ -559,10 +564,23 @@ void qu_initialize_audio(qu_params const *params)
     // such as pausing and resuming. Thus we can assure that music
     // playback in the background is more robust.
     priv.mutex = pl_create_mutex();
+
+    // Mark as initialized.
+    priv.initialized = true;
+
+    // Terminate at exit.
+    qu_atexit(qu_terminate_audio);
+
+    QU_LOGI("Initialized.\n");
 }
 
 void qu_terminate_audio(void)
 {
+    if (!priv.initialized) {
+        QU_LOGW("Can't terminate audio, not initialized.\n");
+        return;
+    }
+
     for (int i = 0; i < MAX_VOICES; i++) {
         if (priv.voices[i].type == VOICE_TYPE_NONE) {
             continue;
@@ -575,6 +593,10 @@ void qu_terminate_audio(void)
     qu_destroy_handle_list(priv.music);
 
     priv.impl->terminate();
+
+    memset(&priv, 0, sizeof(priv));
+
+    QU_LOGI("Terminated.\n");
 }
 
 //------------------------------------------------------------------------------
@@ -582,11 +604,19 @@ void qu_terminate_audio(void)
 
 void qu_set_master_volume(float volume)
 {
+    if (!priv.initialized) {
+        qu_initialize_audio(NULL);
+    }
+
     priv.impl->set_master_volume(volume);
 }
 
 qu_sound qu_load_sound(char const *path)
 {
+    if (!priv.initialized) {
+        qu_initialize_audio(NULL);
+    }
+
     qu_file *file = qu_open_file_from_path(path);
 
     if (!file) {
@@ -602,12 +632,21 @@ qu_sound qu_load_sound(char const *path)
 
 void qu_delete_sound(qu_sound handle)
 {
+    // How can we delete a sound if audio isn't even initialized?
+    if (!priv.initialized) {
+        return;
+    }
+
     // Destructor will be triggered, see sound_dtor().
     qu_handle_list_remove(priv.sounds, handle.id);
 }
 
 qu_voice qu_play_sound(qu_sound handle)
 {
+    if (!priv.initialized) {
+        return (qu_voice) { 0 };
+    }
+
     // Get sound object from the sound array.
     struct sound *sound = qu_handle_list_get(priv.sounds, handle.id);
 
@@ -622,6 +661,10 @@ qu_voice qu_play_sound(qu_sound handle)
 
 qu_voice qu_loop_sound(qu_sound handle)
 {
+    if (!priv.initialized) {
+        return (qu_voice) { 0 };
+    }
+
     // Get sound object from the sound array.
     struct sound *sound = qu_handle_list_get(priv.sounds, handle.id);
 
@@ -636,6 +679,10 @@ qu_voice qu_loop_sound(qu_sound handle)
 
 qu_music qu_open_music(char const *path)
 {
+    if (!priv.initialized) {
+        qu_initialize_audio(NULL);
+    }
+
     qu_file *file = qu_open_file_from_path(path);
 
     if (!file) {
@@ -659,12 +706,20 @@ qu_music qu_open_music(char const *path)
 
 void qu_close_music(qu_music handle)
 {
+    if (!priv.initialized) {
+        return;
+    }
+
     // Destructor will be triggered, see music_dtor().
     qu_handle_list_remove(priv.music, handle.id);
 }
 
 qu_voice qu_play_music(qu_music handle)
 {
+    if (!priv.initialized) {
+        return (qu_voice) { 0 };
+    }
+
     struct music *music = qu_handle_list_get(priv.music, handle.id);
 
     if (!music) {
@@ -677,6 +732,10 @@ qu_voice qu_play_music(qu_music handle)
 
 qu_voice qu_loop_music(qu_music handle)
 {
+    if (!priv.initialized) {
+        return (qu_voice) { 0 };
+    }
+
     struct music *music = qu_handle_list_get(priv.music, handle.id);
 
     if (!music) {
@@ -689,6 +748,10 @@ qu_voice qu_loop_music(qu_music handle)
 
 void qu_pause_voice(qu_voice handle)
 {
+    if (!priv.initialized) {
+        return;
+    }
+
     struct voice *voice = id_to_voice(handle.id);
 
     if (!voice) {
@@ -713,6 +776,10 @@ void qu_pause_voice(qu_voice handle)
 
 void qu_unpause_voice(qu_voice handle)
 {
+    if (!priv.initialized) {
+        return;
+    }
+
     struct voice *voice = id_to_voice(handle.id);
 
     if (!voice) {
@@ -737,6 +804,10 @@ void qu_unpause_voice(qu_voice handle)
 
 void qu_stop_voice(qu_voice handle)
 {
+    if (!priv.initialized) {
+        return;
+    }
+
     struct voice *voice = id_to_voice(handle.id);
 
     if (!voice) {
