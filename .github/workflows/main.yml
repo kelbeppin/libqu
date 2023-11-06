@@ -40,6 +40,8 @@ jobs:
           compiler: { name: msvc }
         - os: { name: linux }
           arch: x86
+        - os: { name: linux }
+          config: { name: shared }
 
     steps:
     - uses: actions/checkout@v3
