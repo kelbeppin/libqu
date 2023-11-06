@@ -366,6 +366,8 @@ void qu_initialize_core(qu_params const *params)
 
 void qu_terminate_core(void)
 {
+    pl_free(priv.event_buffer.array);
+
     if (priv.joystick) {
         priv.joystick->terminate();
     }
