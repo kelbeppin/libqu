@@ -295,7 +295,7 @@ static qu_result initialize(qu_params const *params)
     impl.colormap = XCreateColormap(impl.display, impl.root, vi->visual, AllocNone);
     impl.event_mask = ExposureMask | KeyPressMask | KeyReleaseMask |
         PointerMotionMask | ButtonPressMask | ButtonReleaseMask |
-        StructureNotifyMask;
+        StructureNotifyMask | EnterWindowMask | LeaveWindowMask;
 
     qu_vec2i window_size = qu_get_window_size();
 
@@ -539,6 +539,12 @@ static bool process(void)
                 qu_event_window_resize(impl.width, impl.height);
             }
 
+            break;
+        case EnterNotify:
+            qu_enqueue_event(&(qu_event) { QU_EVENT_TYPE_ACTIVATE });
+            break;
+        case LeaveNotify:
+            qu_enqueue_event(&(qu_event) { QU_EVENT_TYPE_DEACTIVATE });
             break;
         default:
             QU_LOGD("Unhandled event: 0x%04x\n", event.type);
