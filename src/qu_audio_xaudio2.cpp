@@ -66,15 +66,15 @@ static struct xa2_module const xa2_modules[] = {
 class xa2_engine_callback : public IXAudio2EngineCallback
 {
 public:
-    virtual void OnProcessingPassStart()
+    virtual void WINAPI OnProcessingPassStart()
     {
     }
 
-    virtual void OnProcessingPassEnd()
+    virtual void WINAPI OnProcessingPassEnd()
     {
     }
 
-    virtual void OnCriticalError(HRESULT error)
+    virtual void WINAPI OnCriticalError(HRESULT error)
     {
     }
 };
@@ -82,31 +82,31 @@ public:
 class xa2_source_callback : public IXAudio2VoiceCallback
 {
 public:
-    virtual void OnVoiceProcessingPassStart(UINT32 bytesRequired)
+    virtual void WINAPI OnVoiceProcessingPassStart(UINT32 bytesRequired)
     {
     }
 
-    virtual void OnVoiceProcessingPassEnd()
+    virtual void WINAPI OnVoiceProcessingPassEnd()
     {
     }
 
-    virtual void OnStreamEnd()
+    virtual void WINAPI OnStreamEnd()
     {
     }
 
-    virtual void OnBufferStart(void *context)
+    virtual void WINAPI OnBufferStart(void *context)
     {
     }
 
-    virtual void OnBufferEnd(void *context)
+    virtual void WINAPI OnBufferEnd(void *context)
     {
     }
 
-    virtual void OnLoopEnd(void *context)
+    virtual void WINAPI OnLoopEnd(void *context)
     {
     }
 
-    virtual void OnVoiceError(void *context, HRESULT error)
+    virtual void WINAPI OnVoiceError(void *context, HRESULT error)
     {
     }
 };
