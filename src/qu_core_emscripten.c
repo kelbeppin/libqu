@@ -429,7 +429,6 @@ static qu_result initialize(qu_params const *params)
     });
 
     char const *document = EMSCRIPTEN_EVENT_TARGET_DOCUMENT;
-    char const *canvas = "!canvas";
 
     // Set keyboard event handlers.
 
@@ -455,7 +454,7 @@ static qu_result initialize(qu_params const *params)
 
     // Create WebGL context.
 
-    priv.gl = emscripten_webgl_create_context(canvas, &(EmscriptenWebGLContextAttributes) {
+    priv.gl = emscripten_webgl_create_context("!canvas", &(EmscriptenWebGLContextAttributes) {
         .alpha = EM_TRUE,
         .depth = EM_TRUE,
         .stencil = EM_TRUE,
@@ -484,14 +483,6 @@ static qu_result initialize(qu_params const *params)
     if (!emscripten_webgl_enable_extension(priv.gl, "OES_vertex_array_object")) {
         QU_LOGI("OES_vertex_array_object is not available.\n");
     }
-
-    // Set proper canvas size.
-
-    int width = params->display_width;
-    int height = params->display_height;
-
-    CHECK_EMSCRIPTEN(emscripten_set_canvas_element_size(canvas, width, height),
-        "Unable to set HTML canvas size.");
 
     // Done.
 
@@ -551,6 +542,8 @@ static qu_vec2i get_window_size(void)
 
 static void set_window_size(int width, int height)
 {
+    CHECK_EMSCRIPTEN(emscripten_set_canvas_element_size("!canvas", width, height),
+        "Unable to set HTML canvas size.");
 }
 
 //------------------------------------------------------------------------------
