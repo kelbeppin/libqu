@@ -17,11 +17,15 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu.c: Gateway
+//------------------------------------------------------------------------------
 
 #include "qu.h"
 
 //------------------------------------------------------------------------------
-// qu.c: Gateway
+
+#define MAX_EXIT_HANDLERS       (32)
+
 //------------------------------------------------------------------------------
 
 enum qu_status
@@ -37,9 +41,29 @@ struct qu
     qu_params params;
 };
 
+struct gateway_priv
+{
+    void (*exit_handlers[MAX_EXIT_HANDLERS])(void);
+    int total_exit_handlers;
+};
+
 static struct qu qu;
+static struct gateway_priv priv;
 
 //------------------------------------------------------------------------------
+// Internal API
+
+void qu_atexit(void (*callback)(void))
+{
+    if (priv.total_exit_handlers == MAX_EXIT_HANDLERS) {
+        return;
+    }
+
+    priv.exit_handlers[priv.total_exit_handlers++] = callback;
+}
+
+//------------------------------------------------------------------------------
+// Public API
 
 void qu_initialize(qu_params const *user_params)
 {
@@ -90,6 +114,10 @@ void qu_terminate(void)
         qu_terminate_core();
 
         qu.status = QU_STATUS_TERMINATED;
+    }
+
+    for (int i = (priv.total_exit_handlers - 1); i >= 0; i--) {
+        priv.exit_handlers[i]();
     }
 }
 

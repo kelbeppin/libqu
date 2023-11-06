@@ -427,6 +427,8 @@ void *pl_open_dll(char const *path);
 void pl_close_dll(void *dll);
 void *pl_get_dll_proc(void *dll, char const *name);
 
+void qu_atexit(void (*callback)(void));
+
 void qu_mat4_identity(qu_mat4 *mat);
 void qu_mat4_copy(qu_mat4 *dst, qu_mat4 const *src);
 void qu_mat4_multiply(qu_mat4 *a, qu_mat4 const *b);
