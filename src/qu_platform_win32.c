@@ -51,22 +51,8 @@ struct pl_mutex
 
 //------------------------------------------------------------------------------
 
-static double      frequency_highp;
-static double      start_highp;
-static float       start_mediump;
-
-//------------------------------------------------------------------------------
-
 void pl_initialize(void)
 {
-    LARGE_INTEGER perf_clock_frequency, perf_clock_count;
-
-    QueryPerformanceFrequency(&perf_clock_frequency);
-    QueryPerformanceCounter(&perf_clock_count);
-
-    frequency_highp = (double) perf_clock_frequency.QuadPart;
-    start_highp = (double) perf_clock_count.QuadPart / frequency_highp;
-    start_mediump = (float) GetTickCount() / 1000.f;
 }
 
 void pl_terminate(void)
@@ -98,19 +84,29 @@ void pl_free(void *data)
 //------------------------------------------------------------------------------
 // Clock
 
-float qu_get_time_mediump(void)
+uint32_t pl_get_ticks_mediump(void)
 {
-    float seconds = (float) GetTickCount() / 1000.f;
-    return seconds - start_mediump;
+    return GetTickCount();
 }
 
-double qu_get_time_highp(void)
+uint64_t pl_get_ticks_highp(void)
 {
-    LARGE_INTEGER perf_clock_counter;
-    QueryPerformanceCounter(&perf_clock_counter);
+    static LARGE_INTEGER frequency = { 0 };
 
-    double seconds = (double) perf_clock_counter.QuadPart / frequency_highp;
-    return seconds - start_highp;
+    if (frequency.QuadPart == 0) {
+        if (!QueryPerformanceFrequency(&frequency)) {
+            frequency.QuadPart = -1;
+        }
+    }
+
+    if (frequency.QuadPart == -1) {
+        return GetTickCount() * 1000000;
+    }
+
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
+
+    return (counter.QuadPart * 1000000000) / frequency.QuadPart;
 }
 
 //------------------------------------------------------------------------------

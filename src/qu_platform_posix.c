@@ -55,18 +55,8 @@ struct pl_mutex
 
 //------------------------------------------------------------------------------
 
-static uint64_t start_mediump;
-static double start_highp;
-
-//------------------------------------------------------------------------------
-
 void pl_initialize(void)
 {
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-
-    start_mediump = (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
-    start_highp = (double) ts.tv_sec + (ts.tv_nsec / 1.0e9);
 }
 
 void pl_terminate(void)
@@ -98,21 +88,20 @@ void pl_free(void *data)
 //------------------------------------------------------------------------------
 // Clock
 
-float qu_get_time_mediump(void)
+uint32_t pl_get_ticks_mediump(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    unsigned long long msec = (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
-    return (msec - start_mediump) / 1000.0f;
+    return (ts.tv_sec * 1000) + (ts.tv_nsec / 1000000);
 }
 
-double qu_get_time_highp(void)
+uint64_t pl_get_ticks_highp(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    return (double) ts.tv_sec + (ts.tv_nsec / 1.0e9) - start_highp;
+    return (ts.tv_sec * 1000000000) + ts.tv_nsec;
 }
 
 //------------------------------------------------------------------------------

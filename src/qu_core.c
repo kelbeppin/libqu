@@ -75,6 +75,13 @@ struct event_buffer
     size_t capacity;
 };
 
+struct core_clock
+{
+    bool initialized;
+    uint32_t start_mediump;
+    uint64_t start_highp;
+};
+
 struct core_priv
 {
 	qu_core_impl const *impl;
@@ -104,11 +111,24 @@ struct core_priv
     qu_vec2i touch_delta[QU_MAX_TOUCH_INPUTS];
 
     struct event_buffer event_buffer;
+
+    struct core_clock clock;
 };
 
 static struct core_priv priv;
 
 //------------------------------------------------------------------------------
+
+static void initialize_clock(void)
+{
+    if (priv.clock.initialized) {
+        return;
+    }
+
+    priv.clock.initialized = true;
+    priv.clock.start_mediump = pl_get_ticks_mediump();
+    priv.clock.start_highp = pl_get_ticks_highp();
+}
 
 static void handle_key_press(qu_keyboard_event const *event)
 {
@@ -615,4 +635,22 @@ bool qu_is_joystick_button_pressed(int joystick, int button)
 float qu_get_joystick_axis_value(int joystick, int axis)
 {
     return priv.joystick->get_axis_value(joystick, axis);
+}
+
+float qu_get_time_mediump(void)
+{
+    if (!priv.clock.initialized) {
+        initialize_clock();
+    }
+
+    return (pl_get_ticks_mediump() - priv.clock.start_mediump) / 1000.f;
+}
+
+double qu_get_time_highp(void)
+{
+    if (!priv.clock.initialized) {
+        initialize_clock();
+    }
+
+    return (pl_get_ticks_highp() - priv.clock.start_highp) / 1000000000.0;
 }
