@@ -426,6 +426,7 @@ void pl_sleep(double seconds);
 void *pl_open_dll(char const *path);
 void pl_close_dll(void *dll);
 void *pl_get_dll_proc(void *dll, char const *name);
+void pl_get_date_time(qu_date_time *date_time);
 
 void qu_atexit(void (*callback)(void));
 

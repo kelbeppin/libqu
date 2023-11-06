@@ -508,6 +508,20 @@ typedef struct qu_keyboard_state
 } qu_keyboard_state;
 
 /**
+ * Structure that represents date and time (in Gregorian calendar).
+ */
+typedef struct qu_date_time
+{
+    int year;                       /*!< Year (e.g. 2022) */
+    int month;                      /*!< Month (1: Jan, 2: Feb, etc) */
+    int day;                        /*!< Day (1-31) */
+    int weekday;                    /*!< Weekday (1: Mon, 2: Tue, 3: Wed, etc) */
+    int hours;                      /*!< Hours (0-23) */
+    int minutes;                    /*!< Minutes (0-59) */
+    int seconds;                    /*!< Seconds (0-59) */
+} qu_date_time;
+
+/**
  * Blend mode.
  *
  * This structure defines the blending mode.
@@ -978,6 +992,15 @@ QU_API float QU_CALL qu_get_time_mediump(void);
  *         nanosecond precision.
  */
 QU_API double QU_CALL qu_get_time_highp(void);
+
+/**
+ * Get current system date and time.
+ * 
+ * This function returns a struct that holds current date and time.
+ * 
+ * @return Current date and time.
+ */
+QU_API qu_date_time QU_CALL qu_get_date_time(void);
 
 /**@}*/
 /**@}*/

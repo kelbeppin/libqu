@@ -281,3 +281,22 @@ void *pl_get_dll_proc(void *library, char const *name)
 
     return NULL;
 }
+
+//------------------------------------------------------------------------------
+// Date & Time
+
+void pl_get_date_time(qu_date_time *date_time)
+{
+    SYSTEMTIME localTime = { 0 };
+
+    GetLocalTime(&localTime);
+
+    date_time->year = localTime.wYear;
+    date_time->month = localTime.wMonth;
+    date_time->day = localTime.wDay;
+    date_time->weekday = (localTime.wDayOfWeek == 0) ? 7 : localTime.wDayOfWeek;
+
+    date_time->hours = localTime.wHour;
+    date_time->minutes = localTime.wMinute;
+    date_time->seconds = localTime.wSecond;
+}

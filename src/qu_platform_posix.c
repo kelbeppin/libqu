@@ -241,3 +241,21 @@ void *pl_get_dll_proc(void *library, char const *name)
 
     return NULL;
 }
+
+//------------------------------------------------------------------------------
+// Date & Time
+
+void pl_get_date_time(qu_date_time *date_time)
+{
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+
+    date_time->year = 1900 + tm->tm_year;
+    date_time->month = 1 + tm->tm_mon;
+    date_time->day = tm->tm_mday;
+    date_time->weekday = (tm->tm_wday == 0) ? 7 : tm->tm_wday;
+
+    date_time->hours = tm->tm_hour;
+    date_time->minutes = tm->tm_min;
+    date_time->seconds = tm->tm_sec;
+}

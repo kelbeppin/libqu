@@ -654,3 +654,12 @@ double qu_get_time_highp(void)
 
     return (pl_get_ticks_highp() - priv.clock.start_highp) / 1000000000.0;
 }
+
+qu_date_time qu_get_date_time(void)
+{
+    qu_date_time date_time = { 0 };
+
+    pl_get_date_time(&date_time);
+
+    return date_time;
+}
