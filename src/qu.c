@@ -73,7 +73,6 @@ void qu_initialize(qu_params const *user_params)
         qu.params.canvas_height = qu.params.display_height;
     }
 
-    pl_initialize();
     qu_initialize_core(&qu.params);
     qu_initialize_graphics(&qu.params);
     qu_initialize_audio(&qu.params);
@@ -89,7 +88,6 @@ void qu_terminate(void)
         qu_terminate_audio();
         qu_terminate_graphics();
         qu_terminate_core();
-        pl_terminate();
 
         qu.status = QU_STATUS_TERMINATED;
     }

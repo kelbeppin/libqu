@@ -409,8 +409,6 @@ extern qu_audio_impl const qu_sles_audio_impl;
 
 //------------------------------------------------------------------------------
 
-void pl_initialize(void);
-void pl_terminate(void);
 void *pl_malloc(size_t size);
 void *pl_calloc(size_t count, size_t size);
 void *pl_realloc(void *data, size_t size);

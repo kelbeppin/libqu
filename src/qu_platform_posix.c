@@ -55,16 +55,6 @@ struct pl_mutex
 
 //------------------------------------------------------------------------------
 
-void pl_initialize(void)
-{
-}
-
-void pl_terminate(void)
-{
-}
-
-//------------------------------------------------------------------------------
-
 void *pl_malloc(size_t size)
 {
     return malloc(size);
