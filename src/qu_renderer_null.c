@@ -31,15 +31,15 @@ static bool query(qu_params const *params)
 
 static void initialize(qu_params const *params)
 {
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 }
 
 static void terminate(void)
 {
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
-static void upload_vertex_data(enum qu__vertex_format format, float const *data, size_t size)
+static void upload_vertex_data(qu_vertex_format format, float const *data, size_t size)
 {
 }
 
@@ -51,11 +51,11 @@ static void apply_transform(qu_mat4 const *transform)
 {
 }
 
-static void apply_surface(struct qu__surface const *surface)
+static void apply_surface(qu_surface_obj const *surface)
 {
 }
 
-static void apply_texture(struct qu__texture const *texture)
+static void apply_texture(qu_texture_obj const *texture)
 {
 }
 
@@ -67,11 +67,11 @@ static void apply_draw_color(qu_color color)
 {
 }
 
-static void apply_brush(enum qu__brush brush)
+static void apply_brush(qu_brush brush)
 {
 }
 
-static void apply_vertex_format(enum qu__vertex_format format)
+static void apply_vertex_format(qu_vertex_format format)
 {
 }
 
@@ -87,37 +87,37 @@ static void exec_clear(void)
 {
 }
 
-static void exec_draw(enum qu__render_mode mode, unsigned int first_vertex, unsigned int total_vertices)
+static void exec_draw(qu_render_mode mode, unsigned int first_vertex, unsigned int total_vertices)
 {
 }
 
-static void load_texture(struct qu__texture *texture)
+static void load_texture(qu_texture_obj *texture)
 {
 }
 
-static void unload_texture(struct qu__texture *texture)
+static void unload_texture(qu_texture_obj *texture)
 {
 }
 
-static void set_texture_smooth(struct qu__texture *texture, bool smooth)
+static void set_texture_smooth(qu_texture_obj *texture, bool smooth)
 {
 }
 
-static void create_surface(struct qu__surface *surface)
+static void create_surface(qu_surface_obj *surface)
 {
 }
 
-static void destroy_surface(struct qu__surface *surface)
+static void destroy_surface(qu_surface_obj *surface)
 {
 }
 
-static void set_surface_antialiasing_level(struct qu__surface *surface, int level)
+static void set_surface_antialiasing_level(qu_surface_obj *surface, int level)
 {
 }
 
 //------------------------------------------------------------------------------
 
-struct qu__renderer_impl const qu__renderer_null = {
+qu_renderer_impl const qu_null_renderer_impl = {
     .query = query,
     .initialize = initialize,
     .terminate = terminate,

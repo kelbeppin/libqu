@@ -17,254 +17,228 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "fs"
-#include "qu.h"
-
-//------------------------------------------------------------------------------
 // qu_fs.c: filesystem abstraction
 //------------------------------------------------------------------------------
 
-#define FILE_SOURCE_DEFAULT         0   // Standard C file stream (FILE *)
-#define FILE_SOURCE_SYSTEM          1   // System-specific (e.g. Android's AAsset)
-#define FILE_SOURCE_MEMORY          2   // Buffer stored in memory
+#define QU_MODULE "fs"
 
 //------------------------------------------------------------------------------
 
-struct file_callbacks
-{
-    int64_t (*read)(void *dst, size_t size, void *handle);
-    int64_t (*tell)(void *handle);
-    int64_t (*seek)(void *handle, int64_t offset, int whence);
-    size_t (*get_size)(void *handle);
-    void (*close)(void *handle);
-};
+#include "qu.h"
 
-struct membuf
+//------------------------------------------------------------------------------
+
+static void *fs_std_open(char const *path)
+{
+    return fopen(path, "rb");
+}
+
+static void fs_std_close(void *context)
+{
+    fclose((FILE *) context);
+}
+
+static int64_t fs_std_read(void *dst, size_t size, void *context)
+{
+    FILE *stream = (FILE *) context;
+    
+    return fread(dst, 1, size, stream);
+}
+
+static int64_t fs_std_tell(void *context)
+{
+    FILE *stream = (FILE *) context;
+    
+    return ftell(stream);
+}
+
+static int64_t fs_std_seek(void *context, int64_t offset, int origin)
+{
+    FILE *stream = (FILE *) context;
+    
+    return fseek(stream, offset, origin);
+}
+
+//------------------------------------------------------------------------------
+
+struct fs_memory_buffer
 {
     void const *data;
     size_t size;
     int64_t offset;
 };
 
-struct qx_file
+static void fs_memory_buffer_close(void *context)
 {
-    int source;
-    char name[256];
-    void *handle;
-};
-
-//------------------------------------------------------------------------------
-
-static int64_t fread_(void *dst, size_t size, void *handle)
-{
-    return fread(dst, 1, size, (FILE *) handle);
+    // Actual data remains intact; this only frees fs_memory_buffer struct.
+    pl_free(context);
 }
 
-static int64_t ftell_(void *handle)
+static int64_t fs_memory_buffer_read(void *dst, size_t size, void *context)
 {
-    return ftell((FILE *) handle);
-}
+    struct fs_memory_buffer *buffer = context;
+    
+    // Count of bytes that should be read (copied).
+    int64_t bytes_to_read = size;
 
-static int64_t fseek_(void *handle, int64_t offset, int origin)
-{
-    return fseek((FILE *) handle, offset, origin);
-}
-
-static size_t get_file_size(void *handle)
-{
-    FILE *stream = (FILE *) handle;
-
-    size_t pos, size;
-
-    pos = ftell(stream);
-    fseek(stream, 0, SEEK_END);
-
-    size = ftell(stream);
-    fseek(stream, pos, SEEK_SET);
-
-    return size;
-}
-
-static void fclose_(void *handle)
-{
-    fclose((FILE *) handle);
-}
-
-//------------------------------------------------------------------------------
-
-static int64_t membuf_read(void *dst, size_t size, void *handle)
-{
-    struct membuf *membuf = (struct membuf *) handle;
-    int64_t bytes = 0;
-
-    if ((membuf->offset + size) <= membuf->size) {
-        bytes = size;
-    } else {
-        bytes = membuf->size - membuf->offset;
+    // Don't overrun the buffer.
+    if ((buffer->offset + size) > buffer->size) {
+        bytes_to_read = buffer->size - buffer->offset;
     }
 
-    memcpy(dst, (uint8_t const *) membuf->data + membuf->offset, bytes);
+    // Cast data pointer to byte pointer for pointer arithmetic.
+    unsigned char const *data_bytes = buffer->data;
 
-    return bytes;
+    // Copy to the destination buffer.
+    memcpy(dst, data_bytes + buffer->offset, bytes_to_read);
+    
+    // Advance offset.
+    buffer->offset += bytes_to_read;
+
+    return bytes_to_read;
 }
 
-static int64_t membuf_tell(void *handle)
+static int64_t fs_memory_buffer_tell(void *context)
 {
-    struct membuf *membuf = (struct membuf *) handle;
-    return membuf->offset;
+    return ((struct fs_memory_buffer *) context)->offset;
 }
 
-static int64_t membuf_seek(void *handle, int64_t offset, int origin)
+static int64_t fs_memory_buffer_seek(void *context, int64_t offset, int origin)
 {
-    struct membuf *membuf = (struct membuf *) handle;
-    int64_t abs_offset;
-
+    struct fs_memory_buffer *buffer = context;
+    
+    // Absolute offset.
+    int64_t abs_offset = offset;
+    
     if (origin == SEEK_CUR) {
-        abs_offset = membuf->offset + offset;
+        abs_offset = buffer->offset + offset;
     } else if (origin == SEEK_END) {
-        abs_offset = membuf->size + offset;
-    } else {
-        abs_offset = offset;
+        abs_offset = buffer->size + offset;
     }
-
-    if (abs_offset < 0 || abs_offset > (int64_t) membuf->size) {
+    
+    // Return -1 if offset is outside of bounds.
+    if (abs_offset < 0 || abs_offset > (int64_t) buffer->size) {
         return -1;
     }
-
-    membuf->offset = abs_offset;
+    
+    buffer->offset = abs_offset;
 
     return 0;
 }
 
-static size_t membuf_get_size(void *handle)
-{
-    struct membuf *membuf = (struct membuf *) handle;
-    return membuf->size;
-}
-
-static void membuf_close(void *handle)
-{
-    free(handle);
-}
-
 //------------------------------------------------------------------------------
 
-static struct file_callbacks const file_callback_table[] = {
-    [FILE_SOURCE_DEFAULT] = {
-        .read = fread_,
-        .tell = ftell_,
-        .seek = fseek_,
-        .get_size = get_file_size,
-        .close = fclose_,
+struct fs_callbacks
+{
+    void *(*open)(char const *path);
+    void (*close)(void *handle);
+    int64_t (*read)(void *dst, size_t size, void *handle);
+    int64_t (*tell)(void *handle);
+    int64_t (*seek)(void *handle, int64_t offset, int whence);
+};
+
+static struct fs_callbacks const fs_callbacks[] = {
+    [QU_FILE_SOURCE_STANDARD] = {
+        .open = fs_std_open,
+        .close = fs_std_close,
+        .read = fs_std_read,
+        .tell = fs_std_tell,
+        .seek = fs_std_seek,
     },
-    [FILE_SOURCE_SYSTEM] = {
-        .read = qx_sys_fread,
-        .tell = qx_sys_ftell,
-        .seek = qx_sys_fseek,
-        .get_size = qx_sys_get_file_size,
-        .close = qx_sys_fclose,
+#if defined(ANDROID)
+    [QU_FILE_SOURCE_ANDROID_ASSET] = {
+        .open = np_android_asset_open,
+        .close = np_android_asset_close,
+        .read = np_android_asset_read,
+        .tell = np_android_asset_tell,
+        .seek = np_android_asset_seek,
     },
-    [FILE_SOURCE_MEMORY] = {
-        .read = membuf_read,
-        .tell = membuf_tell,
-        .seek = membuf_seek,
-        .get_size = membuf_get_size,
-        .close = membuf_close,
+#endif // defined(ANDROID)
+    [QU_FILE_SOURCE_MEMORY_BUFFER] = {
+        .open = NULL,
+        .close = fs_memory_buffer_close,
+        .read = fs_memory_buffer_read,
+        .tell = fs_memory_buffer_tell,
+        .seek = fs_memory_buffer_seek,
     },
 };
 
 //------------------------------------------------------------------------------
 
-qx_file *qx_fopen(char const *path)
+qu_file *qu_open_file_from_path(char const *path)
 {
-    qx_file *file = malloc(sizeof(qx_file));
+    int source = -1;
+    void *context = NULL;
 
-    if (!file) {
-        QU_ERROR("malloc() returned NULL!\n");
+    for (int i = 0; i < QU_TOTAL_FILE_SOURCES; i++) {
+        if (!fs_callbacks[i].open) {
+            continue;
+        }
+
+        context = fs_callbacks[i].open(path);
+
+        if (context) {
+            source = i;
+            break;
+        }
+    }
+
+    if (source == -1 || !context) {
         return NULL;
     }
 
-    strncpy(file->name, path, sizeof(file->name) - 1);
+    qu_file *file = pl_malloc(sizeof(*file));
 
-    void *sys_file = qx_sys_fopen(path);
+    file->source = source;
+    file->context = context;
 
-    if (sys_file) {
-        file->source = FILE_SOURCE_SYSTEM;
-        file->handle = sys_file;
+    strncpy(file->name, path, sizeof(file->name));
 
-        QU_INFO("Successfully opened file %s using system-specific interface.\n", path);
+    fs_callbacks[file->source].seek(file->context, 0, SEEK_END);
+    file->size = (size_t) fs_callbacks[file->source].tell(file->context);
 
-        return file;
-    }
+    fs_callbacks[file->source].seek(file->context, 0, SEEK_SET);
 
-    FILE *std_file = fopen(path, "rb");
-
-    if (std_file) {
-        file->source = FILE_SOURCE_DEFAULT;
-        file->handle = std_file;
-
-        QU_INFO("Successfully opened file %s.\n", path);
-
-        return file;
-    }
-
-    free(file);
-
-    QU_ERROR("File %s is not found.\n", path);
-
-    return NULL;
+    return file;
 }
 
-qx_file *qx_membuf_to_file(void const *data, size_t size)
+qu_file *qu_open_file_from_buffer(void const *data, size_t size)
 {
-    qx_file *file = malloc(sizeof(qx_file));
-    struct membuf *buffer = malloc(sizeof(struct membuf));
-
-    if (!file || !buffer) {
-        QU_ERROR("malloc() returned NULL!\n");
-        return NULL;
-    }
+    struct fs_memory_buffer *buffer = pl_malloc(sizeof(*buffer));
 
     buffer->data = data;
     buffer->size = size;
     buffer->offset = 0;
 
-    file->source = FILE_SOURCE_MEMORY;
-    file->handle = buffer;
-
-    snprintf(file->name, sizeof(file->name) - 1, "%p", data);
-
+    qu_file *file = pl_malloc(sizeof(*file));
+    
+    file->source = QU_FILE_SOURCE_MEMORY_BUFFER;
+    file->context = buffer;
+    sprintf(file->name, "%p", data);
+    file->size = size;
+    
     return file;
 }
 
-int64_t qx_fread(void *buffer, size_t size, qx_file *file)
+void qu_close_file(qu_file *file)
 {
-    return file_callback_table[file->source].read(buffer, size, file->handle);
+    fs_callbacks[file->source].close(file->context);
+    QU_LOGD("Closed file %s.\n", file->name);
+
+    pl_free(file);
 }
 
-int64_t qx_ftell(qx_file *file)
+int64_t qu_file_read(void *buffer, size_t size, qu_file *file)
 {
-    return file_callback_table[file->source].tell(file->handle);
+    return fs_callbacks[file->source].read(buffer, size, file->context);
 }
 
-int64_t qx_fseek(qx_file *file, int64_t offset, int origin)
+int64_t qu_file_tell(qu_file *file)
 {
-    return file_callback_table[file->source].seek(file->handle, offset, origin);
+    return fs_callbacks[file->source].tell(file->context);
 }
 
-size_t qx_file_get_size(qx_file *file)
+int64_t qu_file_seek(qu_file *file, int64_t offset, int origin)
 {
-    return file_callback_table[file->source].get_size(file->handle);
-}
-
-char const *qx_file_get_name(qx_file *file)
-{
-    return file->name;
-}
-
-void qx_fclose(qx_file *file)
-{
-    file_callback_table[file->source].close(file->handle);
-    free(file);
+    return fs_callbacks[file->source].seek(file->context, offset, origin);
 }

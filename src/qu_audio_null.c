@@ -25,64 +25,64 @@
 
 //------------------------------------------------------------------------------
 
-static qx_result check(qu_params const *params)
+static qu_result check(qu_params const *params)
 {
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static qx_result initialize(qu_params const *params)
+static qu_result initialize(qu_params const *params)
 {
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 static void terminate(void)
 {
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
 static void set_master_volume(float volume)
 {
 }
 
-static qx_result create_source(qx_audio_source *source)
+static qu_result create_source(qu_audio_source *source)
 {
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static void destroy_source(qx_audio_source *source)
+static void destroy_source(qu_audio_source *source)
 {
 }
 
-static qx_result queue_buffer(qx_audio_source *source, qx_audio_buffer *buffer)
+static qu_result queue_buffer(qu_audio_source *source, qu_audio_buffer *buffer)
 {
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static int get_queued_buffers(qx_audio_source *source)
+static int get_queued_buffers(qu_audio_source *source)
 {
     return 0;
 }
 
-static bool is_source_used(qx_audio_source *source)
+static bool is_source_used(qu_audio_source *source)
 {
     return false;
 }
 
-static qx_result start_source(qx_audio_source *source)
+static qu_result start_source(qu_audio_source *source)
 {
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static qx_result stop_source(qx_audio_source *source)
+static qu_result stop_source(qu_audio_source *source)
 {
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
 
-qx_audio_impl const qx_audio_null = {
+qu_audio_impl const qu_null_audio_impl = {
     .check = check,
     .initialize = initialize,
     .terminate = terminate,

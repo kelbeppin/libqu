@@ -51,25 +51,25 @@ static void _check_gl(char const *call, char const *file, int line)
         return;
     }
     
-    QU_WARNING("OpenGL error(s) occured in %s:\n", file);
-    QU_WARNING("%4d: %s\n", line, call);
+    QU_LOGW("OpenGL error(s) occured in %s:\n", file);
+    QU_LOGW("%4d: %s\n", line, call);
 
     do {
         switch (error) {
         case GL_INVALID_ENUM:
-            QU_WARNING("-- GL_INVALID_ENUM\n");
+            QU_LOGW("-- GL_INVALID_ENUM\n");
             break;
         case GL_INVALID_VALUE:
-            QU_WARNING("-- GL_INVALID_VALUE\n");
+            QU_LOGW("-- GL_INVALID_VALUE\n");
             break;
         case GL_INVALID_OPERATION:
-            QU_WARNING("-- GL_INVALID_OPERATION\n");
+            QU_LOGW("-- GL_INVALID_OPERATION\n");
             break;
         case GL_OUT_OF_MEMORY:
-            QU_WARNING("-- GL_OUT_OF_MEMORY\n");
+            QU_LOGW("-- GL_OUT_OF_MEMORY\n");
             break;
         default:
-            QU_WARNING("-- 0x%04x\n", error);
+            QU_LOGW("-- 0x%04x\n", error);
             break;
         }
     } while ((error = glGetError()) != GL_NO_ERROR);
@@ -200,18 +200,18 @@ static struct shader_desc const shader_desc[TOTAL_SHADERS] = {
     },
 };
 
-static struct program_desc const program_desc[QU__TOTAL_BRUSHES] = {
-    [QU__BRUSH_SOLID] = {
+static struct program_desc const program_desc[QU_TOTAL_BRUSHES] = {
+    [QU_BRUSH_SOLID] = {
         .name = "BRUSH_SOLID",
         .vert = SHADER_VERTEX,
         .frag = SHADER_SOLID,
     },
-    [QU__BRUSH_TEXTURED] = {
+    [QU_BRUSH_TEXTURED] = {
         .name = "BRUSH_TEXTURED",
         .vert = SHADER_VERTEX,
         .frag = SHADER_TEXTURED,
     },
-    [QU__BRUSH_FONT] = {
+    [QU_BRUSH_FONT] = {
         .name = "BRUSH_FONT",
         .vert = SHADER_VERTEX,
         .frag = SHADER_FONT,
@@ -224,30 +224,30 @@ static char const *uniform_names[TOTAL_UNIFORMS] = {
     [UNIFORM_COLOR] = "u_color",
 };
 
-static struct vertex_attribute_desc const vertex_attribute_desc[QU__TOTAL_VERTEX_ATTRIBUTES] = {
-    [QU__VERTEX_ATTRIBUTE_POSITION] = { .name = "a_position", .size = 2 },
-    [QU__VERTEX_ATTRIBUTE_COLOR] = { .name = "a_color", .size = 4 },
-    [QU__VERTEX_ATTRIBUTE_TEXCOORD] = {.name = "a_texCoord", .size = 2 },
+static struct vertex_attribute_desc const vertex_attribute_desc[QU_TOTAL_VERTEX_ATTRIBUTES] = {
+    [QU_VERTEX_ATTRIBUTE_POSITION] = { .name = "a_position", .size = 2 },
+    [QU_VERTEX_ATTRIBUTE_COLOR] = { .name = "a_color", .size = 4 },
+    [QU_VERTEX_ATTRIBUTE_TEXCOORD] = {.name = "a_texCoord", .size = 2 },
 };
 
-static struct vertex_format_desc const vertex_format_desc[QU__TOTAL_VERTEX_FORMATS] = {
-    [QU__VERTEX_FORMAT_SOLID] = {
-        .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION),
+static struct vertex_format_desc const vertex_format_desc[QU_TOTAL_VERTEX_FORMATS] = {
+    [QU_VERTEX_FORMAT_2XY] = {
+        .attributes = QU_VERTEX_ATTRIBUTE_BIT_POSITION,
         .stride = 2,
     },
-    [QU__VERTEX_FORMAT_TEXTURED] = {
-        .attributes = (1 << QU__VERTEX_ATTRIBUTE_POSITION) | (1 << QU__VERTEX_ATTRIBUTE_TEXCOORD),
+    [QU_VERTEX_FORMAT_4XYST] = {
+        .attributes = QU_VERTEX_ATTRIBUTE_BIT_POSITION | QU_VERTEX_ATTRIBUTE_BIT_TEXCOORD,
         .stride = 4,
     },
 };
 
 //------------------------------------------------------------------------------
 
-static GLenum const mode_map[QU__TOTAL_RENDER_MODES] = {
+static GLenum const mode_map[QU_TOTAL_RENDER_MODES] = {
     GL_POINTS,
     GL_LINES,
-    GL_LINE_STRIP,
     GL_LINE_LOOP,
+    GL_LINE_STRIP,
     GL_TRIANGLES,
     GL_TRIANGLE_STRIP,
     GL_TRIANGLE_FAN,
@@ -297,21 +297,21 @@ struct vertex_format_info
 
 struct priv
 {
-    struct qu__texture const *bound_texture;
-    struct qu__surface const *bound_surface;
-    enum qu__brush used_program;
+    qu_texture_obj const *bound_texture;
+    qu_surface_obj const *bound_surface;
+    qu_brush used_program;
 
-    struct program_info programs[QU__TOTAL_BRUSHES];
-    struct vertex_format_info vertex_formats[QU__TOTAL_VERTEX_FORMATS];
+    struct program_info programs[QU_TOTAL_BRUSHES];
+    struct vertex_format_info vertex_formats[QU_TOTAL_VERTEX_FORMATS];
 
     qu_mat4 projection;
     qu_mat4 modelview;
     GLfloat color[4];
 
-    void (*vertex_format_initialize)(enum qu__vertex_format);
-    void (*vertex_format_terminate)(enum qu__vertex_format);
-    void (*vertex_format_update)(enum qu__vertex_format);
-    void (*vertex_format_apply)(enum qu__vertex_format);
+    void (*vertex_format_initialize)(qu_vertex_format);
+    void (*vertex_format_terminate)(qu_vertex_format);
+    void (*vertex_format_update)(qu_vertex_format);
+    void (*vertex_format_apply)(qu_vertex_format);
 };
 
 //------------------------------------------------------------------------------
@@ -353,7 +353,7 @@ static bool check_extension(char const *extension)
         token = strtok(NULL, " ");
     }
 
-    free(extensions);
+    pl_free(extensions);
 
     return found;
 }
@@ -373,11 +373,11 @@ static GLuint load_shader(struct shader_desc const *desc)
         CHECK_GL(glGetShaderInfoLog(shader, 256, NULL, buffer));
         CHECK_GL(glDeleteShader(shader));
 
-        QU_ERROR("Failed to compile GLSL shader %s. Reason:\n%s\n", desc->name, buffer);
+        QU_LOGE("Failed to compile GLSL shader %s. Reason:\n%s\n", desc->name, buffer);
         return 0;
     }
 
-    QU_INFO("Shader %s is compiled successfully.\n", desc->name);
+    QU_LOGI("Shader %s is compiled successfully.\n", desc->name);
     return shader;
 }
 
@@ -388,7 +388,7 @@ static GLuint build_program(char const *name, GLuint vs, GLuint fs)
     CHECK_GL(glAttachShader(program, vs));
     CHECK_GL(glAttachShader(program, fs));
 
-    for (int j = 0; j < QU__TOTAL_VERTEX_ATTRIBUTES; j++) {
+    for (int j = 0; j < QU_TOTAL_VERTEX_ATTRIBUTES; j++) {
         CHECK_GL(glBindAttribLocation(program, j, vertex_attribute_desc[j].name));
     }
 
@@ -403,11 +403,11 @@ static GLuint build_program(char const *name, GLuint vs, GLuint fs)
         CHECK_GL(glGetProgramInfoLog(program, 256, NULL, buffer));
         CHECK_GL(glDeleteProgram(program));
 
-        QU_ERROR("Failed to link GLSL program %s: %s\n", name, buffer);
+        QU_LOGE("Failed to link GLSL program %s: %s\n", name, buffer);
         return 0;
     }
 
-    QU_INFO("Shader program %s is built successfully.\n", name);
+    QU_LOGI("Shader program %s is built successfully.\n", name);
     return program;
 }
 
@@ -434,26 +434,26 @@ static void update_uniforms(void)
     info->dirty_uniforms = 0;
 }
 
-static void vertex_format_initialize(enum qu__vertex_format format)
+static void vertex_format_initialize(qu_vertex_format format)
 {
 }
 
-static void vertex_format_terminate(enum qu__vertex_format format)
+static void vertex_format_terminate(qu_vertex_format format)
 {
 }
 
-static void vertex_format_update(enum qu__vertex_format format)
+static void vertex_format_update(qu_vertex_format format)
 {
 }
 
-static void vertex_format_apply(enum qu__vertex_format format)
+static void vertex_format_apply(qu_vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
     struct vertex_format_desc const *desc = &vertex_format_desc[format];
 
     unsigned int offset = 0;
 
-    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+    for (int i = 0; i < QU_TOTAL_VERTEX_ATTRIBUTES; i++) {
         if (desc->attributes & (1 << i)) {
             GLsizei size = vertex_attribute_desc[i].size;
             GLsizei stride = sizeof(float) * desc->stride;
@@ -467,7 +467,7 @@ static void vertex_format_apply(enum qu__vertex_format format)
     }
 }
 
-static void vao_vertex_format_initialize(enum qu__vertex_format format)
+static void vao_vertex_format_initialize(qu_vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
     struct vertex_format_desc const *desc = &vertex_format_desc[format];
@@ -475,21 +475,21 @@ static void vao_vertex_format_initialize(enum qu__vertex_format format)
     CHECK_GL(glGenVertexArraysOES(1, &info->array));
     CHECK_GL(glBindVertexArrayOES(info->array));
 
-    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+    for (int i = 0; i < QU_TOTAL_VERTEX_ATTRIBUTES; i++) {
         if (desc->attributes & (1 << i)) {
             CHECK_GL(glEnableVertexAttribArray(i));
         }
     }
 }
 
-static void vao_vertex_format_terminate(enum qu__vertex_format format)
+static void vao_vertex_format_terminate(qu_vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
 
     CHECK_GL(glDeleteVertexArraysOES(1, &info->array));
 }
 
-static void vao_vertex_format_update(enum qu__vertex_format format)
+static void vao_vertex_format_update(qu_vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
     struct vertex_format_desc const *desc = &vertex_format_desc[format];
@@ -498,7 +498,7 @@ static void vao_vertex_format_update(enum qu__vertex_format format)
 
     unsigned int offset = 0;
 
-    for (int i = 0; i < QU__TOTAL_VERTEX_ATTRIBUTES; i++) {
+    for (int i = 0; i < QU_TOTAL_VERTEX_ATTRIBUTES; i++) {
         if (desc->attributes & (1 << i)) {
             GLsizei size = vertex_attribute_desc[i].size;
             GLsizei stride = sizeof(float) * desc->stride;
@@ -509,19 +509,19 @@ static void vao_vertex_format_update(enum qu__vertex_format format)
     }
 }
 
-static void vao_vertex_format_apply(enum qu__vertex_format format)
+static void vao_vertex_format_apply(qu_vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
     CHECK_GL(glBindVertexArrayOES(info->array));
 }
 
-static void surface_add_multisample_buffer(struct qu__surface *surface)
+static void surface_add_multisample_buffer(qu_surface_obj *surface)
 {
     surface->sample_count = 1;
 
 #if 0
-    GLsizei width = surface->texture.image.width;
-    GLsizei height = surface->texture.image.height;
+    GLsizei width = surface->texture.width;
+    GLsizei height = surface->texture.height;
 
     GLuint ms_fbo;
     GLuint ms_color;
@@ -551,7 +551,7 @@ static void surface_add_multisample_buffer(struct qu__surface *surface)
 #endif
 }
 
-static void surface_remove_multisample_buffer(struct qu__surface *surface)
+static void surface_remove_multisample_buffer(qu_surface_obj *surface)
 {
 #if 0
     GLuint ms_fbo = surface->priv[2];
@@ -562,7 +562,7 @@ static void surface_remove_multisample_buffer(struct qu__surface *surface)
 #endif
 }
 
-static void surface_blit_multisample_buffer(struct qu__surface const *surface)
+static void surface_blit_multisample_buffer(qu_surface_obj const *surface)
 {
 #if 0
     GLuint fbo = surface->priv[0];
@@ -571,8 +571,8 @@ static void surface_blit_multisample_buffer(struct qu__surface const *surface)
     CHECK_GL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbo));
     CHECK_GL(glBindFramebuffer(GL_READ_FRAMEBUFFER, ms_fbo));
 
-    GLsizei width = surface->texture.image.width;
-    GLsizei height = surface->texture.image.height;
+    GLsizei width = surface->texture.width;
+    GLsizei height = surface->texture.height;
 
     CHECK_GL(glBlitFramebuffer(
         0, 0, width, height,
@@ -587,7 +587,7 @@ static void surface_blit_multisample_buffer(struct qu__surface const *surface)
 
 static bool es2_query(qu_params const *params)
 {
-    if (qu__core_get_renderer() != QU__RENDERER_ES2) {
+    if (strcmp(qu_get_graphics_context_name(), "OpenGL ES 2.0")) {
         return false;
     }
 
@@ -600,9 +600,9 @@ static void es2_initialize(qu_params const *params)
 
     if (check_extension("GL_OES_vertex_array_object")) {
 #ifndef GL_GLEXT_PROTOTYPES
-        glBindVertexArrayOES = qu__core_get_gl_proc_address("glBindVertexArrayOES");
-        glDeleteVertexArraysOES = qu__core_get_gl_proc_address("glDeleteVertexArraysOES");
-        glGenVertexArraysOES = qu__core_get_gl_proc_address("glGenVertexArraysOES");
+        glBindVertexArrayOES = qu_gl_get_proc_address("glBindVertexArrayOES");
+        glDeleteVertexArraysOES = qu_gl_get_proc_address("glDeleteVertexArraysOES");
+        glGenVertexArraysOES = qu_gl_get_proc_address("glGenVertexArraysOES");
 #endif
 
         priv.vertex_format_initialize = vao_vertex_format_initialize;
@@ -610,14 +610,14 @@ static void es2_initialize(qu_params const *params)
         priv.vertex_format_apply = vao_vertex_format_apply;
         priv.vertex_format_update = vao_vertex_format_update;
 
-        QU_INFO("GL_OES_vertex_array_object is supported, will use VAOs.\n");
+        QU_LOGI("GL_OES_vertex_array_object is supported, will use VAOs.\n");
     } else {
         priv.vertex_format_initialize = vertex_format_initialize;
         priv.vertex_format_terminate = vertex_format_terminate;
         priv.vertex_format_apply = vertex_format_apply;
         priv.vertex_format_update = vertex_format_update;
 
-        QU_INFO("GL_OES_vertex_array_object is not supported, won't use VAOs.\n");
+        QU_LOGI("GL_OES_vertex_array_object is not supported, won't use VAOs.\n");
     }
 
     CHECK_GL(glEnable(GL_BLEND));
@@ -629,7 +629,7 @@ static void es2_initialize(qu_params const *params)
         shaders[i] = load_shader(&shader_desc[i]);
     }
 
-    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
+    for (int i = 0; i < QU_TOTAL_BRUSHES; i++) {
         GLuint vs = shaders[program_desc[i].vert];
         GLuint fs = shaders[program_desc[i].frag];
 
@@ -646,30 +646,30 @@ static void es2_initialize(qu_params const *params)
 
     priv.used_program = -1;
 
-    for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
+    for (int i = 0; i < QU_TOTAL_VERTEX_FORMATS; i++) {
         struct vertex_format_info *info = &priv.vertex_formats[i];
         CHECK_GL(glGenBuffers(1, &info->buffer));
         priv.vertex_format_initialize(i);
     }
 
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 }
 
 static void es2_terminate(void)
 {
-    for (int i = 0; i < QU__TOTAL_VERTEX_FORMATS; i++) {
+    for (int i = 0; i < QU_TOTAL_VERTEX_FORMATS; i++) {
         CHECK_GL(glDeleteBuffers(1, &priv.vertex_formats[i].buffer));
         priv.vertex_format_terminate(i);
     }
 
-    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
+    for (int i = 0; i < QU_TOTAL_BRUSHES; i++) {
         CHECK_GL(glDeleteProgram(priv.programs[i].id));
     }
 
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
-static void es2_upload_vertex_data(enum qu__vertex_format format, float const *data, size_t size)
+static void es2_upload_vertex_data(qu_vertex_format format, float const *data, size_t size)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
 
@@ -690,7 +690,7 @@ static void es2_apply_projection(qu_mat4 const *projection)
 {
     qu_mat4_copy(&priv.projection, projection);
 
-    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
+    for (int i = 0; i < QU_TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << UNIFORM_PROJECTION);
     }
 
@@ -701,14 +701,14 @@ static void es2_apply_transform(qu_mat4 const *transform)
 {
     qu_mat4_copy(&priv.modelview, transform);
     
-    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
+    for (int i = 0; i < QU_TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << UNIFORM_MODELVIEW);
     }
 
     update_uniforms();
 }
 
-static void es2_apply_surface(struct qu__surface const *surface)
+static void es2_apply_surface(qu_surface_obj const *surface)
 {
     if (priv.bound_surface && priv.bound_surface->sample_count > 1) {
         surface_blit_multisample_buffer(priv.bound_surface);
@@ -718,8 +718,8 @@ static void es2_apply_surface(struct qu__surface const *surface)
         return;
     }
 
-    GLsizei width = surface->texture.image.width;
-    GLsizei height = surface->texture.image.height;
+    GLsizei width = surface->texture.width;
+    GLsizei height = surface->texture.height;
 
     if (surface->sample_count > 1) {
         CHECK_GL(glBindFramebuffer(GL_FRAMEBUFFER, surface->priv[2]));
@@ -732,7 +732,7 @@ static void es2_apply_surface(struct qu__surface const *surface)
     priv.bound_surface = surface;
 }
 
-static void es2_apply_texture(struct qu__texture const *texture)
+static void es2_apply_texture(qu_texture_obj const *texture)
 {
     if (priv.bound_texture == texture) {
         return;
@@ -754,14 +754,14 @@ static void es2_apply_draw_color(qu_color color)
 {
     color_conv(priv.color, color);
     
-    for (int i = 0; i < QU__TOTAL_BRUSHES; i++) {
+    for (int i = 0; i < QU_TOTAL_BRUSHES; i++) {
         priv.programs[i].dirty_uniforms |= (1 << UNIFORM_COLOR);
     }
 
     update_uniforms();
 }
 
-static void es2_apply_brush(enum qu__brush brush)
+static void es2_apply_brush(qu_brush brush)
 {
     if (priv.used_program == brush) {
         return;
@@ -773,7 +773,7 @@ static void es2_apply_brush(enum qu__brush brush)
     update_uniforms();
 }
 
-static void es2_apply_vertex_format(enum qu__vertex_format format)
+static void es2_apply_vertex_format(qu_vertex_format format)
 {
     struct vertex_format_info *info = &priv.vertex_formats[format];
 
@@ -806,12 +806,12 @@ static void es2_exec_clear(void)
     CHECK_GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-static void es2_exec_draw(enum qu__render_mode mode, unsigned int first_vertex, unsigned int total_vertices)
+static void es2_exec_draw(qu_render_mode mode, unsigned int first_vertex, unsigned int total_vertices)
 {
     CHECK_GL(glDrawArrays(mode_map[mode], (GLint) first_vertex, (GLsizei) total_vertices));
 }
 
-static void es2_load_texture(struct qu__texture *texture)
+static void es2_load_texture(qu_texture_obj *texture)
 {
     GLuint id = texture->priv[0];
     
@@ -822,19 +822,19 @@ static void es2_load_texture(struct qu__texture *texture)
 
     CHECK_GL(glBindTexture(GL_TEXTURE_2D, id));
 
-    GLenum internal_format = texture_format_map[texture->image.channels - 1];
+    GLenum internal_format = texture_format_map[texture->channels - 1];
     GLenum format = internal_format;
 
     CHECK_GL(glTexImage2D(
         GL_TEXTURE_2D,
         0,
         internal_format,
-        texture->image.width,
-        texture->image.height,
+        texture->width,
+        texture->height,
         0,
         format,
         GL_UNSIGNED_BYTE,
-        texture->image.pixels
+        texture->pixels
     ));
 
     CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -847,14 +847,14 @@ static void es2_load_texture(struct qu__texture *texture)
     }
 }
 
-static void es2_unload_texture(struct qu__texture *texture)
+static void es2_unload_texture(qu_texture_obj *texture)
 {
     GLuint id = (GLuint) texture->priv[0];
 
     CHECK_GL(glDeleteTextures(1, &id));
 }
 
-static void es2_set_texture_smooth(struct qu__texture *texture, bool smooth)
+static void es2_set_texture_smooth(qu_texture_obj *texture, bool smooth)
 {
     GLuint id = (GLuint) texture->priv[0];
 
@@ -873,10 +873,10 @@ static void es2_set_texture_smooth(struct qu__texture *texture, bool smooth)
     }
 }
 
-static void es2_create_surface(struct qu__surface *surface)
+static void es2_create_surface(qu_surface_obj *surface)
 {
-    GLsizei width = surface->texture.image.width;
-    GLsizei height = surface->texture.image.height;
+    GLsizei width = surface->texture.width;
+    GLsizei height = surface->texture.height;
 
     GLuint fbo;
     GLuint depth;
@@ -912,7 +912,7 @@ static void es2_create_surface(struct qu__surface *surface)
     surface->priv[1] = depth;
     surface->texture.priv[0] = color;
 
-    int max_samples = qu__core_get_gl_multisample_samples();
+    int max_samples = qu_gl_get_samples();
     surface->sample_count = QU_MIN(max_samples, surface->sample_count);
 
     if (surface->sample_count > 1) {
@@ -932,7 +932,7 @@ static void es2_create_surface(struct qu__surface *surface)
     }
 }
 
-static void es2_destroy_surface(struct qu__surface *surface)
+static void es2_destroy_surface(qu_surface_obj *surface)
 {
     if (surface->sample_count > 1) {
         surface_remove_multisample_buffer(surface);
@@ -947,7 +947,7 @@ static void es2_destroy_surface(struct qu__surface *surface)
     CHECK_GL(glDeleteTextures(1, &color));
 }
 
-static void es2_set_surface_antialiasing_level(struct qu__surface *surface, int level)
+static void es2_set_surface_antialiasing_level(qu_surface_obj *surface, int level)
 {
     if (surface->sample_count > 1) {
         surface_remove_multisample_buffer(surface);
@@ -962,7 +962,7 @@ static void es2_set_surface_antialiasing_level(struct qu__surface *surface, int 
 
 //------------------------------------------------------------------------------
 
-struct qu__renderer_impl const qu__renderer_es2 = {
+qu_renderer_impl const qu_es2_renderer_impl = {
     .query = es2_query,
     .initialize = es2_initialize,
     .terminate = es2_terminate,

@@ -43,28 +43,28 @@ static void _check_al(char const *call, char const *file, int line)
         return;
     }
     
-    QU_WARNING("OpenAL error(s) occured in %s:\n", file);
-    QU_WARNING("%4d: %s\n", line, call);
+    QU_LOGW("OpenAL error(s) occured in %s:\n", file);
+    QU_LOGW("%4d: %s\n", line, call);
 
     do {
         switch (error) {
         case AL_INVALID_NAME:
-            QU_WARNING("-- AL_INVALID_NAME\n");
+            QU_LOGW("-- AL_INVALID_NAME\n");
             break;
         case AL_INVALID_ENUM:
-            QU_WARNING("-- AL_INVALID_ENUM\n");
+            QU_LOGW("-- AL_INVALID_ENUM\n");
             break;
         case AL_INVALID_VALUE:
-            QU_WARNING("-- AL_INVALID_VALUE\n");
+            QU_LOGW("-- AL_INVALID_VALUE\n");
             break;
         case AL_INVALID_OPERATION:
-            QU_WARNING("-- AL_INVALID_OPERATION\n");
+            QU_LOGW("-- AL_INVALID_OPERATION\n");
             break;
         case AL_OUT_OF_MEMORY:
-            QU_WARNING("-- AL_OUT_OF_MEMORY\n");
+            QU_LOGW("-- AL_OUT_OF_MEMORY\n");
             break;
         default:
-            QU_WARNING("-- 0x%04x\n", error);
+            QU_LOGW("-- 0x%04x\n", error);
             break;
         }
     } while ((error = alGetError()) != AL_NO_ERROR);
@@ -98,40 +98,40 @@ static struct al_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qx_result al_check(qu_params const *params)
+static qu_result al_check(qu_params const *params)
 {
     priv.device = alcOpenDevice(NULL);
 
     if (!priv.device) {
-        QU_WARNING("Failed to open device.\n");
-        return QX_FAILURE;
+        QU_LOGW("Failed to open device.\n");
+        return QU_FAILURE;
     }
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static qx_result al_initialize(qu_params const *params)
+static qu_result al_initialize(qu_params const *params)
 {
     priv.context = alcCreateContext(priv.device, NULL);
 
     if (!priv.context) {
-        QU_ERROR("Failed to create context.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create context.\n");
+        return QU_FAILURE;
     }
 
     if (!alcMakeContextCurrent(priv.context)) {
-        QU_ERROR("Failed to activate context.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to activate context.\n");
+        return QU_FAILURE;
     }
 
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 
-    QU_INFO("AL_VENDOR: %s\n", alGetString(AL_VENDOR));
-    QU_INFO("AL_VERSION: %s\n", alGetString(AL_VERSION));
-    QU_INFO("AL_RENDERER: %s\n", alGetString(AL_RENDERER));
-    QU_INFO("AL_EXTENSIONS: %s\n", alGetString(AL_EXTENSIONS));
+    QU_LOGI("AL_VENDOR: %s\n", alGetString(AL_VENDOR));
+    QU_LOGI("AL_VERSION: %s\n", alGetString(AL_VERSION));
+    QU_LOGI("AL_RENDERER: %s\n", alGetString(AL_RENDERER));
+    QU_LOGI("AL_EXTENSIONS: %s\n", alGetString(AL_EXTENSIONS));
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 static void al_terminate(void)
@@ -139,7 +139,7 @@ static void al_terminate(void)
     alcDestroyContext(priv.context);
     alcCloseDevice(priv.device);
 
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
 //------------------------------------------------------------------------------
@@ -151,7 +151,7 @@ static void al_set_master_volume(float volume)
 
 //------------------------------------------------------------------------------
 
-static qx_result al_create_source(qx_audio_source *source)
+static qu_result al_create_source(qu_audio_source *source)
 {
     ALenum format;
 
@@ -160,25 +160,25 @@ static qx_result al_create_source(qx_audio_source *source)
     } else if (source->channels == 2) {
         format = AL_FORMAT_STEREO16;
     } else {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
     ALuint alSource;
     CHECK_AL(alGenSources(1, &alSource));
 
-    QU_DEBUG("al_create_source -> %d\n", alSource);
+    QU_LOGD("al_create_source -> %d\n", alSource);
 
     if (alSource == 0) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
     source->priv[PRIV_OPENAL_ID] = (intptr_t) alSource;
     source->priv[PRIV_OPENAL_FORMAT] = (intptr_t) format;
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static void al_destroy_source(qx_audio_source *source)
+static void al_destroy_source(qu_audio_source *source)
 {
     ALuint alSource = (ALuint) source->priv[PRIV_OPENAL_ID];
 
@@ -187,22 +187,22 @@ static void al_destroy_source(qx_audio_source *source)
     ALint buffersQueued;
     CHECK_AL(alGetSourcei(alSource, AL_BUFFERS_QUEUED, &buffersQueued));
 
-    QU_DEBUG("destroy_source: buffersQueued = %d\n", buffersQueued);
+    QU_LOGD("destroy_source: buffersQueued = %d\n", buffersQueued);
 
     if (buffersQueued > 0) {
-        ALuint *buffers = malloc(sizeof(ALuint) * buffersQueued);
+        ALuint *buffers = pl_malloc(sizeof(ALuint) * buffersQueued);
 
         if (buffers) {
             CHECK_AL(alSourceUnqueueBuffers(alSource, buffersQueued, buffers));
             CHECK_AL(alDeleteBuffers(buffersQueued, buffers));
-            free(buffers);
+            pl_free(buffers);
         }
     }
 
     CHECK_AL(alDeleteSources(1, &alSource));
 }
 
-static qx_result al_queue_buffer(qx_audio_source *source, qx_audio_buffer *buffer)
+static qu_result al_queue_buffer(qu_audio_source *source, qu_audio_buffer *buffer)
 {
     ALuint alSource = (ALuint) source->priv[PRIV_OPENAL_ID];
     ALenum format = (ALenum) source->priv[PRIV_OPENAL_FORMAT];
@@ -214,14 +214,14 @@ static qx_result al_queue_buffer(qx_audio_source *source, qx_audio_buffer *buffe
     CHECK_AL(alGenBuffers(1, &alBuffer));
 
     if (alBuffer == 0) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
     CHECK_AL(alBufferData(alBuffer, format, buffer->data, bytes, sampleRate));
 
     if (source->loop == -1) {
         if (source->priv[PRIV_OPENAL_LOOP_FLAG] == 1) {
-            return QX_FAILURE;
+            return QU_FAILURE;
         }
 
         CHECK_AL(alSourcei(alSource, AL_BUFFER, alBuffer));
@@ -229,7 +229,7 @@ static qx_result al_queue_buffer(qx_audio_source *source, qx_audio_buffer *buffe
 
         source->priv[PRIV_OPENAL_LOOP_FLAG] = 1;
 
-        return QX_SUCCESS;
+        return QU_SUCCESS;
     }
 
     ALint buffersProcessed;
@@ -246,10 +246,10 @@ static qx_result al_queue_buffer(qx_audio_source *source, qx_audio_buffer *buffe
 
     CHECK_AL(alSourceQueueBuffers(alSource, 1, &alBuffer));
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static int al_get_queued_buffers(qx_audio_source *source)
+static int al_get_queued_buffers(qu_audio_source *source)
 {
     ALuint alSource = (ALuint) source->priv[PRIV_OPENAL_ID];
 
@@ -262,7 +262,7 @@ static int al_get_queued_buffers(qx_audio_source *source)
     return buffersQueued - buffersProcessed;
 }
 
-static bool al_is_source_used(qx_audio_source *source)
+static bool al_is_source_used(qu_audio_source *source)
 {
     ALuint alSource = (ALuint) source->priv[PRIV_OPENAL_ID];
 
@@ -276,7 +276,7 @@ static bool al_is_source_used(qx_audio_source *source)
     return false;
 }
 
-static qx_result al_start_source(qx_audio_source *source)
+static qu_result al_start_source(qu_audio_source *source)
 {
     ALuint alSource = (ALuint) source->priv[PRIV_OPENAL_ID];
     CHECK_AL(alSourcePlay(alSource));
@@ -285,13 +285,13 @@ static qx_result al_start_source(qx_audio_source *source)
     CHECK_AL(alGetSourcei(alSource, AL_SOURCE_STATE, &state));
 
     if (state == AL_PLAYING) {
-        return QX_SUCCESS;
+        return QU_SUCCESS;
     }
 
-    return QX_FAILURE;
+    return QU_FAILURE;
 }
 
-static qx_result al_stop_source(qx_audio_source *source)
+static qu_result al_stop_source(qu_audio_source *source)
 {
     ALuint alSource = (ALuint) source->priv[PRIV_OPENAL_ID];
     CHECK_AL(alSourcePause(alSource));
@@ -300,15 +300,15 @@ static qx_result al_stop_source(qx_audio_source *source)
     CHECK_AL(alGetSourcei(alSource, AL_SOURCE_STATE, &state));
 
     if (state == AL_PAUSED) {
-        return QX_SUCCESS;
+        return QU_SUCCESS;
     }
 
-    return QX_FAILURE;
+    return QU_FAILURE;
 }
 
 //------------------------------------------------------------------------------
 
-qx_audio_impl const qx_audio_openal = {
+qu_audio_impl const qu_openal_audio_impl = {
     .check = al_check,
     .initialize = al_initialize,
     .terminate = al_terminate,

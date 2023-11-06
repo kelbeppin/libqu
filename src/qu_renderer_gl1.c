@@ -54,31 +54,31 @@ static void _check_gl(char const *call, char const *file, int line)
         return;
     }
     
-    QU_WARNING("OpenGL error(s) occured in %s:\n", file);
-    QU_WARNING("%4d: %s\n", line, call);
+    QU_LOGW("OpenGL error(s) occured in %s:\n", file);
+    QU_LOGW("%4d: %s\n", line, call);
 
     do {
         switch (error) {
         case GL_INVALID_ENUM:
-            QU_WARNING("-- GL_INVALID_ENUM\n");
+            QU_LOGW("-- GL_INVALID_ENUM\n");
             break;
         case GL_INVALID_VALUE:
-            QU_WARNING("-- GL_INVALID_VALUE\n");
+            QU_LOGW("-- GL_INVALID_VALUE\n");
             break;
         case GL_INVALID_OPERATION:
-            QU_WARNING("-- GL_INVALID_OPERATION\n");
+            QU_LOGW("-- GL_INVALID_OPERATION\n");
             break;
         case GL_STACK_OVERFLOW:
-            QU_WARNING("-- GL_STACK_OVERFLOW\n");
+            QU_LOGW("-- GL_STACK_OVERFLOW\n");
             break;
         case GL_STACK_UNDERFLOW:
-            QU_WARNING("-- GL_STACK_UNDERFLOW\n");
+            QU_LOGW("-- GL_STACK_UNDERFLOW\n");
             break;
         case GL_OUT_OF_MEMORY:
-            QU_WARNING("-- GL_OUT_OF_MEMORY\n");
+            QU_LOGW("-- GL_OUT_OF_MEMORY\n");
             break;
         default:
-            QU_WARNING("-- 0x%04x\n", error);
+            QU_LOGW("-- 0x%04x\n", error);
             break;
         }
     } while ((error = glGetError()) != GL_NO_ERROR);
@@ -94,11 +94,11 @@ static void _check_gl(char const *call, char const *file, int line)
 
 //------------------------------------------------------------------------------
 
-static GLenum const mode_map[QU__TOTAL_RENDER_MODES] = {
+static GLenum const mode_map[QU_TOTAL_RENDER_MODES] = {
     GL_POINTS,
     GL_LINES,
-    GL_LINE_STRIP,
     GL_LINE_LOOP,
+    GL_LINE_STRIP,
     GL_TRIANGLES,
     GL_TRIANGLE_STRIP,
     GL_TRIANGLE_FAN,
@@ -154,8 +154,8 @@ struct ext
 struct priv
 {
     GLuint bound_texture;
-    struct qu__surface const *bound_surface;
-    float const *vertex_data[QU__TOTAL_VERTEX_FORMATS];
+    qu_surface_obj const *bound_surface;
+    float const *vertex_data[QU_TOTAL_VERTEX_FORMATS];
 };
 
 static struct ext ext;
@@ -171,47 +171,42 @@ static void color_conv(GLfloat *dst, qu_color color)
     dst[3] = ((color >> 0x18) & 0xFF) / 255.f;
 }
 
-static bool check_glext(char const *extension)
-{
-    return qu__is_entry_in_list((char const *) glGetString(GL_EXTENSIONS), extension);
-}
-
 static void load_gl_functions(void)
 {
-    ext.glBlendFuncSeparate = qu__core_get_gl_proc_address("glBlendFuncSeparate");
-    ext.glBlendEquationSeparate = qu__core_get_gl_proc_address("glBlendEquationSeparate");
+    ext.glBlendFuncSeparate = qu_gl_get_proc_address("glBlendFuncSeparate");
+    ext.glBlendEquationSeparate = qu_gl_get_proc_address("glBlendEquationSeparate");
 
     char *extensions = qu_strdup((char const *) glGetString(GL_EXTENSIONS));
     char *token = strtok(extensions, " ");
 
     while (token) {
         if (strcmp(token, "GL_EXT_framebuffer_object") == 0) {
-            ext.glBindFramebufferEXT = qu__core_get_gl_proc_address("glBindFramebufferEXT");
-            ext.glBindRenderbufferEXT = qu__core_get_gl_proc_address("glBindRenderbufferEXT");
-            ext.glCheckFramebufferStatusEXT = qu__core_get_gl_proc_address("glCheckFramebufferStatusEXT");
-            ext.glDeleteFramebuffersEXT = qu__core_get_gl_proc_address("glDeleteFramebuffersEXT");
-            ext.glDeleteRenderbuffersEXT = qu__core_get_gl_proc_address("glDeleteRenderbuffersEXT");
-            ext.glGenFramebuffersEXT = qu__core_get_gl_proc_address("glGenFramebuffersEXT");
-            ext.glGenRenderbuffersEXT = qu__core_get_gl_proc_address("glGenRenderbuffersEXT");
-            ext.glFramebufferRenderbufferEXT = qu__core_get_gl_proc_address("glFramebufferRenderbufferEXT");
-            ext.glFramebufferTexture2DEXT = qu__core_get_gl_proc_address("glFramebufferTexture2DEXT");
-            ext.glRenderbufferStorageEXT = qu__core_get_gl_proc_address("glRenderbufferStorageEXT");
+            ext.glBindFramebufferEXT = qu_gl_get_proc_address("glBindFramebufferEXT");
+            ext.glBindRenderbufferEXT = qu_gl_get_proc_address("glBindRenderbufferEXT");
+            ext.glCheckFramebufferStatusEXT = qu_gl_get_proc_address("glCheckFramebufferStatusEXT");
+            ext.glDeleteFramebuffersEXT = qu_gl_get_proc_address("glDeleteFramebuffersEXT");
+            ext.glDeleteRenderbuffersEXT = qu_gl_get_proc_address("glDeleteRenderbuffersEXT");
+            ext.glGenFramebuffersEXT = qu_gl_get_proc_address("glGenFramebuffersEXT");
+            ext.glGenRenderbuffersEXT = qu_gl_get_proc_address("glGenRenderbuffersEXT");
+            ext.glFramebufferRenderbufferEXT = qu_gl_get_proc_address("glFramebufferRenderbufferEXT");
+            ext.glFramebufferTexture2DEXT = qu_gl_get_proc_address("glFramebufferTexture2DEXT");
+            ext.glRenderbufferStorageEXT = qu_gl_get_proc_address("glRenderbufferStorageEXT");
         } else if (strcmp(token, "GL_EXT_framebuffer_blit") == 0) {
-            ext.glBlitFramebufferEXT = qu__core_get_gl_proc_address("glBlitFramebufferEXT");
+            ext.glBlitFramebufferEXT = qu_gl_get_proc_address("glBlitFramebufferEXT");
         } else if (strcmp(token, "GL_EXT_framebuffer_multisample") == 0) {
-            ext.glRenderbufferStorageMultisampleEXT = qu__core_get_gl_proc_address("glRenderbufferStorageMultisampleEXT");
+            ext.glRenderbufferStorageMultisampleEXT = qu_gl_get_proc_address("glRenderbufferStorageMultisampleEXT");
         }
 
         token = strtok(NULL, " ");
     }
 
-    free(extensions);
+    pl_free(extensions);
 }
 
-static void surface_add_multisample_buffer(struct qu__surface *surface)
+static void surface_add_multisample_buffer(qu_surface_obj *surface)
 {
-    GLsizei width = surface->texture.image.width;
-    GLsizei height = surface->texture.image.height;
+    GLsizei width = surface->texture.width;
+    GLsizei height = surface->texture.height;
 
     GLuint ms_fbo;
     GLuint ms_color;
@@ -240,7 +235,7 @@ static void surface_add_multisample_buffer(struct qu__surface *surface)
     surface->priv[3] = ms_color;
 }
 
-static void surface_remove_multisample_buffer(struct qu__surface *surface)
+static void surface_remove_multisample_buffer(qu_surface_obj *surface)
 {
     GLuint ms_fbo = surface->priv[2];
     GLuint ms_color = surface->priv[3];
@@ -253,7 +248,7 @@ static void surface_remove_multisample_buffer(struct qu__surface *surface)
 
 static bool gl1_query(qu_params const *params)
 {
-    if (qu__core_get_renderer() != QU__RENDERER_GL_COMPAT) {
+    if (strcmp(qu_get_graphics_context_name(), "OpenGL (Compatibility Profile)")) {
         return false;
     }
 
@@ -262,16 +257,16 @@ static bool gl1_query(qu_params const *params)
     load_gl_functions();
 
     if (!ext.glGenFramebuffersEXT) {
-        QU_ERROR("Required OpenGL extension EXT_framebuffer_object is not supported.\n");
+        QU_LOGE("Required OpenGL extension EXT_framebuffer_object is not supported.\n");
         return false;
     }
 
     if (!ext.glBlitFramebufferEXT) {
-        QU_WARNING("OpenGL extension EXT_framebuffer_blit is not supported.\n");
+        QU_LOGW("OpenGL extension EXT_framebuffer_blit is not supported.\n");
     }
 
     if (!ext.glRenderbufferStorageMultisampleEXT) {
-        QU_WARNING("OpenGL extension EXT_framebuffer_multisample is not supported.\n");
+        QU_LOGW("OpenGL extension EXT_framebuffer_multisample is not supported.\n");
     }
 
     return true;
@@ -286,19 +281,19 @@ static void gl1_initialize(qu_params const *params)
 
     CHECK_GL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
-    QU_INFO("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
-    QU_INFO("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
-    QU_INFO("GL_VERSION: %s\n", glGetString(GL_VERSION));
+    QU_LOGI("GL_VENDOR: %s\n", glGetString(GL_VENDOR));
+    QU_LOGI("GL_RENDERER: %s\n", glGetString(GL_RENDERER));
+    QU_LOGI("GL_VERSION: %s\n", glGetString(GL_VERSION));
 
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 }
 
 static void gl1_terminate(void)
 {
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
-static void gl1_upload_vertex_data(enum qu__vertex_format vertex_format, float const *data, size_t size)
+static void gl1_upload_vertex_data(qu_vertex_format vertex_format, float const *data, size_t size)
 {
     // Don't actually upload anything.
     priv.vertex_data[vertex_format] = data;
@@ -317,7 +312,7 @@ static void gl1_apply_transform(qu_mat4 const *transform)
     glLoadMatrixf(transform->m);
 }
 
-static void gl1_apply_surface(struct qu__surface const *surface)
+static void gl1_apply_surface(qu_surface_obj const *surface)
 {
     if (priv.bound_surface && priv.bound_surface->sample_count > 1) {
         GLuint fbo = priv.bound_surface->priv[0];
@@ -326,8 +321,8 @@ static void gl1_apply_surface(struct qu__surface const *surface)
         CHECK_GL(ext.glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, fbo));
         CHECK_GL(ext.glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, ms_fbo));
 
-        GLsizei width = priv.bound_surface->texture.image.width;
-        GLsizei height = priv.bound_surface->texture.image.height;
+        GLsizei width = priv.bound_surface->texture.width;
+        GLsizei height = priv.bound_surface->texture.height;
 
         CHECK_GL(ext.glBlitFramebufferEXT(
             0, 0, width, height,
@@ -341,8 +336,8 @@ static void gl1_apply_surface(struct qu__surface const *surface)
         return;
     }
 
-    GLsizei width = surface->texture.image.width;
-    GLsizei height = surface->texture.image.height;
+    GLsizei width = surface->texture.width;
+    GLsizei height = surface->texture.height;
 
     if (surface->sample_count > 1) {
         CHECK_GL(ext.glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, surface->priv[2]));
@@ -355,7 +350,7 @@ static void gl1_apply_surface(struct qu__surface const *surface)
     priv.bound_surface = surface;
 }
 
-static void gl1_apply_texture(struct qu__texture const *texture)
+static void gl1_apply_texture(qu_texture_obj const *texture)
 {
     GLuint id = texture ? texture->priv[0] : 0;
 
@@ -383,21 +378,21 @@ static void gl1_apply_draw_color(qu_color color)
     CHECK_GL(glColor4fv(v));
 }
 
-static void gl1_apply_brush(enum qu__brush brush)
+static void gl1_apply_brush(qu_brush brush)
 {
 }
 
-static void gl1_apply_vertex_format(enum qu__vertex_format vertex_format)
+static void gl1_apply_vertex_format(qu_vertex_format vertex_format)
 {
     switch (vertex_format) {
-    case QU__VERTEX_FORMAT_SOLID:
+    case QU_VERTEX_FORMAT_2XY:
         CHECK_GL(glEnableClientState(GL_VERTEX_ARRAY));
         CHECK_GL(glDisableClientState(GL_COLOR_ARRAY));
         CHECK_GL(glDisableClientState(GL_TEXTURE_COORD_ARRAY));
         
         CHECK_GL(glVertexPointer(2, GL_FLOAT, 0, priv.vertex_data[vertex_format]));
         break;
-    case QU__VERTEX_FORMAT_TEXTURED:
+    case QU_VERTEX_FORMAT_4XYST:
         CHECK_GL(glEnableClientState(GL_VERTEX_ARRAY));
         CHECK_GL(glDisableClientState(GL_COLOR_ARRAY));
         CHECK_GL(glEnableClientState(GL_TEXTURE_COORD_ARRAY));
@@ -434,12 +429,12 @@ static void gl1_exec_clear(void)
     CHECK_GL(glClear(GL_COLOR_BUFFER_BIT));
 }
 
-static void gl1_exec_draw(enum qu__render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices)
+static void gl1_exec_draw(qu_render_mode render_mode, unsigned int first_vertex, unsigned int total_vertices)
 {
     CHECK_GL(glDrawArrays(mode_map[render_mode], (GLint) first_vertex, (GLsizei) total_vertices));
 }
 
-static void gl1_load_texture(struct qu__texture *texture)
+static void gl1_load_texture(qu_texture_obj *texture)
 {
     GLuint id = texture->priv[0];
     
@@ -450,18 +445,18 @@ static void gl1_load_texture(struct qu__texture *texture)
 
     CHECK_GL(glBindTexture(GL_TEXTURE_2D, id));
 
-    GLenum format = texture_format_map[texture->image.channels - 1];
+    GLenum format = texture_format_map[texture->channels - 1];
 
     CHECK_GL(glTexImage2D(
         GL_TEXTURE_2D,
         0,
         format,
-        texture->image.width,
-        texture->image.height,
+        texture->width,
+        texture->height,
         0,
         format,
         GL_UNSIGNED_BYTE,
-        texture->image.pixels
+        texture->pixels
     ));
 
     CHECK_GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
@@ -470,14 +465,14 @@ static void gl1_load_texture(struct qu__texture *texture)
     CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1_unload_texture(struct qu__texture *texture)
+static void gl1_unload_texture(qu_texture_obj *texture)
 {
     GLuint id = (GLuint) texture->priv[0];
 
     CHECK_GL(glDeleteTextures(1, &id));
 }
 
-static void gl1_set_texture_smooth(struct qu__texture *texture, bool smooth)
+static void gl1_set_texture_smooth(qu_texture_obj *texture, bool smooth)
 {
     GLuint id = (GLuint) texture->priv[0];
 
@@ -496,10 +491,10 @@ static void gl1_set_texture_smooth(struct qu__texture *texture, bool smooth)
     CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1_create_surface(struct qu__surface *surface)
+static void gl1_create_surface(qu_surface_obj *surface)
 {
-    GLsizei width = surface->texture.image.width;
-    GLsizei height = surface->texture.image.height;
+    GLsizei width = surface->texture.width;
+    GLsizei height = surface->texture.height;
 
     GLuint fbo;
     GLuint depth;
@@ -542,7 +537,7 @@ static void gl1_create_surface(struct qu__surface *surface)
     int max_samples = 1;
 
     if (ext.glBlitFramebufferEXT && ext.glRenderbufferStorageMultisampleEXT) {
-        max_samples = qu__core_get_gl_multisample_samples();
+        max_samples = qu_gl_get_samples();
     }
 
     surface->sample_count = QU_MIN(max_samples, surface->sample_count);
@@ -560,7 +555,7 @@ static void gl1_create_surface(struct qu__surface *surface)
     CHECK_GL(glBindTexture(GL_TEXTURE_2D, priv.bound_texture));
 }
 
-static void gl1_destroy_surface(struct qu__surface *surface)
+static void gl1_destroy_surface(qu_surface_obj *surface)
 {
     if (surface->sample_count > 1) {
         surface_remove_multisample_buffer(surface);
@@ -575,7 +570,7 @@ static void gl1_destroy_surface(struct qu__surface *surface)
     CHECK_GL(glDeleteTextures(1, &color));
 }
 
-static void gl1_set_surface_antialiasing_level(struct qu__surface *surface, int level)
+static void gl1_set_surface_antialiasing_level(qu_surface_obj *surface, int level)
 {
     if (surface->sample_count > 1) {
         surface_remove_multisample_buffer(surface);
@@ -590,7 +585,7 @@ static void gl1_set_surface_antialiasing_level(struct qu__surface *surface, int 
 
 //------------------------------------------------------------------------------
 
-struct qu__renderer_impl const qu__renderer_gl1 = {
+qu_renderer_impl const qu_gl1_renderer_impl = {
     .query = gl1_query,
     .initialize = gl1_initialize,
     .terminate = gl1_terminate,

@@ -65,32 +65,32 @@ struct sl_audio_player
 
 //------------------------------------------------------------------------------
 
-static qx_result engine_initialize(struct sl_engine *self)
+static qu_result engine_initialize(struct sl_engine *self)
 {
     SLresult result;
 
     result = slCreateEngine(&self->object, 0, NULL, 0, NULL, NULL);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create engine.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create engine.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->object)->Realize(self->object, SL_BOOLEAN_FALSE);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to initialize engine.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to initialize engine.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->object)->GetInterface(self->object, SL_IID_ENGINE, &self->engine);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to obtain EngineItf interface from engine.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to obtain EngineItf interface from engine.\n");
+        return QU_FAILURE;
     }
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 static void engine_terminate(struct sl_engine *self)
@@ -105,7 +105,7 @@ static void engine_terminate(struct sl_engine *self)
 
 //------------------------------------------------------------------------------
 
-static qx_result output_mix_initialize(struct sl_output_mix *self, struct sl_engine *engine)
+static qu_result output_mix_initialize(struct sl_output_mix *self, struct sl_engine *engine)
 {
     SLInterfaceID const interfaceIdList[] = {
         SL_IID_VOLUME,
@@ -124,18 +124,18 @@ static qx_result output_mix_initialize(struct sl_output_mix *self, struct sl_eng
                                                 interfaceRequirementList);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create output mix.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create output mix.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->object)->Realize(self->object, SL_BOOLEAN_FALSE);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to initialize output mix.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to initialize output mix.\n");
+        return QU_FAILURE;
     }
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 static void output_mix_terminate(struct sl_output_mix *self)
@@ -161,7 +161,7 @@ static void buffer_queue_callback(SLAndroidSimpleBufferQueueItf bufferQueue, voi
     }
 }
 
-static qx_result audio_player_initialize(struct sl_audio_player *self, struct sl_engine *engine, struct sl_output_mix *outputMix, qx_audio_source *source)
+static qu_result audio_player_initialize(struct sl_audio_player *self, struct sl_engine *engine, struct sl_output_mix *outputMix, qu_audio_source *source)
 {
     SLuint32 channelMask;
 
@@ -170,7 +170,7 @@ static qx_result audio_player_initialize(struct sl_audio_player *self, struct sl
     } else if (source->channels == 2) {
         channelMask = SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT;
     } else {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
     SLDataLocator_AndroidSimpleBufferQueue dataLocatorBufferQueue = {
@@ -227,49 +227,49 @@ static qx_result audio_player_initialize(struct sl_audio_player *self, struct sl
                                                   interfaceRequirementList);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create AudioPlayer.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create AudioPlayer.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->object)->Realize(self->object, SL_BOOLEAN_FALSE);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create AudioPlayer: can't initialize.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create AudioPlayer: can't initialize.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->object)->GetInterface(self->object, SL_IID_PLAY, &self->play);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create AudioPlayer: can't obtain Play interface.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create AudioPlayer: can't obtain Play interface.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->object)->GetInterface(self->object, SL_IID_VOLUME, &self->volume);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create AudioPlayer: can't obtain Volume interface.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create AudioPlayer: can't obtain Volume interface.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->object)->GetInterface(self->object, SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &self->bufferQueue);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create AudioPlayer: can't obtain AndroidSimpleBufferQueue interface.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create AudioPlayer: can't obtain AndroidSimpleBufferQueue interface.\n");
+        return QU_FAILURE;
     }
 
     result = (*self->bufferQueue)->RegisterCallback(self->bufferQueue, buffer_queue_callback, self);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_ERROR("Failed to create AudioPlayer: can't register buffer queue callback.\n");
-        return QX_FAILURE;
+        QU_LOGE("Failed to create AudioPlayer: can't register buffer queue callback.\n");
+        return QU_FAILURE;
     }
 
     self->_flags = AUDIO_PLAYER_FLAG_ACTIVE;
     (*self->volume)->GetMaxVolumeLevel(self->volume, &self->_maxMillibel);
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 static void audio_player_terminate(struct sl_audio_player *self)
@@ -289,7 +289,7 @@ static void audio_player_terminate(struct sl_audio_player *self)
     memset(self, 0, sizeof(struct sl_audio_player));
 }
 
-static qx_result audio_player_enqueue_buffer(struct sl_audio_player *self, qx_audio_buffer *buffer)
+static qu_result audio_player_enqueue_buffer(struct sl_audio_player *self, qu_audio_buffer *buffer)
 {
     void const *data = buffer->data;
     SLuint32 size = sizeof(int16_t) * buffer->samples;
@@ -297,10 +297,10 @@ static qx_result audio_player_enqueue_buffer(struct sl_audio_player *self, qx_au
     SLresult result = (*self->bufferQueue)->Enqueue(self->bufferQueue, data, size);
 
     if (result != SL_RESULT_SUCCESS) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 static int audio_player_get_buffer_count(struct sl_audio_player *self)
@@ -320,30 +320,30 @@ static void audio_player_set_volume(struct sl_audio_player *self, float volume)
     SLresult result = (*self->volume)->SetVolumeLevel(self->volume, millibel);
 
     if (result != SL_RESULT_SUCCESS) {
-        QU_WARNING("Volume::SetVolumeLevel(0x%04x) failed.\n", millibel);
+        QU_LOGW("Volume::SetVolumeLevel(0x%04x) failed.\n", millibel);
     }
 }
 
-static qx_result audio_player_play(struct sl_audio_player *self)
+static qu_result audio_player_play(struct sl_audio_player *self)
 {
     SLresult result = (*self->play)->SetPlayState(self->play, SL_PLAYSTATE_PLAYING);
 
     if (result != SL_RESULT_SUCCESS) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static qx_result audio_player_pause(struct sl_audio_player *self)
+static qu_result audio_player_pause(struct sl_audio_player *self)
 {
     SLresult result = (*self->play)->SetPlayState(self->play, SL_PLAYSTATE_PAUSED);
 
     if (result != SL_RESULT_SUCCESS) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
@@ -361,26 +361,26 @@ static struct sl_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qx_result sl_check(qu_params const *params)
+static qu_result sl_check(qu_params const *params)
 {
     memset(&priv, 0, sizeof(struct sl_priv));
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static qx_result sl_initialize(qu_params const *params)
+static qu_result sl_initialize(qu_params const *params)
 {
-    if (engine_initialize(&priv.engine) != QX_SUCCESS) {
-        return QX_FAILURE;
+    if (engine_initialize(&priv.engine) != QU_SUCCESS) {
+        return QU_FAILURE;
     }
 
-    if (output_mix_initialize(&priv.outputMix, &priv.engine) != QX_SUCCESS) {
-        return QX_FAILURE;
+    if (output_mix_initialize(&priv.outputMix, &priv.engine) != QU_SUCCESS) {
+        return QU_FAILURE;
     }
 
-    QU_INFO("Initialized.\n");
+    QU_LOGI("Initialized.\n");
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
 static void sl_terminate(void)
@@ -394,7 +394,7 @@ static void sl_terminate(void)
     output_mix_terminate(&priv.outputMix);
     engine_terminate(&priv.engine);
 
-    QU_INFO("Terminated.\n");
+    QU_LOGI("Terminated.\n");
 }
 
 static void sl_set_master_volume(float volume)
@@ -406,7 +406,7 @@ static void sl_set_master_volume(float volume)
     }
 }
 
-static qx_result sl_create_source(qx_audio_source *source)
+static qu_result sl_create_source(qu_audio_source *source)
 {
     struct sl_audio_player *audioPlayer = NULL;
 
@@ -418,19 +418,19 @@ static qx_result sl_create_source(qx_audio_source *source)
     }
 
     if (!audioPlayer) {
-        return QX_FAILURE;
+        return QU_FAILURE;
     }
 
-    if (audio_player_initialize(audioPlayer, &priv.engine, &priv.outputMix, source) != QX_SUCCESS) {
-        return QX_FAILURE;
+    if (audio_player_initialize(audioPlayer, &priv.engine, &priv.outputMix, source) != QU_SUCCESS) {
+        return QU_FAILURE;
     }
 
     source->priv[0] = (intptr_t) audioPlayer;
 
-    return QX_SUCCESS;
+    return QU_SUCCESS;
 }
 
-static void sl_destroy_source(qx_audio_source *source)
+static void sl_destroy_source(qu_audio_source *source)
 {
     struct sl_audio_player *audioPlayer = (struct sl_audio_player *) source->priv[0];
 
@@ -439,35 +439,35 @@ static void sl_destroy_source(qx_audio_source *source)
     source->priv[0] = (intptr_t) 0;
 }
 
-static qx_result sl_queue_buffer(qx_audio_source *source, qx_audio_buffer *buffer)
+static qu_result sl_queue_buffer(qu_audio_source *source, qu_audio_buffer *buffer)
 {
     struct sl_audio_player *audioPlayer = (struct sl_audio_player *) source->priv[0];
 
     return audio_player_enqueue_buffer(audioPlayer, buffer);
 }
 
-static int sl_get_queued_buffers(qx_audio_source *source)
+static int sl_get_queued_buffers(qu_audio_source *source)
 {
     struct sl_audio_player *audioPlayer = (struct sl_audio_player *) source->priv[0];
 
     return audio_player_get_buffer_count(audioPlayer);
 }
 
-static bool sl_is_source_used(qx_audio_source *source)
+static bool sl_is_source_used(qu_audio_source *source)
 {
     struct sl_audio_player *audioPlayer = (struct sl_audio_player *) source->priv[0];
 
     return (audioPlayer->_flags & AUDIO_PLAYER_FLAG_EXHAUSTED) == 0;
 }
 
-static qx_result sl_start_source(qx_audio_source *source)
+static qu_result sl_start_source(qu_audio_source *source)
 {
     struct sl_audio_player *audioPlayer = (struct sl_audio_player *) source->priv[0];
 
     return audio_player_play(audioPlayer);
 }
 
-static qx_result sl_stop_source(qx_audio_source *source)
+static qu_result sl_stop_source(qu_audio_source *source)
 {
     struct sl_audio_player *audioPlayer = (struct sl_audio_player *) source->priv[0];
 
@@ -476,7 +476,7 @@ static qx_result sl_stop_source(qx_audio_source *source)
 
 //------------------------------------------------------------------------------
 
-qx_audio_impl const qx_audio_sles = {
+qu_audio_impl const qu_sles_audio_impl = {
     .check = sl_check,
     .initialize = sl_initialize,
     .terminate = sl_terminate,

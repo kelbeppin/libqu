@@ -6,15 +6,6 @@
 #include <stdio.h>
 
 //------------------------------------------------------------------------------
-
-#if defined(WIN32)
-
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#endif // defined(WIN32)
-
-//------------------------------------------------------------------------------
 // Forward declarations
 
 static void exit_loop(void);
@@ -57,6 +48,36 @@ struct app
 
 static struct app app;
 
+static void format_date(char *out, size_t size, qu_date_time const *date_time)
+{
+    if (date_time->weekday < 1 || date_time->weekday > 7) {
+        return;
+    }
+
+    if (date_time->month < 1 || date_time->month > 12) {
+        return;
+    }
+
+    char const *weekdays[] = {
+        "monday", "tuesday", "wednesday",
+        "thursday", "friday", "saturday",
+        "sunday",
+    };
+
+    char const *months[] = {
+        "Jan", "Feb", "Mar",
+        "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep",
+        "Oct", "Nov", "Dec",
+    };
+
+    snprintf(out, size, "%s, %d %s %d",
+        weekdays[date_time->weekday - 1],
+        date_time->day,
+        months[date_time->month - 1],
+        date_time->year);
+}
+
 static void app_initialize(void)
 {
     char const *texturePaths[TOTAL_TEXTURES] = {
@@ -93,26 +114,13 @@ static void app_initialize(void)
 
 static void app_update(void)
 {
-#if defined(WIN32)
-    SYSTEMTIME localTime = { 0 };
+    qu_date_time date_time = qu_get_date_time();
 
-    GetLocalTime(&localTime);
+    app.clock_hours = date_time.hours;
+    app.clock_minutes = date_time.minutes;
+    app.clock_seconds = date_time.seconds;
 
-    app.clock_hours = localTime.wHour;
-    app.clock_minutes = localTime.wMinute;
-    app.clock_seconds = localTime.wSecond;
-
-    wchar_t date[256];
-
-    GetDateFormatEx(L"nl-NL", DATE_LONGDATE, &localTime, NULL, date, 256, NULL);
-    WideCharToMultiByte(CP_UTF8, 0, date, -1, app.message, sizeof(app.message), NULL, NULL);
-#else // defined(WIN32)
-    float time_mediump = qu_get_time_mediump();
-
-    app.clock_hours = (int) floorf(time_mediump / 3600.f) % 60;
-    app.clock_minutes = (int) floorf(time_mediump / 60.f) % 60;
-    app.clock_seconds = (int) floorf(time_mediump) % 60;
-#endif // defined(WIN32)
+    format_date(app.message, sizeof(app.message) - 1, &date_time);
 
     app.x_camera += app.dx_camera;
 }

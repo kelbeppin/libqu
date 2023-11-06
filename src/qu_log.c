@@ -17,27 +17,55 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "log"
-#include "qu.h"
-
-#ifdef ANDROID
-#include <android/log.h>
-#endif
-
-//------------------------------------------------------------------------------
 // qu_log.c: logging
 //------------------------------------------------------------------------------
 
-void qu_log_printf(qu_log level, char const* module, char const* fmt, ...)
+#define QU_MODULE "log"
+
+//------------------------------------------------------------------------------
+
+#include "qu.h"
+
+//------------------------------------------------------------------------------
+
+void qu_log_puts(qu_log_level level, char const *tag, char const *str)
 {
     char *labels[] = {
-        [QU_LOG_DEBUG]   = "DBG ",
-        [QU_LOG_INFO]    = "INFO",
-        [QU_LOG_WARNING] = "WARN",
-        [QU_LOG_ERROR]   = "ERR ",
+        [QU_LOG_LEVEL_DEBUG]   = "DBG ",
+        [QU_LOG_LEVEL_INFO]    = "INFO",
+        [QU_LOG_LEVEL_WARNING] = "WARN",
+        [QU_LOG_LEVEL_ERROR]   = "ERR ",
     };
 
+    FILE *outputs[] = {
+        [QU_LOG_LEVEL_DEBUG]   = stdout,
+        [QU_LOG_LEVEL_INFO]    = stdout,
+        [QU_LOG_LEVEL_WARNING] = stderr,
+        [QU_LOG_LEVEL_ERROR]   = stderr,
+    };
+
+    float time = qu_get_time_mediump();
+
+    // Source file path: leave only last segment
+    if (tag[0] == '?') {
+        for (int i = strlen(tag) - 1; i >= 0; i--) {
+            if (tag[i] == '/' || tag[i] == '\\') {
+                tag = tag + i + 1;
+                break;
+            }
+        }
+    }
+
+    fprintf(outputs[level], "(%8.3f) [%s] %s: %s",
+        time, labels[level], tag, str);
+
+#if defined(ANDROID)
+    np_android_write_log(level, tag, str);
+#endif
+}
+
+void qu_log_printf(qu_log_level level, char const *tag, char const *fmt, ...)
+{
     va_list ap;
     char buffer[256];
     char *heap = NULL;
@@ -47,7 +75,7 @@ void qu_log_printf(qu_log level, char const* module, char const* fmt, ...)
     va_end(ap);
 
     if ((size_t) count >= sizeof(buffer)) {
-        heap = malloc(count + 1);
+        heap = pl_malloc(count + 1);
 
         if (heap) {
             va_start(ap, fmt);
@@ -56,21 +84,6 @@ void qu_log_printf(qu_log level, char const* module, char const* fmt, ...)
         }
     }
 
-    // Source file path: leave only last segment
-    if (module[0] == '?') {
-        for (int i = strlen(module) - 1; i >= 0; i--) {
-            if (module[i] == '/' || module[i] == '\\') {
-                module = module + i + 1;
-                break;
-            }
-        }
-    }
-
-    fprintf((level == QU_LOG_ERROR) ? stderr : stdout,
-            "(%8.3f) [%s] %s: %s", qu_get_time_mediump(),
-            labels[level], module, heap ? heap : buffer);
-
-    qx_sys_write_log(level, module, heap ? heap : buffer);
-
-    free(heap);
+    qu_log_puts(level, tag, heap ? heap : buffer);
+    pl_free(heap);
 }

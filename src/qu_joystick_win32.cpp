@@ -40,12 +40,12 @@ struct qu__xinput_device
 	XINPUT_STATE state;
 };
 
-struct qu__joystick_win32_priv
+qu_joystick_impl_win32_priv
 {
 	struct qu__xinput_device xinput[TOTAL_XINPUT_DEVICES];
 };
 
-static struct qu__joystick_win32_priv priv;
+static qu_joystick_impl_win32_priv priv;
 
 //------------------------------------------------------------------------------
 
@@ -251,7 +251,7 @@ static float joystick_win32__get_axis_value(int id, int axis)
 
 //------------------------------------------------------------------------------
 
-struct qu__joystick const qu__joystick_win32 = {
+qu_joystick_impl const qu_win32_joystick_impl = {
 	joystick_win32__initialize,
 	joystick_win32__terminate,
     joystick_win32__process,

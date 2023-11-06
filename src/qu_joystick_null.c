@@ -80,7 +80,7 @@ static float joystick_null__get_axis_value(int id, int axis)
 
 //------------------------------------------------------------------------------
 
-struct qu__joystick const qu__joystick_null = {
+qu_joystick_impl const qu_null_joystick_impl = {
 	.initialize = joystick_null__initialize,
 	.terminate = joystick_null__terminate,
 	.process = joystick_null__process,

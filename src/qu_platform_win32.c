@@ -17,12 +17,15 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_platform_win32.c: Win32-specific platform code
+//------------------------------------------------------------------------------
 
 #define QU_MODULE "platform-win32"
-#include "qu.h"
 
 //------------------------------------------------------------------------------
-// qu_platform_win32.c: Win32-specific platform code
+
+#include "qu.h"
+
 //------------------------------------------------------------------------------
 
 #define THREAD_FLAG_WAIT            0x01
@@ -30,73 +33,76 @@
 
 //------------------------------------------------------------------------------
 
-struct qu_thread
+struct pl_thread
 {
     DWORD id;
     HANDLE handle;
     CRITICAL_SECTION cs;
     UINT flags;
     char const *name;
-    qu_thread_func func;
+    intptr_t (*func)(void *);
     void *arg;
 };
 
-struct qu_mutex
+struct pl_mutex
 {
     CRITICAL_SECTION cs;
 };
 
-struct qu__library
-{
-    HMODULE module;
-};
-
 //------------------------------------------------------------------------------
 
-static double      frequency_highp;
-static double      start_highp;
-static float       start_mediump;
-
-//------------------------------------------------------------------------------
-
-void qu_platform_initialize(void)
+void *pl_malloc(size_t size)
 {
-    LARGE_INTEGER perf_clock_frequency, perf_clock_count;
-
-    QueryPerformanceFrequency(&perf_clock_frequency);
-    QueryPerformanceCounter(&perf_clock_count);
-
-    frequency_highp = (double) perf_clock_frequency.QuadPart;
-    start_highp = (double) perf_clock_count.QuadPart / frequency_highp;
-    start_mediump = (float) GetTickCount() / 1000.f;
+    return HeapAlloc(GetProcessHeap(), 0, size);
 }
 
-void qu_platform_terminate(void)
+void *pl_calloc(size_t count, size_t size)
 {
+    return HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size);
+}
+
+void *pl_realloc(void *data, size_t size)
+{
+    return HeapReAlloc(GetProcessHeap(), 0, data, size);
+}
+
+void pl_free(void *data)
+{
+    HeapFree(GetProcessHeap(), 0, data);
 }
 
 //------------------------------------------------------------------------------
 // Clock
 
-float qu_get_time_mediump(void)
+uint32_t pl_get_ticks_mediump(void)
 {
-    float seconds = (float) GetTickCount() / 1000.f;
-    return seconds - start_mediump;
+    return GetTickCount();
 }
 
-double qu_get_time_highp(void)
+uint64_t pl_get_ticks_highp(void)
 {
-    LARGE_INTEGER perf_clock_counter;
-    QueryPerformanceCounter(&perf_clock_counter);
+    static LARGE_INTEGER frequency = { 0 };
 
-    double seconds = (double) perf_clock_counter.QuadPart / frequency_highp;
-    return seconds - start_highp;
+    if (frequency.QuadPart == 0) {
+        if (!QueryPerformanceFrequency(&frequency)) {
+            frequency.QuadPart = -1;
+        }
+    }
+
+    if (frequency.QuadPart == -1) {
+        return GetTickCount() * 1000000;
+    }
+
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
+
+    return (counter.QuadPart * 1000000000) / frequency.QuadPart;
 }
 
 //------------------------------------------------------------------------------
 // Threads
 
-static void thread_end(qu_thread *thread)
+static void thread_end(pl_thread *thread)
 {
     // If the thread is detached, then only its info struct should be freed.
     if (!(thread->flags & THREAD_FLAG_DETACHED)) {
@@ -115,12 +121,12 @@ static void thread_end(qu_thread *thread)
         DeleteCriticalSection(&thread->cs);
     }
 
-    HeapFree(GetProcessHeap(), 0, thread);
+    pl_free(thread);
 }
 
 static DWORD WINAPI thread_main(LPVOID param)
 {
-    qu_thread *thread = (qu_thread *) param;
+    pl_thread *thread = (pl_thread *) param;
     intptr_t retval = thread->func(thread->arg);
 
     thread_end(thread);
@@ -128,9 +134,9 @@ static DWORD WINAPI thread_main(LPVOID param)
     return retval;
 }
 
-qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg)
+pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *arg)
 {
-    qu_thread *thread = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(qu_thread));
+    pl_thread *thread = pl_calloc(1, sizeof(*thread));
 
     if (!thread) {
         return NULL;
@@ -146,14 +152,14 @@ qu_thread *qu_create_thread(char const *name, qu_thread_func func, void *arg)
     thread->handle = CreateThread(NULL, 0, thread_main, thread, 0, &thread->id);
 
     if (!thread->handle) {
-        HeapFree(GetProcessHeap(), 0, thread);
+        pl_free(thread);
         return NULL;
     }
 
     return thread;
 }
 
-void qu_detach_thread(qu_thread *thread)
+void pl_detach_thread(pl_thread *thread)
 {
     EnterCriticalSection(&thread->cs);
     thread->flags |= THREAD_FLAG_DETACHED;
@@ -163,7 +169,7 @@ void qu_detach_thread(qu_thread *thread)
     DeleteCriticalSection(&thread->cs);
 }
 
-intptr_t qu_wait_thread(qu_thread *thread)
+intptr_t pl_wait_thread(pl_thread *thread)
 {
     EnterCriticalSection(&thread->cs);
 
@@ -185,9 +191,9 @@ intptr_t qu_wait_thread(qu_thread *thread)
     return (intptr_t) retval;
 }
 
-qu_mutex *qu_create_mutex(void)
+pl_mutex *pl_create_mutex(void)
 {
-    qu_mutex *mutex = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(qu_mutex));
+    pl_mutex *mutex = pl_calloc(1, sizeof(*mutex));
 
     if (!mutex) {
         return NULL;
@@ -198,23 +204,23 @@ qu_mutex *qu_create_mutex(void)
     return mutex;
 }
 
-void qu_destroy_mutex(qu_mutex *mutex)
+void pl_destroy_mutex(pl_mutex *mutex)
 {
     DeleteCriticalSection(&mutex->cs);
-    HeapFree(GetProcessHeap(), 0, mutex);
+    pl_free(mutex);
 }
 
-void qu_lock_mutex(qu_mutex *mutex)
+void pl_lock_mutex(pl_mutex *mutex)
 {
     EnterCriticalSection(&mutex->cs);
 }
 
-void qu_unlock_mutex(qu_mutex *mutex)
+void pl_unlock_mutex(pl_mutex *mutex)
 {
     LeaveCriticalSection(&mutex->cs);
 }
 
-void qu_sleep(double seconds)
+void pl_sleep(double seconds)
 {
     DWORD milliseconds = (DWORD) (seconds * 1000);
     Sleep(milliseconds);
@@ -226,7 +232,7 @@ void qu_sleep(double seconds)
 static wchar_t *conv_str(char const *str)
 {
     int size = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
-    wchar_t *str_w = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, size * sizeof(wchar_t));
+    wchar_t *str_w = pl_calloc(size, sizeof(*str_w));
 
     if (!str_w) {
         return NULL;
@@ -235,14 +241,14 @@ static wchar_t *conv_str(char const *str)
     int result = MultiByteToWideChar(CP_UTF8, 0, str, -1, str_w, size);
 
     if (result == 0) {
-        HeapFree(GetProcessHeap(), 0, str_w);
+        pl_free(str_w);
         return NULL;
     }
 
     return str_w;
 }
 
-qu__library qu__platform_open_library(char const *path)
+void *pl_open_dll(char const *path)
 {
     wchar_t *path_w = conv_str(path);
 
@@ -251,28 +257,46 @@ qu__library qu__platform_open_library(char const *path)
     }
 
     HMODULE library = LoadLibraryExW(path_w, NULL, 0);
-    HeapFree(GetProcessHeap(), 0, path_w);
+    pl_free(path_w);
 
     if (!library) {
         return NULL;
     }
 
-    return (qu__library) library;
+    return library;
 }
 
-void qu__platform_close_library(qu__library library)
+void pl_close_dll(void *library)
 {
     if (library) {
         FreeLibrary(library);
     }
 }
 
-qu__procedure qu__platform_get_procedure(qu__library library, char const *name)
+void *pl_get_dll_proc(void *library, char const *name)
 {
     if (library) {
-        return (qu__procedure) GetProcAddress(library, name);
+        return GetProcAddress(library, name);
     }
 
     return NULL;
 }
 
+//------------------------------------------------------------------------------
+// Date & Time
+
+void pl_get_date_time(qu_date_time *date_time)
+{
+    SYSTEMTIME localTime = { 0 };
+
+    GetLocalTime(&localTime);
+
+    date_time->year = localTime.wYear;
+    date_time->month = localTime.wMonth;
+    date_time->day = localTime.wDay;
+    date_time->weekday = (localTime.wDayOfWeek == 0) ? 7 : localTime.wDayOfWeek;
+
+    date_time->hours = localTime.wHour;
+    date_time->minutes = localTime.wMinute;
+    date_time->seconds = localTime.wSecond;
+}
