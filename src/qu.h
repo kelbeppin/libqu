@@ -365,19 +365,19 @@ typedef struct qu_renderer_impl
 
 typedef struct qu_audio_impl
 {
-    int (*check)(qu_params const *params);
-    int (*initialize)(qu_params const *params);
+    qu_result (*check)(qu_params const *params);
+    qu_result (*initialize)(qu_params const *params);
     void (*terminate)(void);
 
     void (*set_master_volume)(float volume);
 
-    int (*create_source)(qu_audio_source *source);
+    qu_result (*create_source)(qu_audio_source *source);
     void (*destroy_source)(qu_audio_source *source);
     bool (*is_source_used)(qu_audio_source *source);
-    int (*queue_buffer)(qu_audio_source *source, qu_audio_buffer *buffer);
-    int (*get_queued_buffers)(qu_audio_source *source);
-    int (*start_source)(qu_audio_source *source);
-    int (*stop_source)(qu_audio_source *source);
+    qu_result (*queue_buffer)(qu_audio_source *source, qu_audio_buffer *buffer);
+    qu_result (*get_queued_buffers)(qu_audio_source *source);
+    qu_result (*start_source)(qu_audio_source *source);
+    qu_result (*stop_source)(qu_audio_source *source);
 } qu_audio_impl;
 
 //------------------------------------------------------------------------------

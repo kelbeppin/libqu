@@ -40,12 +40,12 @@ struct qu__xinput_device
 	XINPUT_STATE state;
 };
 
-qu_joystick_impl_win32_priv
+struct joystick_win32_priv
 {
 	struct qu__xinput_device xinput[TOTAL_XINPUT_DEVICES];
 };
 
-static qu_joystick_impl_win32_priv priv;
+static joystick_win32_priv priv;
 
 //------------------------------------------------------------------------------
 

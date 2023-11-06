@@ -367,6 +367,8 @@ static HGLRC create_context(HDC dc)
             profile = "compatibility";
         } else if (dpy.gl_profile == 'e') {
             profile = "ES";
+        } else {
+            profile = "???";
         }
 
         QU_LOGI("Created OpenGL context: version %d.%d, %s profile.\n", major, minor, profile);
