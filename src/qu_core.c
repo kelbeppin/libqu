@@ -72,6 +72,8 @@ struct core_params
 {
     char window_title[WINDOW_TITLE_LENGTH];
     qu_vec2i window_size;
+    unsigned int window_flags;
+    unsigned int canvas_flags;
 };
 
 struct event_buffer
@@ -583,6 +585,26 @@ void qu_set_window_size(int width, int height)
     }
 
     priv.impl->set_window_size(width, height);
+}
+
+unsigned int qu_get_window_flags(void)
+{
+    return priv.params.window_flags;
+}
+
+void qu_set_window_flags(unsigned int flags)
+{
+    priv.params.window_flags = flags;
+}
+
+unsigned int qu_get_canvas_flags(void)
+{
+    return priv.params.canvas_flags;
+}
+
+void qu_set_canvas_flags(unsigned int flags)
+{
+    priv.params.canvas_flags = flags;
 }
 
 bool qu_is_window_active(void)

@@ -631,9 +631,10 @@ static void initialize_renderer(qu_params const *params)
     // Enable alpha blend by default.
     priv.renderer->apply_blend_mode(QU_BLEND_MODE_ALPHA);
 
-    if (params->enable_canvas) {
+    if (qu_get_window_flags() & QU_WINDOW_USE_CANVAS) {
         priv.renderer->create_surface(&priv.canvas);
-        priv.renderer->set_texture_smooth(&priv.canvas.texture, params->canvas_smooth);
+        priv.renderer->set_texture_smooth(&priv.canvas.texture,
+            qu_get_canvas_flags() & QU_CANVAS_SMOOTH);
     }
 
     QU_LOGD("Renderer is initialized.\n");
@@ -708,7 +709,7 @@ void qu_initialize_graphics(qu_params const *params)
     priv.current_surface = &priv.display;
 
     // Create texture for canvas if needed.
-    if (params->enable_canvas) {
+    if (qu_get_window_flags() & QU_WINDOW_USE_CANVAS) {
         priv.canvas_enabled = true;
 
         priv.canvas = (qu_surface_obj) {

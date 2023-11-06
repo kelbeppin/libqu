@@ -238,6 +238,22 @@
 typedef uint64_t qu_color;
 
 /**
+ * Window flags.
+ */
+typedef enum qu_window_flags
+{
+    QU_WINDOW_USE_CANVAS = 0x0001,
+} qu_window_flags;
+
+/**
+ * Canvas flags.
+ */
+typedef enum qu_canvas_flags
+{
+    QU_CANVAS_SMOOTH = 0x0001,
+} qu_canvas_flags;
+
+/**
  * Keys of keyboard.
  */
 typedef enum qu_key
@@ -686,11 +702,45 @@ QU_API qu_vec2i QU_CALL qu_get_window_size(void);
 QU_API void QU_CALL qu_set_window_size(int width, int height);
 
 /**
+ * Get current window flags.
+ * 
+ * @return Window flag bitmask.
+ */
+QU_API unsigned int QU_CALL qu_get_window_flags(void);
+
+/**
+ * Set window flags.
+ * 
+ * Use this function before calling qu_initialize().
+ * 
+ * @param flags Window flag bitmask.
+ * @sa qu_window_flags
+ */
+QU_API void QU_CALL qu_set_window_flags(unsigned int flags);
+
+/**
  * Check if window is focused.
  *
  * @return True if the libqu window is focused.
  */
 QU_API bool QU_CALL qu_is_window_active(void);
+
+/**
+ * Get current canvas flags.
+ * 
+ * @return Canvas flag bitmask.
+ */
+QU_API unsigned int QU_CALL qu_get_canvas_flags(void);
+
+/**
+ * Set canvas flags.
+ * 
+ * Use this function before calling qu_initialize().
+ * 
+ * @param flags Canvas flag bitmask.
+ * @sa qu_canvas_flags
+ */
+QU_API void QU_CALL qu_set_canvas_flags(unsigned int flags);
 
 /**@}*/
 
