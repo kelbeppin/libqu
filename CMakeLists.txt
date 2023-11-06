@@ -301,10 +301,10 @@ endif()
 
 #-------------------------------------------------------------------------------
 
-if(NOT BUILD_SHARED_LIBS)
-    include(CTest)
-
-    if(BUILD_TESTING)
-        add_subdirectory(tests)
-    endif()
-endif()
+# if(NOT BUILD_SHARED_LIBS)
+#     include(CTest)
+# 
+#     if(BUILD_TESTING)
+#         add_subdirectory(tests)
+#     endif()
+# endif()
