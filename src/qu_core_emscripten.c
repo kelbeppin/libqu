@@ -417,10 +417,13 @@ static EM_BOOL wheel_callback(int type, EmscriptenWheelEvent const *event, void 
 
 //------------------------------------------------------------------------------
 
-static void initialize(qu_params const *params)
+static qu_result precheck(qu_params const *params)
 {
-    memset(&priv, 0, sizeof(priv));
+    return QU_SUCCESS;
+}
 
+static qu_result initialize(qu_params const *params)
+{
     EM_ASM({
         specialHTMLTargets["!canvas"] = Module.canvas;
     });
@@ -493,13 +496,16 @@ static void initialize(qu_params const *params)
     // Done.
 
     QU_LOGI("Initialized.\n");
+
+    return QU_SUCCESS;
 }
 
 static void terminate(void)
 {
     emscripten_webgl_destroy_context(priv.gl);
     pl_free(priv.events.array);
-
+    memset(&priv, 0, sizeof(priv));
+    
     QU_LOGI("Terminated.\n");
 }
 
@@ -542,6 +548,7 @@ static bool set_window_size(int width, int height)
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_emscripten_core_impl = {
+    .precheck = precheck,
     .initialize = initialize,
     .terminate = terminate,
     .process_input = process,

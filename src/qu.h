@@ -303,7 +303,8 @@ typedef struct qu_audio_source
 
 typedef struct qu_core_impl
 {
-    void (*initialize)(qu_params const *params);
+    qu_result (*precheck)(qu_params const *params);
+    qu_result (*initialize)(qu_params const *params);
     void (*terminate)(void);
     bool (*process_input)(void);
     void (*swap_buffers)(void);
@@ -319,7 +320,8 @@ typedef struct qu_core_impl
 
 typedef struct qu_joystick_impl
 {
-    void (*initialize)(qu_params const *params);
+    qu_result (*precheck)(qu_params const *params);
+    qu_result (*initialize)(qu_params const *params);
     void (*terminate)(void);
     void (*process)(void);
     bool (*is_connected)(int id);

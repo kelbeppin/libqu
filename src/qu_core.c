@@ -119,6 +119,34 @@ static struct core_priv priv;
 
 //------------------------------------------------------------------------------
 
+static bool is_core_impl_valid(qu_core_impl const *core)
+{
+    return core->initialize
+        && core->terminate
+        && core->process_input
+        && core->swap_buffers
+        && core->get_graphics_context_name
+        && core->gl_proc_address
+        && core->get_gl_multisample_samples
+        && core->set_window_title
+        && core->set_window_size;
+}
+
+static bool is_joystick_impl_valid(qu_joystick_impl const *joystick)
+{
+    return joystick->initialize
+        && joystick->terminate
+        && joystick->process
+        && joystick->is_connected
+        && joystick->get_name
+        && joystick->get_button_count
+        && joystick->get_axis_count
+        && joystick->get_button_name
+        && joystick->get_axis_name
+        && joystick->is_button_pressed
+        && joystick->get_axis_value;
+}
+
 static void initialize_clock(void)
 {
     if (priv.clock.initialized) {
@@ -278,8 +306,6 @@ static void handle_touch_motion(qu_touch_event const *event)
 
 void qu_initialize_core(qu_params const *params)
 {
-	memset(&priv, 0, sizeof(priv));
-
     int core_impl_count = QU_ARRAY_SIZE(core_impl_list);
     int joystick_impl_count = QU_ARRAY_SIZE(joystick_impl_list);
 
@@ -294,43 +320,34 @@ void qu_initialize_core(qu_params const *params)
     for (int i = 0; i < core_impl_count; i++) {
         priv.impl = core_impl_list[i];
 
-        // if (priv.impl->query()) {
+        if (priv.impl->precheck(params) == QU_SUCCESS) {
             break;
-        // }
+        }
     }
-
-    QU_HALT_IF(!priv.impl->initialize);
-    QU_HALT_IF(!priv.impl->terminate);
-    QU_HALT_IF(!priv.impl->process_input);
-    QU_HALT_IF(!priv.impl->swap_buffers);
-    QU_HALT_IF(!priv.impl->get_graphics_context_name);
-    QU_HALT_IF(!priv.impl->gl_proc_address);
-    QU_HALT_IF(!priv.impl->get_gl_multisample_samples);
-    QU_HALT_IF(!priv.impl->set_window_title);
-    QU_HALT_IF(!priv.impl->set_window_size);
 
     for (int i = 0; i < joystick_impl_count; i++) {
         priv.joystick = joystick_impl_list[i];
 
-        // if (priv.joystick->query()) {
+        if (priv.joystick->precheck(params) == QU_SUCCESS) {
             break;
-        // }
+        }
     }
 
-    QU_HALT_IF(!priv.joystick->initialize);
-    QU_HALT_IF(!priv.joystick->terminate);
-    QU_HALT_IF(!priv.joystick->process);
-    QU_HALT_IF(!priv.joystick->is_connected);
-    QU_HALT_IF(!priv.joystick->get_name);
-    QU_HALT_IF(!priv.joystick->get_button_count);
-    QU_HALT_IF(!priv.joystick->get_axis_count);
-    QU_HALT_IF(!priv.joystick->get_button_name);
-    QU_HALT_IF(!priv.joystick->get_axis_name);
-    QU_HALT_IF(!priv.joystick->is_button_pressed);
-    QU_HALT_IF(!priv.joystick->get_axis_value);
+    if (!is_core_impl_valid(priv.impl)) {
+        QU_HALT("Core module implementation is invalid.");
+    }
 
-	priv.impl->initialize(params);
-    priv.joystick->initialize(params);
+    if (!is_joystick_impl_valid(priv.joystick)) {
+        QU_HALT("Joystick module implementation is invalid.");
+    }
+
+	if (priv.impl->initialize(params) != QU_SUCCESS) {
+        QU_HALT("Failed to initialize core module.");
+    }
+
+    if (priv.joystick->initialize(params) != QU_SUCCESS) {
+        QU_HALT("Failed to initialize joystick module.");
+    }
 
     // Temporary:
     priv.window_width = params->display_width;
@@ -343,6 +360,8 @@ void qu_terminate_core(void)
 {
     priv.joystick->terminate();
 	priv.impl->terminate();
+
+    memset(&priv, 0, sizeof(priv));
 }
 
 bool qu_handle_events(void)

@@ -661,7 +661,12 @@ static void set_size(int width, int height)
 
 //------------------------------------------------------------------------------
 
-static void initialize(qu_params const *params)
+static qu_result win32_precheck(qu_params const *params)
+{
+    return QU_SUCCESS;
+}
+
+static qu_result initialize(qu_params const *params)
 {
     // Check instance
 
@@ -741,6 +746,8 @@ static void initialize(qu_params const *params)
     // Done.
 
     QU_LOGI("Initialized.\n");
+
+    return QU_SUCCESS;
 }
 
 static void terminate(void)
@@ -832,6 +839,7 @@ static bool w32_set_window_size(int width, int height)
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_win32_core_impl = {
+    .precheck = win32_precheck,
     .initialize = initialize,
     .terminate = terminate,
     .process_input = process,

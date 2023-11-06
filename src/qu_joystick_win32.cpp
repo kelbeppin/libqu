@@ -49,13 +49,19 @@ static joystick_win32_priv priv;
 
 //------------------------------------------------------------------------------
 
-static void joystick_win32__initialize(qu_params const *params)
+static qu_result joystick_win32__precheck(qu_params const *params)
 {
-    memset(&priv, 0, sizeof(priv));
+    return QU_SUCCESS;
+}
+
+static qu_result joystick_win32__initialize(qu_params const *params)
+{
+    return QU_SUCCESS;
 }
 
 static void joystick_win32__terminate(void)
 {
+    memset(&priv, 0, sizeof(priv));
 }
 
 static void joystick_win32__process(void)
@@ -252,6 +258,7 @@ static float joystick_win32__get_axis_value(int id, int axis)
 //------------------------------------------------------------------------------
 
 qu_joystick_impl const qu_win32_joystick_impl = {
+    joystick_win32__precheck,
 	joystick_win32__initialize,
 	joystick_win32__terminate,
     joystick_win32__process,

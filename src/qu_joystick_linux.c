@@ -62,17 +62,23 @@ static struct qu__joystick_linux_priv priv;
 
 //------------------------------------------------------------------------------
 
-static void joystick_linux__initialize(qu_params const *params)
+static qu_result joystick_linux__precheck(qu_params const *params)
 {
-    memset(&priv, 0, sizeof(priv));
+    return QU_SUCCESS;
+}
 
+static qu_result joystick_linux__initialize(qu_params const *params)
+{
 	for (int i = 0; i < MAX_JOYSTICKS; i++) {
         priv.device[i].fd = -1;
     }
+
+    return QU_SUCCESS;
 }
 
 static void joystick_linux__terminate(void)
 {
+    memset(&priv, 0, sizeof(priv));
 }
 
 static void joystick_linux__process(void)
@@ -311,6 +317,7 @@ static float joystick_linux__get_axis_value(int id, int axis)
 //------------------------------------------------------------------------------
 
 qu_joystick_impl const qu_linux_joystick_impl = {
+    .precheck = joystick_linux__precheck,
 	.initialize = joystick_linux__initialize,
 	.terminate = joystick_linux__terminate,
     .process = joystick_linux__process,

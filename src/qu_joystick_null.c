@@ -26,8 +26,14 @@
 // qu_joystick_null.c: Dummy joystick module
 //------------------------------------------------------------------------------
 
-static void joystick_null__initialize(qu_params const *params)
+static qu_result joystick_null__precheck(qu_params const *params)
 {
+	return QU_SUCCESS;
+}
+
+static qu_result joystick_null__initialize(qu_params const *params)
+{
+	return QU_SUCCESS;
 }
 
 static void joystick_null__terminate(void)
@@ -81,6 +87,7 @@ static float joystick_null__get_axis_value(int id, int axis)
 //------------------------------------------------------------------------------
 
 qu_joystick_impl const qu_null_joystick_impl = {
+	.precheck = joystick_null__precheck,
 	.initialize = joystick_null__initialize,
 	.terminate = joystick_null__terminate,
 	.process = joystick_null__process,

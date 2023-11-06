@@ -636,8 +636,14 @@ JNIEXPORT void __unused ANativeActivity_onCreate(ANativeActivity *activity, void
 
 //------------------------------------------------------------------------------
 
-static void android_initialize(qu_params const *params)
+static qu_result android_precheck(qu_params const *params)
 {
+    return QU_SUCCESS;
+}
+
+static qu_result android_initialize(qu_params const *params)
+{
+    return QU_SUCCESS;
 }
 
 static void android_terminate(void)
@@ -705,6 +711,7 @@ static bool android_set_window_size(int width, int height)
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_android_core_impl = {
+    .precheck = android_precheck,
     .initialize = android_initialize,
     .terminate = android_terminate,
     .process_input = android_process_events,

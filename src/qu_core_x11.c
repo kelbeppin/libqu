@@ -252,10 +252,13 @@ static void set_display_size(int width, int height)
 #endif
 }
 
-static void initialize(qu_params const *params)
+static qu_result x11_precheck(qu_params const *params)
 {
-    memset(&impl, 0, sizeof(impl));
+    return QU_SUCCESS;
+}
 
+static qu_result initialize(qu_params const *params)
+{
     // (0) Open display
 
     impl.display = XOpenDisplay(NULL);
@@ -472,6 +475,8 @@ static void initialize(qu_params const *params)
     // (9) Done.
 
     QU_LOGI("Xlib-based core module initialized.\n");
+
+    return QU_SUCCESS;
 }
 
 static void terminate(void)
@@ -484,6 +489,8 @@ static void terminate(void)
         XFreeColormap(impl.display, impl.colormap);
         XCloseDisplay(impl.display);
     }
+
+    memset(&impl, 0, sizeof(impl));
 
     QU_LOGI("Xlib-based core module terminated.\n");
 }
@@ -616,6 +623,7 @@ static bool set_window_size(int width, int height)
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_x11_core_impl = {
+    .precheck = x11_precheck,
     .initialize = initialize,
     .terminate = terminate,
     .process_input = process,
