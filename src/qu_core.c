@@ -466,6 +466,12 @@ bool qu_handle_events(void)
         case QU_EVENT_TYPE_TOUCH_MOVED:
             handle_touch_motion(&event->data.touch);
             break;
+        case QU_EVENT_TYPE_WINDOW_RESIZE:
+            qu_event_window_resize(
+                event->data.window_resize.width,
+                event->data.window_resize.height
+            );
+            break;
         }
     }
 

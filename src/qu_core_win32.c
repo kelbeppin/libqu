@@ -553,7 +553,13 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
         PostQuitMessage(0);
         return 0;
     case WM_SIZE:
-        qu_event_window_resize(LOWORD(lp), HIWORD(lp));
+        qu_enqueue_event(&(qu_event) {
+            .type = QU_EVENT_TYPE_WINDOW_RESIZE,
+            .data.window_resize = {
+                .width = LOWORD(lp),
+                .height = HIWORD(lp),
+            },
+        });
         return 0;
     case WM_ACTIVATE:
         if (LOWORD(wp) == WA_INACTIVE) {

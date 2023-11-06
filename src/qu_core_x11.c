@@ -81,11 +81,6 @@ static struct
 
     PFNGLXSWAPINTERVALEXTPROC ext_glXSwapIntervalEXT;
     PFNGLXCREATECONTEXTATTRIBSARBPROC ext_glXCreateContextAttribsARB;
-
-    // Window structure state
-
-    int width;
-    int height;
 } impl;
 
 //------------------------------------------------------------------------------
@@ -430,14 +425,6 @@ static qu_result initialize(qu_params const *params)
 
     XSync(impl.display, False);
 
-    // (8.1) ...
-
-    XWindowAttributes xwa;
-    XGetWindowAttributes(impl.display, impl.window, &xwa);
-
-    impl.width = xwa.width;
-    impl.height = xwa.height;
-
     // (9) Done.
 
     QU_LOGI("Xlib-based core module initialized.\n");
@@ -533,12 +520,13 @@ static bool process(void)
             });
             break;
         case ConfigureNotify:
-            if (event.xconfigure.width != impl.width || event.xconfigure.height != impl.height) {
-                impl.width = event.xconfigure.width;
-                impl.height = event.xconfigure.height;
-                qu_event_window_resize(impl.width, impl.height);
-            }
-
+            qu_enqueue_event(&(qu_event) {
+                .type = QU_EVENT_TYPE_WINDOW_RESIZE,
+                .data.window_resize = {
+                    .width = event.xconfigure.width,
+                    .height = event.xconfigure.height,
+                },
+            });
             break;
         case EnterNotify:
             qu_enqueue_event(&(qu_event) { QU_EVENT_TYPE_ACTIVATE });
@@ -612,18 +600,10 @@ static void x11_set_window_title(char const *title)
 
 static qu_vec2i x11_get_window_size(void)
 {
-    Window root;
-    int x;
-    int y;
-    unsigned int width;
-    unsigned int height;
-    unsigned int border_width;
-    unsigned int depth;
+    XWindowAttributes xwa;
+    XGetWindowAttributes(impl.display, impl.window, &xwa);
 
-    XGetGeometry(impl.display, impl.window,
-        &root, &x, &y, &width, &height, &border_width, &depth);
-    
-    return (qu_vec2i) { width, height };
+    return (qu_vec2i) { xwa.width, xwa.height };
 }
 
 static void x11_set_window_size(int width, int height)

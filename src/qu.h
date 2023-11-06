@@ -143,6 +143,7 @@ typedef enum qu_event_type
     QU_EVENT_TYPE_TOUCH_STARTED,
     QU_EVENT_TYPE_TOUCH_ENDED,
     QU_EVENT_TYPE_TOUCH_MOVED,
+    QU_EVENT_TYPE_WINDOW_RESIZE,
 } qu_event_type;
 
 typedef enum qu_render_mode
@@ -250,6 +251,12 @@ typedef struct qu_touch_event
     int y;
 } qu_touch_event;
 
+typedef struct qu_window_resize_event
+{
+    int width;
+    int height;
+} qu_window_resize_event;
+
 typedef struct qu_event
 {
     qu_event_type type;
@@ -258,6 +265,7 @@ typedef struct qu_event
         qu_keyboard_event keyboard;
         qu_mouse_event mouse;
         qu_touch_event touch;
+        qu_window_resize_event window_resize;
     } data;
 } qu_event;
 

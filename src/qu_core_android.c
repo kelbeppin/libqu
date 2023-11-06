@@ -375,9 +375,13 @@ static int main_looper_callback(int fd, int events, void *arg)
         break;
     case COMMAND_RESIZE:
         if (priv.window) {
-            int width = ANativeWindow_getWidth(priv.window);
-            int height = ANativeWindow_getHeight(priv.window);
-            qu_event_window_resize(width, height);
+            qu_enqueue_event(&(qu_event) {
+                .type = QU_EVENT_TYPE_WINDOW_RESIZE,
+                .data.window_resize = {
+                    .width = ANativeWindow_getWidth(priv.window),
+                    .height = ANativeWindow_getHeight(priv.window),
+                },
+            });
         }
         break;
     }
