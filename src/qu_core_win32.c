@@ -638,27 +638,6 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
     return DefWindowProc(window, msg, wp, lp);
 }
 
-static void set_size(int width, int height)
-{
-    HMONITOR monitor = MonitorFromWindow(dpy.window, MONITOR_DEFAULTTONEAREST);
-    MONITORINFO mi = { sizeof(MONITORINFO) };
-    GetMonitorInfoW(monitor, &mi);
-
-    int dx = (mi.rcMonitor.right - mi.rcMonitor.left - width) / 2;
-    int dy = (mi.rcMonitor.bottom - mi.rcMonitor.top - height) / 2;
-
-    RECT rect = { dx, dy, dx + width, dy + height };
-    AdjustWindowRect(&rect, dpy.style, FALSE);
-
-    int x = rect.left;
-    int y = rect.top;
-    int w = rect.right - rect.left;
-    int h = rect.bottom - rect.top;
-
-    SetWindowPos(dpy.window, NULL, x, y, w, h, SWP_SHOWWINDOW);
-    UpdateWindow(dpy.window);
-}
-
 //------------------------------------------------------------------------------
 
 static qu_result win32_precheck(qu_params const *params)
@@ -700,7 +679,7 @@ static qu_result initialize(qu_params const *params)
 
     // Create window
 
-    MultiByteToWideChar(CP_UTF8, 0, params->title, -1, dpy.title, ARRAYSIZE(dpy.title));
+    MultiByteToWideChar(CP_UTF8, 0, qu_get_window_title(), -1, dpy.title, ARRAYSIZE(dpy.title));
 
     wcsncpy(dpy.class_name, dpy.title, ARRAYSIZE(dpy.class_name));
     wcsncpy(dpy.window_name, dpy.title, ARRAYSIZE(dpy.window_name));
@@ -738,10 +717,6 @@ static qu_result initialize(qu_params const *params)
 
     BOOL dark = TRUE;
     DwmSetWindowAttribute(dpy.window, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark, sizeof(dark));
-
-    // Resize and show the window.
-
-    set_size(params->display_width, params->display_height);
 
     // Done.
 
@@ -813,27 +788,59 @@ static int get_gl_multisample_samples(void)
     return dpy.gl_samples;
 }
 
-static bool w32_set_window_title(char const *title)
+static char const *win32_get_window_title(void)
+{
+    // This will fail horribly but ok.
+    return dpy.title;
+}
+
+static void win32_set_window_title(char const *title)
 {
     WCHAR title_w[256];
 
     MultiByteToWideChar(CP_UTF8, 0, title, -1, title_w, ARRAYSIZE(title_w));
     
     if (!SetWindowTextW(dpy.window, title_w)) {
-        return false;
+        return;
     }
 
     wcsncpy(dpy.title, title_w, ARRAYSIZE(title_w));
     wcsncpy(dpy.window_name, title_w, ARRAYSIZE(title_w));
-
-    return true;
 }
 
-static bool w32_set_window_size(int width, int height)
+static qu_vec2i win32_get_window_size(void)
 {
-    set_size(width, height);
+    RECT rect;
 
-    return true;
+    if (!GetClientRect(dpy.window, &rect)) {
+        return (qu_vec2i) { -1, -1 };
+    }
+
+    return (qu_vec2i) {
+        .x = rect.right - rect.left,
+        .y = rect.bottom - rect.top,
+    };
+}
+
+static void win32_set_window_size(int width, int height)
+{
+    HMONITOR monitor = MonitorFromWindow(dpy.window, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = { sizeof(MONITORINFO) };
+    GetMonitorInfoW(monitor, &mi);
+
+    int dx = (mi.rcMonitor.right - mi.rcMonitor.left - width) / 2;
+    int dy = (mi.rcMonitor.bottom - mi.rcMonitor.top - height) / 2;
+
+    RECT rect = { dx, dy, dx + width, dy + height };
+    AdjustWindowRect(&rect, dpy.style, FALSE);
+
+    int x = rect.left;
+    int y = rect.top;
+    int w = rect.right - rect.left;
+    int h = rect.bottom - rect.top;
+
+    SetWindowPos(dpy.window, NULL, x, y, w, h, SWP_SHOWWINDOW);
+    UpdateWindow(dpy.window);
 }
 
 //------------------------------------------------------------------------------
@@ -847,6 +854,8 @@ qu_core_impl const qu_win32_core_impl = {
     .get_graphics_context_name = get_graphics_context_name,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
-    .set_window_title = w32_set_window_title,
-    .set_window_size = w32_set_window_size,
+    .get_window_title = win32_get_window_title,
+    .set_window_title = win32_set_window_title,
+    .get_window_size = win32_get_window_size,
+    .set_window_size = win32_set_window_size,
 };

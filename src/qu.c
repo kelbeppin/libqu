@@ -79,15 +79,6 @@ void qu_initialize(qu_params const *user_params)
         memcpy(&qu.params, user_params, sizeof(qu_params));
     }
 
-    if (!qu.params.title) {
-        qu.params.title = "libqu application";
-    }
-
-    if (!qu.params.display_width || !qu.params.display_height) {
-        qu.params.display_width = 720;
-        qu.params.display_height = 480;
-    }
-
     if (!qu.params.canvas_antialiasing_level) {
         qu.params.canvas_antialiasing_level = qu.params.antialiasing_level;
     }

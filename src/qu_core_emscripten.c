@@ -535,14 +535,22 @@ static int get_gl_multisample_samples(void)
     return 1;
 }
 
-static bool set_window_title(char const *title)
+static char const *get_window_title(void)
 {
-    return false;
+    return NULL;
 }
 
-static bool set_window_size(int width, int height)
+static void set_window_title(char const *title)
 {
-    return false;
+}
+
+static qu_vec2i get_window_size(void)
+{
+    return (qu_vec2i) { -1, -1 };
+}
+
+static void set_window_size(int width, int height)
+{
 }
 
 //------------------------------------------------------------------------------
@@ -556,6 +564,8 @@ qu_core_impl const qu_emscripten_core_impl = {
     .get_graphics_context_name = get_graphics_context_name,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
+    .get_window_title = get_window_title,
     .set_window_title = set_window_title,
+    .get_window_size = get_window_size,
     .set_window_size = set_window_size,
 };

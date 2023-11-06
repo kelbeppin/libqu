@@ -68,6 +68,12 @@ static qu_joystick_impl const *joystick_impl_list[] = {
 
 //------------------------------------------------------------------------------
 
+struct core_params
+{
+    char window_title[WINDOW_TITLE_LENGTH];
+    qu_vec2i window_size;
+};
+
 struct event_buffer
 {
     qu_event *array;
@@ -84,14 +90,12 @@ struct core_clock
 
 struct core_priv
 {
+    bool initialized;
+
 	qu_core_impl const *impl;
     qu_joystick_impl const *joystick;
 
-    char window_title[WINDOW_TITLE_LENGTH];
-    int window_width;
-    int window_height;
     bool window_active;
-
     qu_keyboard_state keyboard;
     uint32_t mouse_buttons;
     qu_vec2i mouse_cursor_position;
@@ -110,10 +114,12 @@ struct core_priv
     qu_vec2i touch_position[QU_MAX_TOUCH_INPUTS];
     qu_vec2i touch_delta[QU_MAX_TOUCH_INPUTS];
 
+    struct core_params params;
     struct event_buffer event_buffer;
-
     struct core_clock clock;
 };
+
+//------------------------------------------------------------------------------
 
 static struct core_priv priv;
 
@@ -145,6 +151,45 @@ static bool is_joystick_impl_valid(qu_joystick_impl const *joystick)
         && joystick->get_axis_name
         && joystick->is_button_pressed
         && joystick->get_axis_value;
+}
+
+static void initialize_window(void)
+{
+    if (priv.impl) {
+        return;
+    }
+
+    int impl_count = QU_ARRAY_SIZE(core_impl_list);
+
+    if (impl_count == 0) {
+        QU_HALT("core_impl_count == 0");
+    }
+
+    for (int i = 0; i < impl_count; i++) {
+        priv.impl = core_impl_list[i];
+
+        if (priv.impl->precheck(NULL) == QU_SUCCESS) {
+            break;
+        }
+    }
+
+    if (!is_core_impl_valid(priv.impl)) {
+        QU_HALT("Core module implementation is invalid.");
+    }
+
+	if (priv.impl->initialize(NULL) != QU_SUCCESS) {
+        QU_HALT("Failed to initialize core module.");
+    }
+
+    // These functions always return valid values even if priv.params
+    // is still zeroed. So use them instead of directly taking values from
+    // priv.params.
+
+    char const *title = qu_get_window_title();
+    qu_vec2i size = qu_get_window_size();
+
+    priv.impl->set_window_title(title);
+    priv.impl->set_window_size(size.x, size.y);
 }
 
 static void initialize_joystick(void)
@@ -335,32 +380,13 @@ static void handle_touch_motion(qu_touch_event const *event)
 
 void qu_initialize_core(qu_params const *params)
 {
-    int core_impl_count = QU_ARRAY_SIZE(core_impl_list);
+    initialize_window();
 
-    if (core_impl_count == 0) {
-        QU_HALT("core_impl_count == 0");
-    }
+    priv.initialized = true;
 
-    for (int i = 0; i < core_impl_count; i++) {
-        priv.impl = core_impl_list[i];
-
-        if (priv.impl->precheck(params) == QU_SUCCESS) {
-            break;
-        }
-    }
-
-    if (!is_core_impl_valid(priv.impl)) {
-        QU_HALT("Core module implementation is invalid.");
-    }
-
-	if (priv.impl->initialize(params) != QU_SUCCESS) {
-        QU_HALT("Failed to initialize core module.");
-    }
+    QU_LOGI("Initialized.");
 
     // Temporary:
-    priv.window_width = params->display_width;
-    priv.window_height = params->display_height;
-    strncpy(priv.window_title, params->title, WINDOW_TITLE_LENGTH);
     priv.window_active = true;
 }
 
@@ -372,7 +398,9 @@ void qu_terminate_core(void)
         priv.joystick->terminate();
     }
 
-	priv.impl->terminate();
+    if (priv.impl) {
+	    priv.impl->terminate();
+    }
 
     memset(&priv, 0, sizeof(priv));
 }
@@ -506,27 +534,49 @@ void qu_enqueue_event(qu_event const *event)
 
 char const *qu_get_window_title(void)
 {
-    return priv.window_title;
+    if (!priv.initialized) {
+        if (priv.params.window_title[0] == '\0') {
+            return "libqu application";
+        }
+
+        return priv.params.window_title;
+    }
+
+    return priv.impl->get_window_title();
 }
 
 void qu_set_window_title(char const *title)
 {
-    if (priv.impl->set_window_title(title)) {
-        strncpy(priv.window_title, title, WINDOW_TITLE_LENGTH);
+    if (!priv.initialized) {
+        strncpy(priv.params.window_title, title, WINDOW_TITLE_LENGTH);
+        return;
     }
+
+    priv.impl->set_window_title(title);
 }
 
 qu_vec2i qu_get_window_size(void)
 {
-    return (qu_vec2i) { priv.window_width, priv.window_height };
+    if (!priv.initialized) {
+        if (!priv.params.window_size.x || !priv.params.window_size.y) {
+            return (qu_vec2i) { 1280, 720 };
+        }
+
+        return priv.params.window_size;
+    }
+
+    return priv.impl->get_window_size();
 }
 
 void qu_set_window_size(int width, int height)
 {
-    if (priv.impl->set_window_size(width, height)) {
-        priv.window_width = width;
-        priv.window_height = height;
+    if (!priv.initialized) {
+        priv.params.window_size.x = width;
+        priv.params.window_size.y = height;
+        return;
     }
+
+    priv.impl->set_window_size(width, height);
 }
 
 bool qu_is_window_active(void)

@@ -698,9 +698,19 @@ static int android_gl_get_sample_count(void)
     return egl.samples;
 }
 
+static char const *android_get_window_title(void)
+{
+    return NULL;
+}
+
 static bool android_set_window_title(char const *title)
 {
     return false;
+}
+
+static qu_vec2i android_get_window_size(void)
+{
+    return (qu_vec2i) { -1, -1 };
 }
 
 static bool android_set_window_size(int width, int height)
@@ -719,7 +729,9 @@ qu_core_impl const qu_android_core_impl = {
     .get_graphics_context_name = android_get_graphics_context_name,
     .gl_proc_address = android_gl_get_proc_address,
     .get_gl_multisample_samples = android_gl_get_sample_count,
+    .get_window_title = android_get_window_title,
     .set_window_title = android_set_window_title,
+    .get_window_size = android_get_window_size,
     .set_window_size = android_set_window_size,
 };
 

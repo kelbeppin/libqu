@@ -314,8 +314,11 @@ typedef struct qu_core_impl
     void *(*gl_proc_address)(char const *name);
     int (*get_gl_multisample_samples)(void);
 
-    bool (*set_window_title)(char const *title);
-    bool (*set_window_size)(int width, int height);
+    char const *(*get_window_title)(void);
+    void (*set_window_title)(char const *title);
+
+    qu_vec2i (*get_window_size)(void);
+    void (*set_window_size)(int width, int height);
 } qu_core_impl;
 
 typedef struct qu_joystick_impl

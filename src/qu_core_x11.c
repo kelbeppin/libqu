@@ -221,37 +221,6 @@ static qu_mouse_button mouse_button_conv(unsigned int button)
 
 //------------------------------------------------------------------------------
 
-static void set_title(char const *title)
-{
-    XStoreName(impl.display, impl.window, title);
-    XChangeProperty(impl.display, impl.window,
-        impl.atoms[NET_WM_NAME],
-        impl.atoms[UTF8_STRING],
-        8, PropModeReplace,
-        (unsigned char const *) title, strlen(title));
-}
-
-static void set_display_size(int width, int height)
-{
-    int x = (DisplayWidth(impl.display, impl.screen) / 2) - (width / 2);
-    int y = (DisplayHeight(impl.display, impl.screen) / 2) - (height / 2);
-
-    XMoveResizeWindow(impl.display, impl.window, x, y, width, height);
-
-#if 0
-    XSizeHints hints = {
-        .flags = PMinSize | PMaxSize,
-        .min_width = params->display_width,
-        .max_width = params->display_width,
-        .min_height = params->display_height,
-        .max_height = params->display_height,
-    };
-
-    XMoveWindow(impl.display, impl.window, x, y);
-    XSetWMNormalHints(impl.display, impl.window, &hints);
-#endif
-}
-
 static qu_result x11_precheck(qu_params const *params)
 {
     return QU_SUCCESS;
@@ -328,12 +297,14 @@ static qu_result initialize(qu_params const *params)
         PointerMotionMask | ButtonPressMask | ButtonReleaseMask |
         StructureNotifyMask;
 
+    qu_vec2i window_size = qu_get_window_size();
+
     impl.window = XCreateWindow(
         impl.display,   // display
         impl.root,      // parent
         0, 0,           // position
-        params->display_width,
-        params->display_height,
+        window_size.x,  // window width
+        window_size.y,  // window height
         0,              // border width
         CopyFromParent, // depth
         InputOutput,    // class
@@ -366,7 +337,7 @@ static qu_result initialize(qu_params const *params)
     // (4) WM_CLASS
 
     XClassHint *class_hint = XAllocClassHint();
-    class_hint->res_class = "libqu application";
+    class_hint->res_class = (char *) qu_get_window_title();
     XSetClassHint(impl.display, impl.window, class_hint);
     XFree(class_hint);
 
@@ -456,11 +427,6 @@ static qu_result initialize(qu_params const *params)
     XkbSetDetectableAutoRepeat(impl.display, True, NULL);
 
     // (8) Set title and size of the window
-
-    XMapWindow(impl.display, impl.window);
-
-    set_title(params->title);
-    set_display_size(params->display_width, params->display_height);
 
     XSync(impl.display, False);
 
@@ -610,14 +576,72 @@ static int get_gl_multisample_samples(void)
     return 1;
 }
 
-static bool set_window_title(char const *title)
+static char const *x11_get_window_title(void)
 {
-    return false;
+    Atom type;
+    int format;
+    unsigned long nitems;
+    unsigned long bytes_after;
+    unsigned char *prop;
+
+    XGetWindowProperty(impl.display, impl.window,
+        impl.atoms[NET_WM_NAME], 0, 65535, False, impl.atoms[UTF8_STRING],
+        &type, &format, &nitems, &bytes_after, &prop);
+    
+    // todo: XFree()
+
+    return (char *) prop;
 }
 
-static bool set_window_size(int width, int height)
+static void x11_set_window_title(char const *title)
 {
-    return false;
+    XStoreName(impl.display, impl.window, title);
+
+    XChangeProperty(impl.display, impl.window,
+        impl.atoms[NET_WM_NAME],
+        impl.atoms[UTF8_STRING],
+        8, PropModeReplace,
+        (unsigned char const *) title, strlen(title));
+}
+
+static qu_vec2i x11_get_window_size(void)
+{
+    Window root;
+    int x;
+    int y;
+    unsigned int width;
+    unsigned int height;
+    unsigned int border_width;
+    unsigned int depth;
+
+    XGetGeometry(impl.display, impl.window,
+        &root, &x, &y, &width, &height, &border_width, &depth);
+    
+    return (qu_vec2i) { width, height };
+}
+
+static void x11_set_window_size(int width, int height)
+{
+    int x = (DisplayWidth(impl.display, impl.screen) / 2) - (width / 2);
+    int y = (DisplayHeight(impl.display, impl.screen) / 2) - (height / 2);
+
+    XMoveResizeWindow(impl.display, impl.window, x, y, width, height);
+
+#if 0
+    XSizeHints hints = {
+        .flags = PMinSize | PMaxSize,
+        .min_width = params->display_width,
+        .max_width = params->display_width,
+        .min_height = params->display_height,
+        .max_height = params->display_height,
+    };
+
+    XMoveWindow(impl.display, impl.window, x, y);
+    XSetWMNormalHints(impl.display, impl.window, &hints);
+#endif
+
+    // "This function has no effect if the window is already mapped."
+    XMapWindow(impl.display, impl.window);
 }
 
 //------------------------------------------------------------------------------
@@ -631,6 +655,8 @@ qu_core_impl const qu_x11_core_impl = {
     .get_graphics_context_name = get_graphics_context_name,
     .gl_proc_address = gl_proc_address,
     .get_gl_multisample_samples = get_gl_multisample_samples,
-    .set_window_title = set_window_title,
-    .set_window_size = set_window_size,
+    .get_window_title = x11_get_window_title,
+    .set_window_title = x11_set_window_title,
+    .get_window_size = x11_get_window_size,
+    .set_window_size = x11_set_window_size,
 };
