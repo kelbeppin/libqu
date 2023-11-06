@@ -375,7 +375,7 @@ typedef struct qu_audio_impl
     void (*destroy_source)(qu_audio_source *source);
     bool (*is_source_used)(qu_audio_source *source);
     qu_result (*queue_buffer)(qu_audio_source *source, qu_audio_buffer *buffer);
-    qu_result (*get_queued_buffers)(qu_audio_source *source);
+    int (*get_queued_buffers)(qu_audio_source *source);
     qu_result (*start_source)(qu_audio_source *source);
     qu_result (*stop_source)(qu_audio_source *source);
 } qu_audio_impl;

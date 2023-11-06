@@ -119,7 +119,6 @@ static char const *key_names[QU_TOTAL_KEYS] = {
     "KEY_KP_POINT",
     "KEY_KP_DIV",
     "KEY_KP_ENTER",
-    "[INVALID]",
 };
 
 //------------------------------------------------------------------------------
