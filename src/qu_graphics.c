@@ -185,8 +185,6 @@ struct qu__graphics_priv
     float canvas_ay;
     float canvas_bx;
     float canvas_by;
-
-    qu_params tmp_params;
 };
 
 static struct qu__graphics_priv priv;
@@ -563,7 +561,7 @@ static void surface_dtor(void *ptr)
 
 //------------------------------------------------------------------------------
 
-static void initialize_renderer(qu_params const *params)
+static void initialize_renderer(void)
 {
     QU_LOGD("Initializing renderer...\n");
 
@@ -578,7 +576,7 @@ static void initialize_renderer(qu_params const *params)
 
         QU_HALT_IF(!priv.renderer->query);
 
-        if (priv.renderer->query(params)) {
+        if (priv.renderer->query(NULL)) {
             QU_LOGD("Selected graphics implementation #%d.\n", i);
             break;
         }
@@ -610,7 +608,7 @@ static void initialize_renderer(qu_params const *params)
     QU_HALT_IF(!priv.renderer->destroy_surface);
     QU_HALT_IF(!priv.renderer->set_surface_antialiasing_level);
 
-    priv.renderer->initialize(params);
+    priv.renderer->initialize(NULL);
 
     qu_texture_obj *texture = qu_handle_list_get_first(priv.textures);
 
@@ -680,8 +678,6 @@ static void terminate_renderer(void)
 
 void qu_initialize_graphics(qu_params const *params)
 {
-    priv.tmp_params = *params;
-
     QU_ALLOC_ARRAY(priv.command_buffer.data, QU__RENDER_COMMAND_BUFFER_INITIAL_CAPACITY);
     priv.command_buffer.size = 0;
     priv.command_buffer.capacity = QU__RENDER_COMMAND_BUFFER_INITIAL_CAPACITY;
@@ -744,7 +740,7 @@ void qu_initialize_graphics(qu_params const *params)
         graphics__update_canvas_coords(window_size.x, window_size.y);
     }
 
-    initialize_renderer(params);
+    initialize_renderer();
 
     priv.initialized = true;
     QU_LOGI("Initialized.\n");
@@ -802,7 +798,7 @@ void qu_event_context_restored(void)
 {
     priv.renderer->terminate();
 
-    initialize_renderer(&priv.tmp_params);
+    initialize_renderer();
 }
 
 void qu_event_window_resize(int width, int height)
@@ -819,9 +815,6 @@ void qu_event_window_resize(int width, int height)
             .height = height,
         },
     });
-
-    priv.tmp_params.display_width = width;
-    priv.tmp_params.display_height = height;
 }
 
 qu_vec2i qu_convert_window_pos_to_canvas_pos(qu_vec2i position)

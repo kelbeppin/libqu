@@ -516,7 +516,7 @@ void qu_initialize_audio(qu_params const *params)
 
         QU_HALT_IF(!priv.impl->check);
 
-        if (priv.impl->check(params) == QU_SUCCESS) {
+        if (priv.impl->check(NULL) == QU_SUCCESS) {
             QU_LOGD("Selected audio implementation #%d.\n", i);
             break;
         }
@@ -535,7 +535,7 @@ void qu_initialize_audio(qu_params const *params)
     QU_HALT_IF(!priv.impl->stop_source);
 
     // Initialize audio engine.
-    if (priv.impl->initialize(params) != QU_SUCCESS) {
+    if (priv.impl->initialize(NULL) != QU_SUCCESS) {
         QU_HALT("Illegal audio engine state.");
     }
 

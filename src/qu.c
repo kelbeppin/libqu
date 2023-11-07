@@ -38,7 +38,6 @@ enum qu_status
 struct qu
 {
     enum qu_status status;
-    qu_params params;
 };
 
 struct gateway_priv
@@ -75,21 +74,8 @@ void qu_initialize(qu_params const *user_params)
         memset(&qu, 0, sizeof(struct qu));
     }
 
-    if (user_params) {
-        memcpy(&qu.params, user_params, sizeof(qu_params));
-    }
-
-    if (!qu.params.canvas_antialiasing_level) {
-        qu.params.canvas_antialiasing_level = qu.params.antialiasing_level;
-    }
-
-    if (!qu.params.canvas_width || !qu.params.canvas_height) {
-        qu.params.canvas_width = qu.params.display_width;
-        qu.params.canvas_height = qu.params.display_height;
-    }
-
-    qu_initialize_core(&qu.params);
-    qu_initialize_graphics(&qu.params);
+    qu_initialize_core(NULL);
+    qu_initialize_graphics(NULL);
     qu_initialize_text();
 
     qu.status = QU_STATUS_INITIALIZED;
