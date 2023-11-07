@@ -366,13 +366,11 @@ int main(int argc, char *argv[])
     app.camera.y = 256.f;
     app.camera.z = 512.f;
 
-    qu_initialize(&(qu_params) {
-        .antialiasing_level = 8,
-        .display_width = 512,
-        .display_height = 512,
-        .enable_canvas = true,
-        .canvas_smooth = true,
-    });
+    qu_set_window_size(512, 512);
+    qu_set_window_flags(QU_WINDOW_USE_CANVAS);
+    qu_set_canvas_flags(QU_CANVAS_SMOOTH);
+
+    qu_initialize();
 
     app.duck_texture = qu_load_texture("assets/duck.png");
 

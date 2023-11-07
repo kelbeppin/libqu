@@ -14,7 +14,7 @@
 
 //------------------------------------------------------------------------------
 
-static char const *key_names[QU_TOTAL_KEYS] = {
+static char const *key_names[] = {
     "KEY_0",
     "KEY_1",
     "KEY_2",
@@ -119,6 +119,7 @@ static char const *key_names[QU_TOTAL_KEYS] = {
     "KEY_KP_POINT",
     "KEY_KP_DIV",
     "KEY_KP_ENTER",
+    "(none)",
 };
 
 //------------------------------------------------------------------------------
@@ -225,21 +226,19 @@ static bool loop(void)
 
 int main(int argc, char *argv[])
 {
-    qu_initialize(&(qu_params) {
-        .title = "[libquack sample] keyboard",
-        .display_width = 512,
-        .display_height = 512,
-        .enable_canvas = true,
-        .canvas_smooth = true,
-    });
+    qu_set_window_title("[libquack sample] keyboard");
+    qu_set_window_size(512, 512);
+    qu_set_window_flags(QU_WINDOW_USE_CANVAS);
+
+    qu_initialize();
 
     app.font12 = qu_load_font("assets/unispace.ttf", 12.f);
     app.font16 = qu_load_font("assets/unispace.ttf", 16.f);
     app.font18 = qu_load_font("assets/unispace.ttf", 18.f);
 
-    app.last_pressed_key = QU_KEY_INVALID;
-    app.last_repeated_key = QU_KEY_INVALID;
-    app.last_released_key = QU_KEY_INVALID;
+    app.last_pressed_key = QU_TOTAL_KEYS;
+    app.last_repeated_key = QU_TOTAL_KEYS;
+    app.last_released_key = QU_TOTAL_KEYS;
 
     qu_on_key_pressed(key_press_callback);
     qu_on_key_repeated(key_repeat_callback);

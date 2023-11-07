@@ -251,13 +251,13 @@ static void exit_loop(void)
 
 int main(int argc, char *argv[])
 {
-    qu_initialize(&(qu_params) {
-        .display_width = 720,
-        .display_height = 480,
-        .enable_canvas = true,
-        .canvas_width = 240,
-        .canvas_height = 160,
-    });
+    qu_set_window_title("libqu sample: clock");
+    qu_set_window_size(720, 480);
+    qu_set_window_flags(QU_WINDOW_USE_CANVAS);
+
+    qu_set_canvas_size(240, 160);
+
+    qu_initialize();
 
     app_initialize();
 

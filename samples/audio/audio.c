@@ -49,11 +49,10 @@ static void on_key_pressed(qu_key key)
 
 int main(int argc, char *argv[])
 {
-    qu_initialize(&(qu_params) {
-        .display_width = 512,
-        .display_height = 512,
-        .enable_canvas = true,
-    });
+    qu_set_window_size(512, 512);
+    qu_set_window_flags(QU_WINDOW_USE_CANVAS);
+
+    qu_initialize();
 
     fanfare = qu_load_sound("assets/fanfare.wav");
     negative = qu_load_sound("assets/negative.wav");
@@ -73,9 +72,11 @@ int main(int argc, char *argv[])
         float t = qu_get_time_mediump();
 
         qu_clear(QU_COLOR(0, 0, 0));
+        qu_push_matrix();
         qu_translate(256.f, 256.f);
         qu_rotate(t * 45.f);
         qu_draw_line(-64.f, 0.f, 64.f, 0.f, QU_COLOR(255, 255, 255));
+        qu_pop_matrix();
         qu_present();
     }
 

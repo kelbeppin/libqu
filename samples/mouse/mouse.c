@@ -137,13 +137,11 @@ static bool loop(void)
 
 int main(int argc, char *argv[])
 {
-    qu_initialize(&(qu_params) {
-        .title = "[libquack sample] mouse",
-        .display_width = 512,
-        .display_height = 512,
-        .enable_canvas = true,
-        .canvas_smooth = true,
-    });
+    qu_set_window_title("[libquack sample] mouse");
+    qu_set_window_size(512, 512);
+    qu_set_window_flags(QU_WINDOW_USE_CANVAS);
+
+    qu_initialize();
 
     qu_on_mouse_button_pressed(mouse_button_press_callback);
     qu_on_mouse_button_released(mouse_button_release_callback);
