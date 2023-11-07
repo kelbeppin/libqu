@@ -640,12 +640,12 @@ JNIEXPORT void __unused ANativeActivity_onCreate(ANativeActivity *activity, void
 
 //------------------------------------------------------------------------------
 
-static qu_result android_precheck(qu_params const *params)
+static qu_result android_precheck(void)
 {
     return QU_SUCCESS;
 }
 
-static qu_result android_initialize(qu_params const *params)
+static qu_result android_initialize(void)
 {
     return QU_SUCCESS;
 }

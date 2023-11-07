@@ -311,8 +311,8 @@ typedef struct qu_audio_source
 
 typedef struct qu_core_impl
 {
-    qu_result (*precheck)(qu_params const *params);
-    qu_result (*initialize)(qu_params const *params);
+    qu_result (*precheck)(void);
+    qu_result (*initialize)(void);
     void (*terminate)(void);
     bool (*process_input)(void);
     void (*swap_buffers)(void);
@@ -334,8 +334,8 @@ typedef struct qu_core_impl
 
 typedef struct qu_joystick_impl
 {
-    qu_result (*precheck)(qu_params const *params);
-    qu_result (*initialize)(qu_params const *params);
+    qu_result (*precheck)(void);
+    qu_result (*initialize)(void);
     void (*terminate)(void);
     void (*process)(void);
     bool (*is_connected)(int id);
@@ -350,8 +350,8 @@ typedef struct qu_joystick_impl
 
 typedef struct qu_renderer_impl
 {
-    bool (*query)(qu_params const *params);
-    void (*initialize)(qu_params const *params);
+    bool (*query)(void);
+    void (*initialize)(void);
     void (*terminate)(void);
 
     void (*upload_vertex_data)(qu_vertex_format vertex_format, float const *data, size_t size);
@@ -381,8 +381,8 @@ typedef struct qu_renderer_impl
 
 typedef struct qu_audio_impl
 {
-    qu_result (*check)(qu_params const *params);
-    qu_result (*initialize)(qu_params const *params);
+    qu_result (*check)(void);
+    qu_result (*initialize)(void);
     void (*terminate)(void);
 
     void (*set_master_volume)(float volume);
@@ -485,7 +485,7 @@ void qu_close_audio_loader(qu_audio_loader *loader);
 int64_t qu_audio_loader_read(qu_audio_loader *loader, int16_t *samples, int64_t max_samples);
 int64_t qu_audio_loader_seek(qu_audio_loader *loader, int64_t sample_offset);
 
-void qu_initialize_core(qu_params const *params);
+void qu_initialize_core(void);
 void qu_terminate_core(void);
 bool qu_handle_events(void);
 void qu_swap_buffers(void);
@@ -494,7 +494,7 @@ void *qu_gl_get_proc_address(char const *name);
 int qu_gl_get_samples(void);
 void qu_enqueue_event(qu_event const *event);
 
-void qu_initialize_graphics(qu_params const *params);
+void qu_initialize_graphics(void);
 void qu_terminate_graphics(void);
 void qu_flush_graphics(void);
 void qu_event_context_lost(void);
@@ -509,7 +509,7 @@ void qu_draw_font(qu_texture texture, qu_color color, float const *data, int cou
 void qu_initialize_text(void);
 void qu_terminate_text(void);
 
-void qu_initialize_audio(qu_params const *params);
+void qu_initialize_audio(void);
 void qu_terminate_audio(void);
 
 #if defined(ANDROID)

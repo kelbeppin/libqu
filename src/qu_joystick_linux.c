@@ -62,12 +62,12 @@ static struct qu__joystick_linux_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qu_result joystick_linux__precheck(qu_params const *params)
+static qu_result joystick_linux__precheck(void)
 {
     return QU_SUCCESS;
 }
 
-static qu_result joystick_linux__initialize(qu_params const *params)
+static qu_result joystick_linux__initialize(void)
 {
 	for (int i = 0; i < MAX_JOYSTICKS; i++) {
         priv.device[i].fd = -1;

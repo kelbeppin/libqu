@@ -646,12 +646,12 @@ static LRESULT CALLBACK wndproc(HWND window, UINT msg, WPARAM wp, LPARAM lp)
 
 //------------------------------------------------------------------------------
 
-static qu_result win32_precheck(qu_params const *params)
+static qu_result win32_precheck(void)
 {
     return QU_SUCCESS;
 }
 
-static qu_result initialize(qu_params const *params)
+static qu_result initialize(void)
 {
     // Check instance
 

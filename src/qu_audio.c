@@ -496,7 +496,7 @@ static int32_t play_music(struct music *music, int loop)
 
 //------------------------------------------------------------------------------
 
-void qu_initialize_audio(qu_params const *params)
+void qu_initialize_audio(void)
 {
     if (priv.initialized) {
         QU_LOGW("Attempt to initialized audio, but it's initialized already.\n");
@@ -516,7 +516,7 @@ void qu_initialize_audio(qu_params const *params)
 
         QU_HALT_IF(!priv.impl->check);
 
-        if (priv.impl->check(NULL) == QU_SUCCESS) {
+        if (priv.impl->check() == QU_SUCCESS) {
             QU_LOGD("Selected audio implementation #%d.\n", i);
             break;
         }
@@ -535,7 +535,7 @@ void qu_initialize_audio(qu_params const *params)
     QU_HALT_IF(!priv.impl->stop_source);
 
     // Initialize audio engine.
-    if (priv.impl->initialize(NULL) != QU_SUCCESS) {
+    if (priv.impl->initialize() != QU_SUCCESS) {
         QU_HALT("Illegal audio engine state.");
     }
 
@@ -605,7 +605,7 @@ void qu_terminate_audio(void)
 void qu_set_master_volume(float volume)
 {
     if (!priv.initialized) {
-        qu_initialize_audio(NULL);
+        qu_initialize_audio();
     }
 
     priv.impl->set_master_volume(volume);
@@ -614,7 +614,7 @@ void qu_set_master_volume(float volume)
 qu_sound qu_load_sound(char const *path)
 {
     if (!priv.initialized) {
-        qu_initialize_audio(NULL);
+        qu_initialize_audio();
     }
 
     qu_file *file = qu_open_file_from_path(path);
@@ -680,7 +680,7 @@ qu_voice qu_loop_sound(qu_sound handle)
 qu_music qu_open_music(char const *path)
 {
     if (!priv.initialized) {
-        qu_initialize_audio(NULL);
+        qu_initialize_audio();
     }
 
     qu_file *file = qu_open_file_from_path(path);

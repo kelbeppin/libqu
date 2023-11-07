@@ -217,12 +217,12 @@ static qu_mouse_button mouse_button_conv(unsigned int button)
 
 //------------------------------------------------------------------------------
 
-static qu_result x11_precheck(qu_params const *params)
+static qu_result x11_precheck(void)
 {
     return QU_SUCCESS;
 }
 
-static qu_result initialize(qu_params const *params)
+static qu_result initialize(void)
 {
     // (0) Open display
 

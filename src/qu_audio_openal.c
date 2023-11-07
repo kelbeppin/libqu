@@ -98,7 +98,7 @@ static struct al_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qu_result al_check(qu_params const *params)
+static qu_result al_check(void)
 {
     priv.device = alcOpenDevice(NULL);
 
@@ -110,7 +110,7 @@ static qu_result al_check(qu_params const *params)
     return QU_SUCCESS;
 }
 
-static qu_result al_initialize(qu_params const *params)
+static qu_result al_initialize(void)
 {
     priv.context = alcCreateContext(priv.device, NULL);
 

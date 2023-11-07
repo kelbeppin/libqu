@@ -492,28 +492,6 @@ typedef struct qu_voice
 } qu_voice;
 
 /**
- * Initialization parameters.
- *
- * This structure holds parameters that are define how the library
- * is initialized.
- */
-typedef struct qu_params
-{
-    char const *title;          /*!< Window title */
-    
-    int antialiasing_level;     /*!< MSAA level */
-
-    int display_width;          /*!< Window width */
-    int display_height;         /*!< Window height */
-
-    bool enable_canvas;         /*!< True to enable canvas */
-    bool canvas_smooth;         /*!< True to make canvas smooth */
-    int canvas_antialiasing_level; /*!< Canvas MSAA level */
-    int canvas_width;           /*!< Canvas width */
-    int canvas_height;          /*!< Canvas height */
-} qu_params;
-
-/**
  * Keyboard state.
  *
  * This structure holds state of all keyboard keys.
@@ -605,7 +583,7 @@ extern "C" {
  * @param params A pointer to a structure containing initialization parameters.
  *               Use NULL to use default parameters.
  */
-QU_API void QU_CALL qu_initialize(qu_params const *params);
+QU_API void QU_CALL qu_initialize(void);
 
 /**
  * Terminate the library and clean up resources.

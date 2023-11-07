@@ -25,12 +25,12 @@
 
 //------------------------------------------------------------------------------
 
-static qu_result check(qu_params const *params)
+static qu_result check(void)
 {
     return QU_SUCCESS;
 }
 
-static qu_result initialize(qu_params const *params)
+static qu_result initialize(void)
 {
     QU_LOGI("Initialized.\n");
 

@@ -64,7 +64,7 @@ void qu_atexit(void (*callback)(void))
 //------------------------------------------------------------------------------
 // Public API
 
-void qu_initialize(qu_params const *user_params)
+void qu_initialize(void)
 {
     if (qu.status == QU_STATUS_INITIALIZED) {
         return;
@@ -74,8 +74,8 @@ void qu_initialize(qu_params const *user_params)
         memset(&qu, 0, sizeof(struct qu));
     }
 
-    qu_initialize_core(NULL);
-    qu_initialize_graphics(NULL);
+    qu_initialize_core();
+    qu_initialize_graphics();
     qu_initialize_text();
 
     qu.status = QU_STATUS_INITIALIZED;

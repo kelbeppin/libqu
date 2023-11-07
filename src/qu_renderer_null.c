@@ -24,12 +24,12 @@
 
 //------------------------------------------------------------------------------
 
-static bool query(qu_params const *params)
+static bool query(void)
 {
     return true;
 }
 
-static void initialize(qu_params const *params)
+static void initialize(void)
 {
     QU_LOGI("Initialized.\n");
 }

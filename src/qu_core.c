@@ -170,7 +170,7 @@ static void initialize_window(void)
     for (int i = 0; i < impl_count; i++) {
         priv.impl = core_impl_list[i];
 
-        if (priv.impl->precheck(NULL) == QU_SUCCESS) {
+        if (priv.impl->precheck() == QU_SUCCESS) {
             break;
         }
     }
@@ -179,7 +179,7 @@ static void initialize_window(void)
         QU_HALT("Core module implementation is invalid.");
     }
 
-	if (priv.impl->initialize(NULL) != QU_SUCCESS) {
+	if (priv.impl->initialize() != QU_SUCCESS) {
         QU_HALT("Failed to initialize core module.");
     }
 
@@ -209,7 +209,7 @@ static void initialize_joystick(void)
     for (int i = 0; i < impl_count; i++) {
         priv.joystick = joystick_impl_list[i];
 
-        if (priv.joystick->precheck(NULL) == QU_SUCCESS) {
+        if (priv.joystick->precheck() == QU_SUCCESS) {
             break;
         }
     }
@@ -218,7 +218,7 @@ static void initialize_joystick(void)
         QU_HALT("Joystick module implementation is invalid.");
     }
 
-    if (priv.joystick->initialize(NULL) != QU_SUCCESS) {
+    if (priv.joystick->initialize() != QU_SUCCESS) {
         QU_HALT("Failed to initialize joystick module.");
     }
 }
@@ -380,7 +380,7 @@ static void handle_touch_motion(qu_touch_event const *event)
 //------------------------------------------------------------------------------
 // Internal API
 
-void qu_initialize_core(qu_params const *params)
+void qu_initialize_core(void)
 {
     initialize_window();
 

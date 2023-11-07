@@ -246,7 +246,7 @@ static void surface_remove_multisample_buffer(qu_surface_obj *surface)
 
 //------------------------------------------------------------------------------
 
-static bool gl1_query(qu_params const *params)
+static bool gl1_query(void)
 {
     if (strcmp(qu_get_graphics_context_name(), "OpenGL (Compatibility Profile)")) {
         return false;
@@ -272,7 +272,7 @@ static bool gl1_query(qu_params const *params)
     return true;
 }
 
-static void gl1_initialize(qu_params const *params)
+static void gl1_initialize(void)
 {
     memset(&priv, 0, sizeof(priv));
 

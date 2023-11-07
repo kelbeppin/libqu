@@ -417,12 +417,12 @@ static EM_BOOL wheel_callback(int type, EmscriptenWheelEvent const *event, void 
 
 //------------------------------------------------------------------------------
 
-static qu_result precheck(qu_params const *params)
+static qu_result precheck(void)
 {
     return QU_SUCCESS;
 }
 
-static qu_result initialize(qu_params const *params)
+static qu_result initialize(void)
 {
     EM_ASM({
         specialHTMLTargets["!canvas"] = Module.canvas;

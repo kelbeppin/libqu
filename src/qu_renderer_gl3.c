@@ -555,7 +555,7 @@ static void surface_remove_multisample_buffer(qu_surface_obj *surface)
 
 //------------------------------------------------------------------------------
 
-static bool gl3_query(qu_params const *params)
+static bool gl3_query(void)
 {
     if (strcmp(qu_get_graphics_context_name(), "OpenGL")) {
         return false;
@@ -568,7 +568,7 @@ static bool gl3_query(qu_params const *params)
     return true;
 }
 
-static void gl3_initialize(qu_params const *params)
+static void gl3_initialize(void)
 {
     memset(&priv, 0, sizeof(priv));
 

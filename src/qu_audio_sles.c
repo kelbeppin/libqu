@@ -361,14 +361,14 @@ static struct sl_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qu_result sl_check(qu_params const *params)
+static qu_result sl_check(void)
 {
     memset(&priv, 0, sizeof(struct sl_priv));
 
     return QU_SUCCESS;
 }
 
-static qu_result sl_initialize(qu_params const *params)
+static qu_result sl_initialize(void)
 {
     if (engine_initialize(&priv.engine) != QU_SUCCESS) {
         return QU_FAILURE;

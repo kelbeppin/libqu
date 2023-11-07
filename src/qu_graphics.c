@@ -576,7 +576,7 @@ static void initialize_renderer(void)
 
         QU_HALT_IF(!priv.renderer->query);
 
-        if (priv.renderer->query(NULL)) {
+        if (priv.renderer->query()) {
             QU_LOGD("Selected graphics implementation #%d.\n", i);
             break;
         }
@@ -608,7 +608,7 @@ static void initialize_renderer(void)
     QU_HALT_IF(!priv.renderer->destroy_surface);
     QU_HALT_IF(!priv.renderer->set_surface_antialiasing_level);
 
-    priv.renderer->initialize(NULL);
+    priv.renderer->initialize();
 
     qu_texture_obj *texture = qu_handle_list_get_first(priv.textures);
 
@@ -676,7 +676,7 @@ static void terminate_renderer(void)
 
 //------------------------------------------------------------------------------
 
-void qu_initialize_graphics(qu_params const *params)
+void qu_initialize_graphics(void)
 {
     QU_ALLOC_ARRAY(priv.command_buffer.data, QU__RENDER_COMMAND_BUFFER_INITIAL_CAPACITY);
     priv.command_buffer.size = 0;
@@ -791,7 +791,7 @@ void qu_event_context_lost(void)
     terminate_renderer();
     
     priv.renderer = &qu_null_renderer_impl;
-    priv.renderer->initialize(NULL);
+    priv.renderer->initialize();
 }
 
 void qu_event_context_restored(void)

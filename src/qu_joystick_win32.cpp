@@ -49,12 +49,12 @@ static joystick_win32_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qu_result joystick_win32__precheck(qu_params const *params)
+static qu_result joystick_win32__precheck(void)
 {
     return QU_SUCCESS;
 }
 
-static qu_result joystick_win32__initialize(qu_params const *params)
+static qu_result joystick_win32__initialize(void)
 {
     return QU_SUCCESS;
 }

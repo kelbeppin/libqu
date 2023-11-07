@@ -131,7 +131,7 @@ static struct xa2_priv priv;
 
 //------------------------------------------------------------------------------
 
-static qu_result xa2_check(qu_params const *params)
+static qu_result xa2_check(void)
 {
     for (int i = 0; i < ARRAYSIZE(xa2_modules); i++) {
         struct xa2_module const *module = &xa2_modules[i];
@@ -161,7 +161,7 @@ static qu_result xa2_check(qu_params const *params)
     return QU_FAILURE;
 }
 
-static qu_result xa2_initialize(qu_params const *params)
+static qu_result xa2_initialize(void)
 {
     HRESULT hResult;
 

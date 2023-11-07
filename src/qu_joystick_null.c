@@ -26,12 +26,12 @@
 // qu_joystick_null.c: Dummy joystick module
 //------------------------------------------------------------------------------
 
-static qu_result joystick_null__precheck(qu_params const *params)
+static qu_result joystick_null__precheck(void)
 {
 	return QU_SUCCESS;
 }
 
-static qu_result joystick_null__initialize(qu_params const *params)
+static qu_result joystick_null__initialize(void)
 {
 	return QU_SUCCESS;
 }

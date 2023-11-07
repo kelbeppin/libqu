@@ -585,7 +585,7 @@ static void surface_blit_multisample_buffer(qu_surface_obj const *surface)
 
 //------------------------------------------------------------------------------
 
-static bool es2_query(qu_params const *params)
+static bool es2_query(void)
 {
     if (strcmp(qu_get_graphics_context_name(), "OpenGL ES 2.0")) {
         return false;
@@ -594,7 +594,7 @@ static bool es2_query(qu_params const *params)
     return true;
 }
 
-static void es2_initialize(qu_params const *params)
+static void es2_initialize(void)
 {
     memset(&priv, 0, sizeof(priv));
 
