@@ -69,6 +69,12 @@ enum qu__render_command
     QU__RENDER_COMMAND_DRAW,
 };
 
+struct graphics_params
+{
+    qu_vec2i canvas_size;
+    unsigned int canvas_flags;
+};
+
 struct qu__resize_render_command_args
 {
     int width;
@@ -149,6 +155,10 @@ struct qu__vertex_buffer
 
 struct qu__graphics_priv
 {
+    bool initialized;
+
+    struct graphics_params params;
+    
     qu_renderer_impl const *renderer;
 
     struct qu__render_command_buffer command_buffer;
@@ -626,7 +636,8 @@ static void initialize_renderer(qu_params const *params)
     priv.renderer->apply_texture(priv.current_texture);
 
     // Set default viewport.
-    priv.renderer->exec_resize(params->display_width, params->display_height);
+    qu_vec2i window_size = qu_get_window_size();
+    priv.renderer->exec_resize(window_size.x, window_size.y);
 
     // Enable alpha blend by default.
     priv.renderer->apply_blend_mode(QU_BLEND_MODE_ALPHA);
@@ -634,7 +645,7 @@ static void initialize_renderer(qu_params const *params)
     if (qu_get_window_flags() & QU_WINDOW_USE_CANVAS) {
         priv.renderer->create_surface(&priv.canvas);
         priv.renderer->set_texture_smooth(&priv.canvas.texture,
-            qu_get_canvas_flags() & QU_CANVAS_SMOOTH);
+            priv.params.canvas_flags & QU_CANVAS_SMOOTH);
     }
 
     QU_LOGD("Renderer is initialized.\n");
@@ -669,8 +680,6 @@ static void terminate_renderer(void)
 
 void qu_initialize_graphics(qu_params const *params)
 {
-    memset(&priv, 0, sizeof(priv));
-
     priv.tmp_params = *params;
 
     QU_ALLOC_ARRAY(priv.command_buffer.data, QU__RENDER_COMMAND_BUFFER_INITIAL_CAPACITY);
@@ -694,15 +703,17 @@ void qu_initialize_graphics(qu_params const *params)
     priv.brush = QU_BRUSH_SOLID;
     priv.vertex_format = QU_VERTEX_FORMAT_2XY;
 
+    qu_vec2i window_size = qu_get_window_size();
+
     // Create pseudo-texture for display.
     priv.display = (qu_surface_obj) {
         .texture = {
-            .width = params->display_width,
-            .height = params->display_height,
+            .width = window_size.x,
+            .height = window_size.y,
         },
     };
 
-    qu_mat4_ortho(&priv.display.projection, 0.f, params->display_width, params->display_height, 0.f);
+    qu_mat4_ortho(&priv.display.projection, 0.f, window_size.x, window_size.y, 0.f);
     qu_mat4_identity(&priv.display.modelview[0]);
 
     priv.current_texture = NULL;
@@ -710,17 +721,19 @@ void qu_initialize_graphics(qu_params const *params)
 
     // Create texture for canvas if needed.
     if (qu_get_window_flags() & QU_WINDOW_USE_CANVAS) {
+        qu_vec2i canvas_size = qu_get_canvas_size();
+
         priv.canvas_enabled = true;
 
         priv.canvas = (qu_surface_obj) {
             .texture = {
-                .width = params->canvas_width,
-                .height = params->canvas_height,
+                .width = canvas_size.x,
+                .height = canvas_size.y,
             },
             .sample_count = params->canvas_antialiasing_level,
         };
 
-        qu_mat4_ortho(&priv.canvas.projection, 0.f, params->canvas_width, params->canvas_height, 0.f);
+        qu_mat4_ortho(&priv.canvas.projection, 0.f, canvas_size.x, canvas_size.y, 0.f);
         qu_mat4_identity(&priv.canvas.modelview[0]);
 
         graphics__append_render_command(&(struct qu__render_command_info) {
@@ -728,10 +741,13 @@ void qu_initialize_graphics(qu_params const *params)
             .args.surface.surface = &priv.canvas,
         });
 
-        graphics__update_canvas_coords(params->display_width, params->display_height);
+        graphics__update_canvas_coords(window_size.x, window_size.y);
     }
 
     initialize_renderer(params);
+
+    priv.initialized = true;
+    QU_LOGI("Initialized.\n");
 }
 
 void qu_terminate_graphics(void)
@@ -748,6 +764,10 @@ void qu_terminate_graphics(void)
     qu_destroy_handle_list(priv.surfaces);
 
     pl_free(priv.circle_vertices);
+
+    memset(&priv, 0, sizeof(priv));
+
+    QU_LOGI("Terminated.\n");
 }
 
 void qu_flush_graphics(void)
@@ -862,6 +882,43 @@ qu_vec2i qu_convert_window_delta_to_canvas_delta(qu_vec2i delta)
 
 //------------------------------------------------------------------------------
 // Public API
+
+qu_vec2i qu_get_canvas_size(void)
+{
+    if (!priv.initialized) {
+        if (!priv.params.canvas_size.x || !priv.params.canvas_size.y) {
+            return qu_get_window_size();
+        }
+
+        return priv.params.canvas_size;
+    }
+
+    return (qu_vec2i) {
+        .x = priv.canvas.texture.width,
+        .y = priv.canvas.texture.height,
+    };
+}
+
+void qu_set_canvas_size(int width, int height)
+{
+    if (!priv.initialized) {
+        priv.params.canvas_size.x = width;
+        priv.params.canvas_size.y = height;
+        return;
+    }
+
+    // TODO: implement
+}
+
+unsigned int qu_get_canvas_flags(void)
+{
+    return priv.params.canvas_flags;
+}
+
+void qu_set_canvas_flags(unsigned int flags)
+{
+    priv.params.canvas_flags = flags;
+}
 
 void qu_set_view(float x, float y, float w, float h, float rotation)
 {

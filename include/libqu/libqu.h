@@ -725,23 +725,6 @@ QU_API void QU_CALL qu_set_window_flags(unsigned int flags);
  */
 QU_API bool QU_CALL qu_is_window_active(void);
 
-/**
- * Get current canvas flags.
- * 
- * @return Canvas flag bitmask.
- */
-QU_API unsigned int QU_CALL qu_get_canvas_flags(void);
-
-/**
- * Set canvas flags.
- * 
- * Use this function before calling qu_initialize().
- * 
- * @param flags Canvas flag bitmask.
- * @sa qu_canvas_flags
- */
-QU_API void QU_CALL qu_set_canvas_flags(unsigned int flags);
-
 /**@}*/
 
 //----------------------------------------------------------
@@ -1063,6 +1046,41 @@ QU_API qu_date_time QU_CALL qu_get_date_time(void);
  * @brief This module provides a set of functions for 2D graphics.
  * @{
  */
+
+/**
+ * Get canvas size.
+ * 
+ * @return Size of the canvas.
+ */
+QU_API qu_vec2i QU_CALL qu_get_canvas_size(void);
+
+/**
+ * Set canvas size.
+ * 
+ * Use this function before qu_initialize().
+ * Canvas cannot be resized.
+ * 
+ * @param width Canvas width.
+ * @param height Canvas height.
+ */
+QU_API void QU_CALL qu_set_canvas_size(int width, int height);
+
+/**
+ * Get current canvas flags.
+ * 
+ * @return Canvas flag bitmask.
+ */
+QU_API unsigned int QU_CALL qu_get_canvas_flags(void);
+
+/**
+ * Set canvas flags.
+ * 
+ * Use this function before calling qu_initialize().
+ * 
+ * @param flags Canvas flag bitmask.
+ * @sa qu_canvas_flags
+ */
+QU_API void QU_CALL qu_set_canvas_flags(unsigned int flags);
 
 /**
  * Set blend mode.
