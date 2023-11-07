@@ -722,6 +722,15 @@ static bool android_set_window_size(int width, int height)
     return false;
 }
 
+static int android_get_window_aa_level(void)
+{
+    return 1;
+}
+
+static void android_set_window_aa_level(int level)
+{
+}
+
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_android_core_impl = {
@@ -737,6 +746,8 @@ qu_core_impl const qu_android_core_impl = {
     .set_window_title = android_set_window_title,
     .get_window_size = android_get_window_size,
     .set_window_size = android_set_window_size,
+    .get_window_aa_level = android_get_window_aa_level,
+    .set_window_aa_level = android_set_window_aa_level,
 };
 
 //------------------------------------------------------------------------------

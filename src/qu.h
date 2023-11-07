@@ -327,6 +327,9 @@ typedef struct qu_core_impl
 
     qu_vec2i (*get_window_size)(void);
     void (*set_window_size)(int width, int height);
+
+    int (*get_window_aa_level)(void);
+    void (*set_window_aa_level)(int level);
 } qu_core_impl;
 
 typedef struct qu_joystick_impl

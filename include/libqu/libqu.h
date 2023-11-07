@@ -719,6 +719,22 @@ QU_API unsigned int QU_CALL qu_get_window_flags(void);
 QU_API void QU_CALL qu_set_window_flags(unsigned int flags);
 
 /**
+ * Get current MSAA level.
+ * 
+ * @return MSAA level.
+ */
+QU_API int QU_CALL qu_get_window_aa_level(void);
+
+/**
+ * Set MSAA level.
+ * 
+ * Call this function before calling qu_initialize().
+ * 
+ * @param level MSAA level.
+ */
+QU_API void QU_CALL qu_set_window_aa_level(int level);
+
+/**
  * Check if window is focused.
  *
  * @return True if the libqu window is focused.

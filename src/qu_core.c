@@ -73,6 +73,7 @@ struct core_params
     char window_title[WINDOW_TITLE_LENGTH];
     qu_vec2i window_size;
     unsigned int window_flags;
+    int window_aa_level;
 };
 
 struct event_buffer
@@ -594,6 +595,25 @@ unsigned int qu_get_window_flags(void)
 void qu_set_window_flags(unsigned int flags)
 {
     priv.params.window_flags = flags;
+}
+
+int qu_get_window_aa_level(void)
+{
+    if (!priv.initialized) {
+        return priv.params.window_aa_level;
+    }
+
+    return priv.impl->get_window_aa_level();
+}
+
+void qu_set_window_aa_level(int level)
+{
+    if (!priv.initialized) {
+        priv.params.window_aa_level = level;
+        return;
+    }
+
+    priv.impl->set_window_aa_level(level);
 }
 
 bool qu_is_window_active(void)

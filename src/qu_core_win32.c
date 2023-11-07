@@ -849,6 +849,16 @@ static void win32_set_window_size(int width, int height)
     UpdateWindow(dpy.window);
 }
 
+static int win32_get_window_aa_level(void)
+{
+    return dpy.gl_samples;
+}
+
+static void win32_set_window_aa_level(int level)
+{
+    QU_LOGW("Modifying of MSAA level is not supported.\n");
+}
+
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_win32_core_impl = {
@@ -864,4 +874,6 @@ qu_core_impl const qu_win32_core_impl = {
     .set_window_title = win32_set_window_title,
     .get_window_size = win32_get_window_size,
     .set_window_size = win32_set_window_size,
+    .get_window_aa_level = win32_get_window_aa_level,
+    .set_window_aa_level = win32_set_window_aa_level,
 };

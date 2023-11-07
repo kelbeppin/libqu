@@ -60,6 +60,7 @@ enum
 static struct
 {
     int gl_profile;
+    int sample_count;
 
     // Xlib variables
 
@@ -277,6 +278,7 @@ static qu_result initialize(qu_params const *params)
     }
 
     if (best_fbc >= 0) {
+        impl.sample_count = best_sample_count;
         QU_LOGI("Selected FBConfig with %d samples.\n", best_sample_count);
     }
 
@@ -630,6 +632,16 @@ static void x11_set_window_size(int width, int height)
     XMapWindow(impl.display, impl.window);
 }
 
+static int x11_get_window_aa_level(void)
+{
+    return impl.sample_count;
+}
+
+static void x11_set_window_aa_level(int level)
+{
+    QU_LOGW("Modifying of MSAA level is not supported.\n");
+}
+
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_x11_core_impl = {
@@ -645,4 +657,6 @@ qu_core_impl const qu_x11_core_impl = {
     .set_window_title = x11_set_window_title,
     .get_window_size = x11_get_window_size,
     .set_window_size = x11_set_window_size,
+    .get_window_aa_level = x11_get_window_aa_level,
+    .set_window_aa_level = x11_set_window_aa_level,
 };

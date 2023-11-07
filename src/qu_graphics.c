@@ -730,7 +730,7 @@ void qu_initialize_graphics(qu_params const *params)
                 .width = canvas_size.x,
                 .height = canvas_size.y,
             },
-            .sample_count = params->canvas_antialiasing_level,
+            .sample_count = qu_get_window_aa_level(),
         };
 
         qu_mat4_ortho(&priv.canvas.projection, 0.f, canvas_size.x, canvas_size.y, 0.f);

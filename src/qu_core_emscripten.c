@@ -546,6 +546,15 @@ static void set_window_size(int width, int height)
         "Unable to set HTML canvas size.");
 }
 
+static int get_window_aa_level(void)
+{
+    return 1;
+}
+
+static void set_window_aa_level(int level)
+{
+}
+
 //------------------------------------------------------------------------------
 
 qu_core_impl const qu_emscripten_core_impl = {
@@ -561,4 +570,6 @@ qu_core_impl const qu_emscripten_core_impl = {
     .set_window_title = set_window_title,
     .get_window_size = get_window_size,
     .set_window_size = set_window_size,
+    .get_window_aa_level = get_window_aa_level,
+    .set_window_aa_level = set_window_aa_level,
 };
