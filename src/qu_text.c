@@ -17,18 +17,25 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "text"
-#include "qu.h"
-
-#include <hb-ft.h>
-
-//------------------------------------------------------------------------------
 // qu_text.c: Text rendering module
 //------------------------------------------------------------------------------
 
-#define INITIAL_FONT_COUNT          256
-#define INITIAL_GLYPH_COUNT         256
+#define QU_MODULE "text"
+
+#define STB_DS_IMPLEMENTATION
+
+#define STBDS_REALLOC(ctx, ptr, size)   pl_realloc(ptr, size)
+#define STBDS_FREE(ctx, ptr)            pl_free(ptr)
+
+//------------------------------------------------------------------------------
+
+#include "qu.h"
+
+#include <hb-ft.h>
+#include <stb_ds.h>
+
+//------------------------------------------------------------------------------
+
 #define INITIAL_VERTEX_BUFFER_SIZE  256
 #define INITIAL_INDEX_BUFFER_SIZE   256
 
@@ -64,7 +71,7 @@ struct atlas
 
 struct glyph
 {
-    unsigned long codepoint;        // glyph codepoint (unicode?)
+    unsigned long key;              // glyph codepoint (unicode?)
     int s0, t0;                     // top-left position in atlas
     int s1, t1;                     // bottom-right position in atlas
     float x_advance;                // how much x to add after printing the glyph
@@ -75,12 +82,12 @@ struct glyph
 
 struct font
 {
+    int32_t key;                    // identifier
     hb_font_t *font;                // harfbuzz font handle
     FT_Face face;                   // FreeType font handle
     FT_StreamRec stream;            // FreeType font handle
     struct atlas atlas;             // texture atlas (TODO: multiple atlases)
     struct glyph *glyphs;           // dynamic array of glyphs
-    int glyph_count;                // number of items in glyph array
     float height;                   // general height of font (glyphs may be taller)
 };
 
@@ -89,7 +96,7 @@ static struct
     bool initialized;
     FT_Library freetype;            // FreeType object
     struct font *fonts;             // dynamic array of font objects
-    int font_count;                 // number of items in font array
+    int font_count;                 // font id counter
     float *vertex_buffer;           // dynamic array of vertex data
     int vertex_buffer_size;         // size of vertex data
     qu_color text_color;            // basic color
@@ -123,71 +130,128 @@ static void ft_stream_close(FT_Stream stream)
     // qu_close_file(stream->descriptor.pointer);
 }
 
-/**
- * Get free font index.
- * Expands font array if it's full.
- */
-static int get_font_index(void)
+static FT_Face open_ft_face(FT_Stream stream, float pt)
 {
-    for (int i = 0; i < impl.font_count; i++) {
-        if (impl.fonts[i].face == NULL) {
-            return i;
-        }
+    FT_Face face;
+
+    FT_Error error = FT_Open_Face(impl.freetype, &(FT_Open_Args) {
+        .flags = FT_OPEN_STREAM,
+        .stream = stream,
+    }, 0, &face);
+
+    if (error) {
+        return NULL;
     }
 
-    int next_count = QU_MAX(impl.font_count * 2, INITIAL_FONT_COUNT);
-    struct font *next_array = pl_realloc(impl.fonts, sizeof(struct font) * next_count);
+    FT_Set_Char_Size(face, 0, (int) (pt * 64.0f), 0, 0);
 
-    if (!next_array) {
-        return -1;
-    }
-
-    int font_index = impl.font_count;
-
-    for (int i = font_index; i < next_count; i++) {
-        memset(&next_array[i], 0, sizeof(struct font));
-    }
-
-    QU_LOGD("text: grow font array (%d -> %d)\n", impl.font_count, next_count);
-
-    impl.font_count = next_count;
-    impl.fonts = next_array;
-
-    return font_index;
+    return face;
 }
 
-/**
- * Get free glyph index for specific font.
- * Expands glyph array if it's full.
- */
-static int get_glyph_index(int font_index)
+static qu_result create_atlas(struct atlas *atlas, float pt)
 {
-    for (int i = 0; i < impl.fonts[font_index].glyph_count; i++) {
-        if (impl.fonts[font_index].glyphs[i].codepoint == 0) {
-            return i;
-        }
+    int width = 4096;
+    int height = 16;
+
+    while (height < (pt * 4)) {
+        height *= 2;
     }
 
-    int next_count = QU_MAX(impl.fonts[font_index].glyph_count * 2, INITIAL_GLYPH_COUNT);
-    struct glyph *next_array = pl_realloc(impl.fonts[font_index].glyphs, sizeof(struct glyph) * next_count);
-    
-    if (!next_array) {
-        return -1;
+    unsigned char fill = 0x00;
+    qu_texture texture = qu_create_texture(width, height, 1, &fill);
+
+    if (!texture.id) {
+        return QU_FAILURE;
     }
 
-    QU_LOGD("text: grow glyph array for %d (%d -> %d)\n", font_index,
-        impl.fonts[font_index].glyph_count, next_count);
+    qu_set_texture_smooth(texture, true);
 
-    int glyph_index = impl.fonts[font_index].glyph_count;
+    unsigned char *bitmap = pl_calloc(width * height, sizeof(*bitmap));
 
-    for (int i = glyph_index; i < next_count; i++) {
-        memset(&next_array[i], 0, sizeof(struct glyph));
+    if (!bitmap) {
+        return QU_FAILURE;
     }
 
-    impl.fonts[font_index].glyph_count = next_count;
-    impl.fonts[font_index].glyphs = next_array;
+    atlas->texture = texture;
+    atlas->bitmap = bitmap;
 
-    return glyph_index;
+    atlas->width = width;
+    atlas->height = height;
+    atlas->x_padding = 4;
+    atlas->y_padding = 4;
+    atlas->cursor_x = atlas->x_padding;
+    atlas->cursor_y = atlas->y_padding;
+    atlas->line_height = 0;
+
+    return QU_SUCCESS;
+}
+
+static int32_t open_font(qu_file *file, float pt)
+{
+    // FreeType requires that FT_Stream is always available while
+    // the font is open.
+    // Thus, we first need to put font object (which holds FT_Stream)
+    // to the hashmap so that it always stored there.
+
+    int32_t id = ++impl.font_count;
+
+    hmputs(impl.fonts, ((struct font) {
+        .key = id,
+        .stream = {
+            .base = NULL,
+            .size = file->size,
+            .pos = qu_file_tell(file),
+            .descriptor.pointer = file,
+            .pathname.pointer = (void *) file->name,
+            .read = ft_stream_io,
+            .close = ft_stream_close,
+        },
+    }));
+
+    struct font *font = hmgetp(impl.fonts, id);
+
+    font->face = open_ft_face(&font->stream, pt);
+
+    if (!font->face) {
+        QU_LOGE("Failed to open font %s.\n", file->name);
+        hmdel(impl.fonts, id);
+        return 0;
+    }
+
+    font->font = hb_ft_font_create_referenced(font->face);
+
+    if (!font->font) {
+        FT_Done_Face(font->face);
+        hmdel(impl.fonts, id);
+        return 0;
+    }
+
+    FT_F26Dot6 ascender = font->face->size->metrics.ascender;
+    FT_F26Dot6 descender = font->face->size->metrics.descender;
+
+    font->height = (ascender - descender) / 64.0f;
+
+    if (create_atlas(&font->atlas, pt) != QU_SUCCESS) {
+        hb_font_destroy(font->font);
+        hmdel(impl.fonts, id);
+        return 0;
+    }
+
+    return id;
+}
+
+static void close_font(struct font *font)
+{
+    if (!font) {
+        return;
+    }
+
+    hmfree(font->glyphs);
+    pl_free(font->atlas.bitmap);
+    qu_delete_texture(font->atlas.texture);
+
+    hb_font_destroy(font->font);
+    qu_close_file(font->stream.descriptor.pointer);
 }
 
 /**
@@ -224,31 +288,16 @@ static bool grow_atlas(struct atlas *atlas)
 }
 
 /**
- * Render the glyph (if it isn't already) and return its index.
- * TODO: consider optimizing glyph indexing.
+ * Render the glyph to the texture atlas.
  */
-static int cache_glyph(int font_index, unsigned long codepoint, float x_advance, float y_advance)
+static struct glyph *cache_glyph(struct font *font, unsigned long codepoint, float x_advance, float y_advance)
 {
-    struct font *font = &impl.fonts[font_index];
-
-    for (int i = 0; i < font->glyph_count; i++) {
-        if (font->glyphs[i].codepoint == codepoint) {
-            return i;
-        }
-    }
-
-    int glyph_index = get_glyph_index(font_index);
-
-    if (glyph_index == -1) {
-        return -1;
-    }
-
     if (FT_Load_Glyph(font->face, codepoint, FT_LOAD_RENDER)) {
-        return -1;
+        return NULL;
     }
 
     if (FT_Render_Glyph(font->face->glyph, FT_RENDER_MODE_NORMAL)) {
-        return -1;
+        return NULL;
     }
 
     unsigned char *bitmap = font->face->glyph->bitmap.buffer;
@@ -266,7 +315,7 @@ static int cache_glyph(int font_index, unsigned long codepoint, float x_advance,
 
         if (atlas->cursor_y > edge_y) {
             if (!grow_atlas(atlas)) {
-                return -1;
+                return NULL;
             }
         }
 
@@ -291,19 +340,17 @@ static int cache_glyph(int font_index, unsigned long codepoint, float x_advance,
         atlas->cursor_x, atlas->cursor_y,
         bitmap_w, bitmap_h, bitmap);
 
-    struct glyph *glyph = &font->glyphs[glyph_index];
-
-    glyph->codepoint = codepoint;
-    glyph->s0 = atlas->cursor_x;
-    glyph->t0 = atlas->cursor_y;
-    glyph->s1 = atlas->cursor_x + bitmap_w;
-    glyph->t1 = atlas->cursor_y + bitmap_h;
-
-    glyph->x_advance = x_advance;
-    glyph->y_advance = y_advance;
-
-    glyph->x_bearing = font->face->glyph->bitmap_left;
-    glyph->y_bearing = font->face->glyph->bitmap_top;
+    hmputs(font->glyphs, ((struct glyph) {
+        .key = codepoint,
+        .s0 = atlas->cursor_x,
+        .t0 = atlas->cursor_y,
+        .s1 = atlas->cursor_x + bitmap_w,
+        .t1 = atlas->cursor_y + bitmap_h,
+        .x_advance = x_advance,
+        .y_advance = y_advance,
+        .x_bearing = font->face->glyph->bitmap_left,
+        .y_bearing = font->face->glyph->bitmap_top,
+    }));
 
     atlas->cursor_x += bitmap_w + atlas->x_padding;
 
@@ -311,7 +358,7 @@ static int cache_glyph(int font_index, unsigned long codepoint, float x_advance,
         atlas->line_height = bitmap_h;
     }
 
-    return glyph_index;
+    return hmgetp(font->glyphs, codepoint);
 }
 
 /**
@@ -406,15 +453,9 @@ static qu_result process_text(int32_t font_id, char const *text, void *data,
                               void (*glyph_callback)(struct font *, struct glyph *, void *),
                               void (*text_callback)(struct font *, void *))
 {
-    int font_index = font_id - 1;
+    struct font *font = hmgetp_null(impl.fonts, font_id);
 
-    if (font_index < 0 || font_index >= impl.font_count) {
-        return QU_FAILURE;
-    }
-
-    struct font *font = &impl.fonts[font_index];
-
-    if (!font->face) {
+    if (!font) {
         return QU_FAILURE;
     }
 
@@ -431,17 +472,21 @@ static qu_result process_text(int32_t font_id, char const *text, void *data,
     unsigned int length = hb_buffer_get_length(buffer);
 
     for (unsigned int i = 0; i < length; i++) {
-        float x_adv = pos[i].x_advance / 64.0f;
-        float y_adv = pos[i].y_advance / 64.0f;
-        
-        int glyph_index = cache_glyph(font_index, info[i].codepoint, x_adv, y_adv);
+        struct glyph *glyph = hmgetp_null(font->glyphs, info[i].codepoint);
 
-        if (glyph_index == -1) {
-            continue;
+        if (!glyph) {
+            float x_adv = pos[i].x_advance / 64.0f;
+            float y_adv = pos[i].y_advance / 64.0f;
+
+            glyph = cache_glyph(font, info[i].codepoint, x_adv, y_adv);
+
+            if (!glyph) {
+                continue;
+            }
         }
 
         if (glyph_callback) {
-            glyph_callback(font, &font->glyphs[glyph_index], data);
+            glyph_callback(font, glyph, data);
         }
     }
 
@@ -482,12 +527,12 @@ void qu_terminate_text(void)
         return;
     }
 
-    for (int i = 0; i < impl.font_count; i++) {
-        qu_delete_font((qu_font) { i });
+    for (int i = 0; i < hmlen(impl.fonts); i++) {
+        close_font(&impl.fonts[i]);
     }
 
     pl_free(impl.vertex_buffer);
-    pl_free(impl.fonts);
+    hmfree(impl.fonts);
 
     QU_LOGI("Text module terminated.\n");
 
@@ -510,107 +555,29 @@ qu_font qu_load_font(char const *path, float pt)
         return (qu_font) { 0 };
     }
 
-    int32_t index = get_font_index();
+    int32_t id = open_font(file, pt);
 
-    if (index == -1) {
+    if (!id) {
         qu_close_file(file);
-        
-        return (qu_font) { 0 };
     }
 
-    struct font *fontp = &impl.fonts[index];
-    memset(fontp, 0, sizeof(struct font));
-
-    fontp->stream.base = NULL;
-    fontp->stream.size = file->size;
-    fontp->stream.pos = qu_file_tell(file);
-    fontp->stream.descriptor.pointer = file;
-    fontp->stream.pathname.pointer = (void *) file->name;
-    fontp->stream.read = ft_stream_io;
-    fontp->stream.close = ft_stream_close;
-
-    FT_Open_Args args = {
-        .flags = FT_OPEN_STREAM,
-        .stream = &fontp->stream,
-    };
-
-    FT_Error error = FT_Open_Face(impl.freetype, &args, 0, &fontp->face);
-
-    if (error) {
-        QU_LOGE("Failed to open font %s.\n", file->name);
-        qu_close_file(file);
-
-        return (qu_font) { 0 };
-    }
-
-    FT_Set_Char_Size(fontp->face, 0, (int) (pt * 64.0f), 0, 0);
-
-    fontp->font = hb_ft_font_create_referenced(fontp->face);
-
-    if (!fontp->font) {
-        FT_Done_Face(fontp->face);
-        fontp->face = NULL;
-
-        qu_close_file(file);
-
-        return (qu_font) { 0 };
-    }
-
-    int width = 4096;
-    int height = 16;
-
-    while (height < (pt * 4)) {
-        height *= 2;
-    }
-
-    unsigned char fill = 0x00;
-    fontp->atlas.texture = qu_create_texture(width, height, 1, &fill);
-    qu_set_texture_smooth(fontp->atlas.texture, true);
-    fontp->atlas.bitmap = pl_calloc(width * height, sizeof(unsigned char));
-
-    if (fontp->atlas.texture.id == 0 || !fontp->atlas.bitmap) {
-        pl_free(fontp->atlas.bitmap);
-        fontp->face = NULL;
-
-        hb_font_destroy(fontp->font);
-        fontp->font = NULL;
-
-        qu_close_file(file);
-
-        return (qu_font) { 0 };
-    }
-
-    fontp->atlas.width = width;
-    fontp->atlas.height = height;
-
-    fontp->atlas.x_padding = 4;
-    fontp->atlas.y_padding = 4;
-
-    fontp->atlas.cursor_x = fontp->atlas.x_padding;
-    fontp->atlas.cursor_y = fontp->atlas.y_padding;
-
-    fontp->atlas.line_height = 0;
+    struct font *font = hmgetp(impl.fonts, id);
 
     for (int i = 0x20; i <= 0xFF; i++) {
         hb_codepoint_t codepoint;
 
-        if (!hb_font_get_glyph(fontp->font, i, 0, &codepoint)) {
+        if (!hb_font_get_glyph(font->font, i, 0, &codepoint)) {
             continue;
         }
 
         hb_position_t x_advance, y_advance;
-        hb_font_get_glyph_advance_for_direction(fontp->font, codepoint,
+        hb_font_get_glyph_advance_for_direction(font->font, codepoint,
             HB_DIRECTION_LTR, &x_advance, &y_advance);
 
-        cache_glyph(index, codepoint, x_advance / 64.0f, y_advance / 64.0f);
+        cache_glyph(font, codepoint, x_advance / 64.0f, y_advance / 64.0f);
     }
 
-    FT_F26Dot6 ascender = fontp->face->size->metrics.ascender;
-    FT_F26Dot6 descender = fontp->face->size->metrics.descender;
-
-    fontp->height = (ascender - descender) / 64.0f;
-
-    return (qu_font) { index + 1 };
+    return (qu_font) { id };
 }
 
 /**
@@ -622,27 +589,8 @@ void qu_delete_font(qu_font font)
         return;
     }
 
-    int index = font.id - 1;
-
-    if (index < 0 || index >= impl.font_count) {
-        return;
-    }
-
-    struct font *fontp = &impl.fonts[index];
-
-    if (!fontp->face) {
-        return;
-    }
-
-    pl_free(fontp->glyphs);
-    pl_free(fontp->atlas.bitmap);
-    qu_delete_texture(fontp->atlas.texture);
-
-    hb_font_destroy(fontp->font);
-    fontp->font = NULL;
-
-    qu_close_file(fontp->stream.descriptor.pointer);
-    fontp->face = NULL;
+    close_font(hmgetp_null(impl.fonts, font.id));
+    hmdel(impl.fonts, font.id);
 }
 
 qu_vec2f qu_calculate_text_box(qu_font font, char const *str)
