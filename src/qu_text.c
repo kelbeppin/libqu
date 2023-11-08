@@ -461,14 +461,13 @@ static qu_result process_text(int32_t font_id, char const *text, void *data,
  */
 void qu_initialize_text(void)
 {
-    memset(&impl, 0, sizeof(impl));
-
     FT_Error error = FT_Init_FreeType(&impl.freetype);
 
     if (error) {
-        QU_LOGE("Failed to initialize FreeType.\n");
-        return;
+        QU_HALT("Failed to initialize FreeType.");
     }
+
+    qu_atexit(qu_terminate_text);
 
     QU_LOGI("Text module initialized.\n");
     impl.initialized = true;
@@ -479,6 +478,10 @@ void qu_initialize_text(void)
  */
 void qu_terminate_text(void)
 {
+    if (!impl.initialized) {
+        return;
+    }
+
     for (int i = 0; i < impl.font_count; i++) {
         qu_delete_font((qu_font) { i });
     }
@@ -486,10 +489,9 @@ void qu_terminate_text(void)
     pl_free(impl.vertex_buffer);
     pl_free(impl.fonts);
 
-    if (impl.initialized) {
-        QU_LOGI("Text module terminated.\n");
-        impl.initialized = false;
-    }
+    QU_LOGI("Text module terminated.\n");
+
+    memset(&impl, 0, sizeof(impl));
 }
 
 /**
@@ -498,6 +500,10 @@ void qu_terminate_text(void)
  */
 qu_font qu_load_font(char const *path, float pt)
 {
+    if (!impl.initialized) {
+        qu_initialize_text();
+    }
+
     qu_file *file = qu_open_file_from_path(path);
 
     if (!file) {
@@ -612,6 +618,10 @@ qu_font qu_load_font(char const *path, float pt)
  */
 void qu_delete_font(qu_font font)
 {
+    if (!impl.initialized) {
+        return;
+    }
+
     int index = font.id - 1;
 
     if (index < 0 || index >= impl.font_count) {
@@ -637,6 +647,10 @@ void qu_delete_font(qu_font font)
 
 qu_vec2f qu_calculate_text_box(qu_font font, char const *str)
 {
+    if (!impl.initialized) {
+        return (qu_vec2f) { -1.f, -1.f };
+    }
+
     struct text_calculate_state state = {
         .width = 0.f,
         .height = 0.f,
@@ -649,6 +663,10 @@ qu_vec2f qu_calculate_text_box(qu_font font, char const *str)
 
 qu_vec2f qu_calculate_text_box_fmt(qu_font font, char const *fmt, ...)
 {
+    if (!impl.initialized) {
+        return (qu_vec2f) { -1.f, -1.f };
+    }
+
     va_list ap;
     char buffer[256];
     char *heap = NULL;
@@ -679,6 +697,10 @@ qu_vec2f qu_calculate_text_box_fmt(qu_font font, char const *fmt, ...)
  */
 void qu_draw_text(qu_font font, float x, float y, qu_color color, char const *str)
 {
+    if (!impl.initialized) {
+        return;
+    }
+
     struct text_draw_state state = {
         .x_current = x,
         .y_current = y,
@@ -692,6 +714,10 @@ void qu_draw_text(qu_font font, float x, float y, qu_color color, char const *st
 
 void qu_draw_text_fmt(qu_font font, float x, float y, qu_color color, char const *fmt, ...)
 {
+    if (!impl.initialized) {
+        return;
+    }
+
     va_list ap;
     char buffer[256];
     char *heap = NULL;

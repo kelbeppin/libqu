@@ -28,25 +28,13 @@
 
 //------------------------------------------------------------------------------
 
-enum qu_status
-{
-    QU_STATUS_CLEAN,
-    QU_STATUS_INITIALIZED,
-    QU_STATUS_TERMINATED,
-};
-
-struct qu
-{
-    enum qu_status status;
-};
-
 struct gateway_priv
 {
+    bool initialized;
     void (*exit_handlers[MAX_EXIT_HANDLERS])(void);
     int total_exit_handlers;
 };
 
-static struct qu qu;
 static struct gateway_priv priv;
 
 //------------------------------------------------------------------------------
@@ -66,34 +54,28 @@ void qu_atexit(void (*callback)(void))
 
 void qu_initialize(void)
 {
-    if (qu.status == QU_STATUS_INITIALIZED) {
+    if (priv.initialized) {
         return;
-    }
-    
-    if (qu.status == QU_STATUS_TERMINATED) {
-        memset(&qu, 0, sizeof(struct qu));
     }
 
     qu_initialize_core();
     qu_initialize_graphics();
-    qu_initialize_text();
 
-    qu.status = QU_STATUS_INITIALIZED;
+    priv.initialized = true;
 }
 
 void qu_terminate(void)
 {
-    if (qu.status == QU_STATUS_INITIALIZED) {
-        qu_terminate_text();
-        qu_terminate_graphics();
-        qu_terminate_core();
-
-        qu.status = QU_STATUS_TERMINATED;
-    }
-
     for (int i = (priv.total_exit_handlers - 1); i >= 0; i--) {
         priv.exit_handlers[i]();
     }
+
+    if (!priv.initialized) {
+        return;
+    }
+
+    qu_terminate_graphics();
+    qu_terminate_core();
 
     memset(&priv, 0, sizeof(priv));
 }
