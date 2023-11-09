@@ -70,6 +70,7 @@ static qu_joystick_impl const *joystick_impl_list[] = {
 
 struct core_params
 {
+    int desired_graphics_api;
     char window_title[WINDOW_TITLE_LENGTH];
     qu_vec2i window_size;
     unsigned int window_flags;
@@ -539,6 +540,30 @@ void qu_enqueue_event(qu_event const *event)
 
 //------------------------------------------------------------------------------
 // Public API
+
+/**
+ * Undocumented.
+ */
+int qu_get_desired_graphics_api(void)
+{
+    return priv.params.desired_graphics_api;
+}
+
+/**
+ * Undocumented.
+ */
+void qu_set_desired_graphics_api(char const *api)
+{
+    if (strcmp(api, "gl1") == 0) {
+        priv.params.desired_graphics_api = QU_GRAPHICS_API_GL15;
+    } else if (strcmp(api, "gl3") == 0) {
+        priv.params.desired_graphics_api = QU_GRAPHICS_API_GL33;
+    } else if (strcmp(api, "es2") == 0) {
+        priv.params.desired_graphics_api = QU_GRAPHICS_API_ES20;
+    } else {
+        QU_LOGW("unknown graphics api \"%s\"\n", api);
+    }
+}
 
 char const *qu_get_window_title(void)
 {

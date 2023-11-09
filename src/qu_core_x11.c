@@ -59,7 +59,7 @@ enum
 
 static struct
 {
-    int gl_profile;
+    int graphics_api;
     int sample_count;
 
     // Xlib variables
@@ -375,22 +375,47 @@ static qu_result initialize(void)
     // (6) Create GLX context and surface
 
     if (impl.extensions & ARB_CREATE_CONTEXT_PROFILE) {
-        int major_version = 3;
-        int minor_version = 3;
-        int profile_mask = GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
+        int major_version;
+        int minor_version;
+        int profile_mask;
 
-#ifdef QU_USE_ES2
-        if (impl.extensions & EXT_CREATE_CONTEXT_ES2_PROFILE) {
+        impl.graphics_api = qu_get_desired_graphics_api();
+
+        if (impl.graphics_api == 0) {
+            impl.graphics_api = QU_GRAPHICS_API_GL33;
+        } else if (impl.graphics_api == QU_GRAPHICS_API_ES20) {
+#if defined(QU_USE_ES2)
+            impl.graphics_api = QU_GRAPHICS_API_GL33;
+#else
+            if (impl.extensions & EXT_CREATE_CONTEXT_ES2_PROFILE) {
+                impl.graphics_api = QU_GRAPHICS_API_ES20;
+            } else {
+                impl.graphics_api = QU_GRAPHICS_API_GL33;
+            }
+#endif
+        }
+
+        switch (impl.graphics_api) {
+        case QU_GRAPHICS_API_GL15:
+            QU_LOGI("Creating OpenGL 1.5 context...\n");
+            major_version = 1;
+            minor_version = 5;
+            profile_mask = GLX_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
+            break;
+        default:
+        case QU_GRAPHICS_API_GL33:
+            QU_LOGI("Creating OpenGL 3.3 (Core Profile) context...\n");
+            major_version = 3;
+            minor_version = 3;
+            profile_mask = GLX_CONTEXT_CORE_PROFILE_BIT_ARB;
+            break;
+        case QU_GRAPHICS_API_ES20:
+            QU_LOGI("Creating OpenGL ES 2.0 context...\n");
             major_version = 2;
             minor_version = 0;
             profile_mask = GLX_CONTEXT_ES2_PROFILE_BIT_EXT;
-            impl.gl_profile = 1;
+            break;
         }
-#endif
-
-        QU_LOGI("Creating %s %d.%d context...\n",
-            impl.gl_profile == 1 ? "OpenGL ES" : "OpenGL",
-            major_version, minor_version);
 
         int ctx_attribs[] = {
             GLX_CONTEXT_MAJOR_VERSION_ARB,  major_version,
@@ -407,7 +432,7 @@ static qu_result initialize(void)
     if (!impl.context) {
         QU_LOGI("Creating legacy OpenGL context...\n");
         impl.context = glXCreateContext(impl.display, vi, NULL, True);
-        impl.gl_profile = -1;
+        impl.graphics_api = QU_GRAPHICS_API_GL15;
     }
 
     XFree(vi);
@@ -552,13 +577,15 @@ static void present(void)
 
 static char const *get_graphics_context_name(void)
 {
-    switch (impl.gl_profile) {
-    case 0:
+    switch (impl.graphics_api) {
+    case QU_GRAPHICS_API_GL15:
+        return "OpenGL (Compatibility Profile)";
+    case QU_GRAPHICS_API_GL33:
         return "OpenGL";
-    case 1:
+    case QU_GRAPHICS_API_ES20:
         return "OpenGL ES 2.0";
     default:
-        return "OpenGL (Compatibility Profile)";
+        return "Unknown";
     }
 }
 

@@ -188,6 +188,14 @@ typedef enum qu_brush
     QU_TOTAL_BRUSHES,
 } qu_brush;
 
+typedef enum qu_graphics_api
+{
+    QU_GRAPHICS_API_NULL,
+    QU_GRAPHICS_API_GL15,
+    QU_GRAPHICS_API_GL33,
+    QU_GRAPHICS_API_ES20,
+} qu_graphics_api;
+
 typedef struct pl_thread pl_thread;
 typedef struct pl_mutex pl_mutex;
 typedef struct qu_handle_list qu_handle_list;
@@ -522,6 +530,11 @@ int64_t np_android_asset_tell(void *asset);
 int64_t np_android_asset_seek(void *asset, int64_t offset, int whence);
 
 #endif // defined(ANDROID)
+
+// Hidden public functions:
+
+QU_API int QU_CALL qu_get_desired_graphics_api(void);
+QU_API void QU_CALL qu_set_desired_graphics_api(char const *api);
 
 //------------------------------------------------------------------------------
 
