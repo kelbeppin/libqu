@@ -510,8 +510,9 @@ void qu_event_context_restored(void);
 void qu_event_window_resize(int width, int height);
 qu_vec2i qu_convert_window_pos_to_canvas_pos(qu_vec2i position);
 qu_vec2i qu_convert_window_delta_to_canvas_delta(qu_vec2i position);
-qu_texture qu_create_texture(int w, int h, int channels, unsigned char *fill);
+qu_texture qu_create_texture(int w, int h, int channels);
 void qu_update_texture(qu_texture texture, int x, int y, int w, int h, uint8_t const *pixels);
+void qu_resize_texture(qu_texture texture, int width, int height);
 void qu_draw_font(qu_texture texture, qu_color color, float const *data, int count);
 
 void qu_initialize_text(void);

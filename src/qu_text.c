@@ -66,7 +66,6 @@ struct atlas
     int line_height;                // max height of current line in the atlas
     int x_padding;                  // min x padding between glyphs
     int y_padding;                  // min y padding between glyphs
-    unsigned char *bitmap;          // locally stored copy of bitmap
 };
 
 struct glyph
@@ -157,8 +156,7 @@ static qu_result create_atlas(struct atlas *atlas, float pt)
         height *= 2;
     }
 
-    unsigned char fill = 0x00;
-    qu_texture texture = qu_create_texture(width, height, 1, &fill);
+    qu_texture texture = qu_create_texture(width, height, 2);
 
     if (!texture.id) {
         return QU_FAILURE;
@@ -166,15 +164,7 @@ static qu_result create_atlas(struct atlas *atlas, float pt)
 
     qu_set_texture_smooth(texture, true);
 
-    unsigned char *bitmap = pl_calloc(width * height, sizeof(*bitmap));
-
-    if (!bitmap) {
-        return QU_FAILURE;
-    }
-
     atlas->texture = texture;
-    atlas->bitmap = bitmap;
-
     atlas->width = width;
     atlas->height = height;
     atlas->x_padding = 4;
@@ -247,7 +237,6 @@ static void close_font(struct font *font)
     }
 
     hmfree(font->glyphs);
-    pl_free(font->atlas.bitmap);
     qu_delete_texture(font->atlas.texture);
 
     hb_font_destroy(font->font);
@@ -259,32 +248,32 @@ static void close_font(struct font *font)
  */
 static bool grow_atlas(struct atlas *atlas)
 {
-    int next_height = atlas->height * 2;
-    unsigned char *next_bitmap = pl_realloc(atlas->bitmap, atlas->width * next_height);
+    atlas->height *= 2;
 
-    if (!next_bitmap) {
-        return false;
+    qu_resize_texture(atlas->texture, atlas->width, atlas->height);
+
+    return true;
+}
+
+/**
+ * Convert 8-bit B/W bitmap to 16-bit bitmap with alpha channel.
+ */
+static unsigned char *conv_8bit_to_16bit(unsigned char *bitmap8, int width, int height)
+{
+    unsigned char *bitmap16 = pl_calloc(sizeof(*bitmap16), width * height * 2);
+
+    if (!bitmap16) {
+        return NULL;
     }
 
-    QU_LOGD("text: grow atlas (%d -> %d)\n", atlas->height, next_height);
-
-    atlas->height = next_height;
-    atlas->bitmap = next_bitmap;
-
-    for (int y = atlas->height / 2; y < atlas->height; y++) {
-        for (int x = 0; x < atlas->width; x++) {
-            atlas->bitmap[y * atlas->width + x] = 0;
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            bitmap16[y * width * 2 + x * 2 + 0] = 255;
+            bitmap16[y * width * 2 + x * 2 + 1] = bitmap8[y * width + x];
         }
     }
 
-    qu_delete_texture(atlas->texture);
-
-    unsigned char fill = 0x00;
-    atlas->texture = qu_create_texture(atlas->width, atlas->height, 1, &fill);
-    qu_set_texture_smooth(atlas->texture, true);
-    qu_update_texture(atlas->texture, 0, 0, -1, -1, atlas->bitmap);
-
-    return true;
+    return bitmap16;
 }
 
 /**
@@ -300,7 +289,7 @@ static struct glyph *cache_glyph(struct font *font, unsigned long codepoint, flo
         return NULL;
     }
 
-    unsigned char *bitmap = font->face->glyph->bitmap.buffer;
+    unsigned char *bitmap8 = font->face->glyph->bitmap.buffer;
     int bitmap_w = font->face->glyph->bitmap.width;
     int bitmap_h = font->face->glyph->bitmap.rows;
 
@@ -322,23 +311,13 @@ static struct glyph *cache_glyph(struct font *font, unsigned long codepoint, flo
         atlas->line_height = 0;
     }
 
-    // Replace portion of large on-memory bitmap with new data.
-    for (int y = 0; y < bitmap_h; y++) {
-        int atlas_y = atlas->cursor_y + y;
-
-        for (int x = 0; x < bitmap_w; x++) {
-            int atlas_x = atlas->cursor_x + x;
-            int atlas_idx = atlas_y * atlas->width + atlas_x;
-            int idx = y * bitmap_w + x;
-
-            atlas->bitmap[atlas_idx] = bitmap[idx];
-        }
-    }
+    unsigned char *bitmap16 = conv_8bit_to_16bit(bitmap8, bitmap_w, bitmap_h);
 
     // Update on-VRAM texture portion.
-    qu_update_texture(atlas->texture,
-        atlas->cursor_x, atlas->cursor_y,
-        bitmap_w, bitmap_h, bitmap);
+    qu_update_texture(atlas->texture, atlas->cursor_x, atlas->cursor_y,
+        bitmap_w, bitmap_h, bitmap16);
+
+    pl_free(bitmap16);
 
     hmputs(font->glyphs, ((struct glyph) {
         .key = codepoint,

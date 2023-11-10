@@ -1193,27 +1193,17 @@ void qu_draw_circle(float x, float y, float radius, qu_color outline, qu_color f
     }
 }
 
-qu_texture qu_create_texture(int width, int height, int channels, unsigned char *fill)
+qu_texture qu_create_texture(int width, int height, int channels)
 {
     qu_texture_obj texture = {
         .width = width,
         .height = height,
         .channels = channels,
-        .pixels = pl_malloc(width * height * channels),
+        .pixels = pl_calloc(sizeof(*texture.pixels), width * height * channels),
     };
 
     if (!texture.pixels) {
         return (qu_texture) { 0 };
-    }
-
-    if (fill) {
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                for (int c = 0; c < channels; c++) {
-                    texture.pixels[y * width * channels + x * channels + c] = fill[c];
-                }
-            }
-        }
     }
 
     priv.renderer->load_texture(&texture);
@@ -1314,6 +1304,40 @@ void qu_update_texture(qu_texture texture, int x, int y, int w, int h, uint8_t c
     }
 
     priv.renderer->load_texture(texture_p);
+}
+
+void qu_resize_texture(qu_texture handle, int width, int height)
+{
+    qu_texture_obj *texture = qu_handle_list_get(priv.textures, handle.id);
+
+    if (!texture) {
+        return;
+    }
+
+    unsigned char *pixels = pl_calloc(width * height * texture->channels, sizeof(*pixels));
+
+    if (!pixels) {
+        QU_HALT("Out of memory.");
+    }
+
+    for (int y = 0; y < QU_MIN(height, texture->height); y++) {
+        for (int x = 0; x < QU_MIN(width, texture->width); x++) {
+            size_t di = y * width * texture->channels + x * texture->channels;
+            size_t si = y * texture->width * texture->channels + x * texture->channels;
+
+            for (int c = 0; c < texture->channels; c++) {
+                pixels[di + c] = texture->pixels[si + c];
+            }
+        }
+    }
+
+    pl_free(texture->pixels);
+
+    texture->width = width;
+    texture->height = height;
+    texture->pixels = pixels;
+
+    priv.renderer->load_texture(texture);
 }
 
 void qu_draw_texture(qu_texture texture, float x, float y, float w, float h)
