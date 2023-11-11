@@ -341,6 +341,26 @@ static struct glyph *cache_glyph(struct font *font, unsigned long codepoint, flo
 }
 
 /**
+ * Cache ASCII glyphs.
+ */
+static void prerender_ascii(struct font *font)
+{
+    for (int i = 0x20; i <= 0xFF; i++) {
+        hb_codepoint_t codepoint;
+
+        if (!hb_font_get_glyph(font->font, i, 0, &codepoint)) {
+            continue;
+        }
+
+        hb_position_t x_advance, y_advance;
+        hb_font_get_glyph_advance_for_direction(font->font, codepoint,
+            HB_DIRECTION_LTR, &x_advance, &y_advance);
+
+        cache_glyph(font, codepoint, x_advance / 64.0f, y_advance / 64.0f);
+    }
+}
+
+/**
  * Get vertex buffer pointer, grow it if necessary.
  */
 static float *maintain_vertex_buffer(int required_size)
@@ -513,6 +533,8 @@ void qu_terminate_text(void)
     pl_free(impl.vertex_buffer);
     hmfree(impl.fonts);
 
+    FT_Done_FreeType(impl.freetype);
+
     QU_LOGI("Text module terminated.\n");
 
     memset(&impl, 0, sizeof(impl));
@@ -536,24 +558,10 @@ qu_font qu_load_font(char const *path, float pt)
 
     int32_t id = open_font(file, pt);
 
-    if (!id) {
+    if (id) {
+        prerender_ascii(hmgetp(impl.fonts, id));
+    } else {
         qu_close_file(file);
-    }
-
-    struct font *font = hmgetp(impl.fonts, id);
-
-    for (int i = 0x20; i <= 0xFF; i++) {
-        hb_codepoint_t codepoint;
-
-        if (!hb_font_get_glyph(font->font, i, 0, &codepoint)) {
-            continue;
-        }
-
-        hb_position_t x_advance, y_advance;
-        hb_font_get_glyph_advance_for_direction(font->font, codepoint,
-            HB_DIRECTION_LTR, &x_advance, &y_advance);
-
-        cache_glyph(font, codepoint, x_advance / 64.0f, y_advance / 64.0f);
     }
 
     return (qu_font) { id };
