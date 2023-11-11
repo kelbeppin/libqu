@@ -1416,7 +1416,7 @@ void qu_draw_font(qu_texture texture, qu_color color, float const *data, int cou
         .args.draw = {
             .texture = texture_p,
             .color = color,
-            .brush = QU_BRUSH_FONT,
+            .brush = QU_BRUSH_TEXTURED,
             .vertex_format = QU_VERTEX_FORMAT_4XYST,
             .render_mode = QU_RENDER_MODE_TRIANGLES,
             .first_vertex = graphics__append_vertex_data(QU_VERTEX_FORMAT_4XYST, data, count * 4),
