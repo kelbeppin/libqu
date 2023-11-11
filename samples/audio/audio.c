@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
     qu_set_window_flags(QU_WINDOW_USE_CANVAS);
 
     qu_initialize();
+    atexit(qu_terminate);
 
     fanfare = qu_load_sound("assets/fanfare.wav");
     negative = qu_load_sound("assets/negative.wav");
