@@ -120,8 +120,13 @@ static void music_dtor(void *ptr)
         pl_wait_thread(music->thread);
     }
 
+    qu_file *file = music->loader->file;
+
     // Close sound reader.
     qu_close_audio_loader(music->loader);
+
+    // Close music file.
+    qu_close_file(file);
 }
 
 //------------------------------------------------------------------------------
@@ -222,9 +227,17 @@ static int32_t load_sound_from_file(qu_file *file)
         return 0;
     }
 
+    // Create sound object.
+    struct sound sound = {
+        .channels = loader->num_channels,
+        .sample_rate = loader->sample_rate,
+        .buffer = {
+            .samples = loader->num_samples,
+        },
+    };
+
     // read_sound_buffer() will allocate memory.
-    int16_t *data = NULL;
-    int64_t samples_read = read_sound_buffer(loader, &data);
+    int64_t samples_read = read_sound_buffer(loader, &sound.buffer.data);
 
     // Close decoder as it won't be used anymore.
     qu_close_audio_loader(loader);
@@ -232,16 +245,6 @@ static int32_t load_sound_from_file(qu_file *file)
     if (samples_read == -1) {
         return 0;
     }
-
-    // Create sound object.
-    struct sound sound = {
-        .channels = loader->num_channels,
-        .sample_rate = loader->sample_rate,
-        .buffer = {
-            .data = data,
-            .samples = loader->num_samples,
-        },
-    };
 
     strncpy(sound.name, file->name, QU_FILE_NAME_LENGTH - 1);
 
@@ -593,6 +596,8 @@ void qu_terminate_audio(void)
     qu_destroy_handle_list(priv.music);
 
     priv.impl->terminate();
+
+    pl_destroy_mutex(priv.mutex);
 
     memset(&priv, 0, sizeof(priv));
 

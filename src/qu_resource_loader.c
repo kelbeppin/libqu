@@ -458,6 +458,7 @@ void qu_close_audio_loader(qu_audio_loader *loader)
     }
 
     audio_loader_callbacks[loader->format].close(loader);
+    pl_free(loader);
 }
 
 int64_t qu_audio_loader_read(qu_audio_loader *loader, int16_t *samples, int64_t max_samples)
