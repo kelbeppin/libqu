@@ -22,11 +22,6 @@
 
 #define QU_MODULE "text"
 
-#define STB_DS_IMPLEMENTATION
-
-#define STBDS_REALLOC(ctx, ptr, size)   pl_realloc(ptr, size)
-#define STBDS_FREE(ctx, ptr)            pl_free(ptr)
-
 //------------------------------------------------------------------------------
 
 #include "qu.h"

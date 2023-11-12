@@ -20,7 +20,22 @@
 // qu.c: Gateway
 //------------------------------------------------------------------------------
 
+#define STB_DS_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+
+#define STBDS_REALLOC(ctx, ptr, size)   pl_realloc(ptr, size)
+#define STBDS_FREE(ctx, ptr)            pl_free(ptr)
+
+#define STBI_MALLOC(size)               pl_malloc(size)
+#define STBI_REALLOC(ptr, size)         pl_realloc(ptr, size)
+#define STBI_FREE(ptr)                  pl_free(ptr)
+
+//------------------------------------------------------------------------------
+
 #include "qu.h"
+
+#include <stb_ds.h>
+#include <stb_image.h>
 
 //------------------------------------------------------------------------------
 

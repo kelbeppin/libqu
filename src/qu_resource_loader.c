@@ -22,8 +22,6 @@
 
 #define QU_MODULE "rl"
 
-#define STB_IMAGE_IMPLEMENTATION
-
 //------------------------------------------------------------------------------
 
 #include <stb_image.h>
