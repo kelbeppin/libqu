@@ -259,6 +259,11 @@ static qu_result initialize(void)
 
     int best_fbc = -1;
     int best_sample_count = 0;
+    int desired_sample_count = qu_get_window_aa_level();
+
+    if (!desired_sample_count) {
+        desired_sample_count = 16;
+    }
 
     for (int i = 0; i < fbc_total; i++) {
         int has_sample_buffers = 0;
@@ -271,7 +276,7 @@ static qu_result initialize(void)
         int total_samples = 0;
         glXGetFBConfigAttrib(impl.display, fbc_list[i], GLX_SAMPLES, &total_samples);
 
-        if (total_samples > best_sample_count) {
+        if ((total_samples > best_sample_count) && (total_samples <= desired_sample_count)) {
             best_fbc = i;
             best_sample_count = total_samples;
         }
@@ -279,7 +284,10 @@ static qu_result initialize(void)
 
     if (best_fbc >= 0) {
         impl.sample_count = best_sample_count;
-        QU_LOGI("Selected FBConfig with %d samples.\n", best_sample_count);
+        QU_LOGI("Selected FBConfig with %d MSAA buffers.\n", best_sample_count);
+    } else {
+        impl.sample_count = 1;
+        QU_LOGI("Selected FBConfig with no MSAA.\n");
     }
 
     GLXFBConfig fbconfig = fbc_list[(best_fbc < 0) ? 0 : best_fbc];
