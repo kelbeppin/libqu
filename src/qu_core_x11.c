@@ -604,7 +604,7 @@ static void *gl_proc_address(char const *name)
 
 static int get_gl_multisample_samples(void)
 {
-    return 1;
+    return impl.sample_count;
 }
 
 static char const *x11_get_window_title(void)
