@@ -645,6 +645,9 @@ static qu_vec2i x11_get_window_size(void)
 
 static void x11_set_window_size(int width, int height)
 {
+    // "This function has no effect if the window is already mapped."
+    XMapWindow(impl.display, impl.window);
+
     int x = (DisplayWidth(impl.display, impl.screen) / 2) - (width / 2);
     int y = (DisplayHeight(impl.display, impl.screen) / 2) - (height / 2);
 
@@ -662,9 +665,6 @@ static void x11_set_window_size(int width, int height)
     XMoveWindow(impl.display, impl.window, x, y);
     XSetWMNormalHints(impl.display, impl.window, &hints);
 #endif
-
-    // "This function has no effect if the window is already mapped."
-    XMapWindow(impl.display, impl.window);
 }
 
 static int x11_get_window_aa_level(void)
