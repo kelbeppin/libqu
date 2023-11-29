@@ -65,8 +65,8 @@ jobs:
 
       matrix:
         arch:
-        - { name: x86, prefix: mingw32 }
-        - { name: x64, prefix: mingw64 }
+        - { name: x86, flags: -D CMAKE_C_COMPILER=i686-w64-mingw32-gcc -D CMAKE_CXX_COMPILER=i686-w64-mingw32-g++ }
+        - { name: x64, flags: -D CMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -D CMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ }
         config:
         - { name: static, flags: -D BUILD_SHARED_LIBS=0 }
         - { name: shared, flags: -D BUILD_SHARED_LIBS=1 }
@@ -80,11 +80,8 @@ jobs:
         path: '**/cpm_modules'
         key: mingw-cpm-modules-${{ hashFiles('**/CMakeLists.txt') }}
 
-    - name: Add MinGW to path
-      run: Add-Content $env:GITHUB_PATH "C:\msys2\${{ matrix.arch.prefix }}"
-
     - name: Configure
-      run: cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug ${{ matrix.config.flags }}
+      run: cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug ${{ matrix.arch.flags }} ${{ matrix.config.flags }}
 
     - name: Build
       run: cmake --build build
