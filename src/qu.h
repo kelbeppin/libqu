@@ -58,13 +58,12 @@
 #include <windows.h>
 #endif
 
+#include "qu_fs.h"
 #include "qu_log.h"
 #include "qu_platform.h"
 #include "qu_util.h"
 
 //------------------------------------------------------------------------------
-
-#define QU_FILE_NAME_LENGTH     (256)
 
 #define QU_HALT(...) \
     do { \
@@ -87,14 +86,6 @@ typedef enum qu_result
     QU_FAILURE = -1,
     QU_SUCCESS = 0,
 } qu_result;
-
-typedef enum qu_file_source
-{
-    QU_FILE_SOURCE_STANDARD,
-    QU_FILE_SOURCE_ANDROID_ASSET,
-    QU_FILE_SOURCE_MEMORY_BUFFER,
-    QU_TOTAL_FILE_SOURCES,
-} qu_file_source;
 
 typedef enum qu_image_loader_format
 {
@@ -180,15 +171,6 @@ typedef struct qu_mat4
 {
     float m[16];
 } qu_mat4;
-
-typedef struct qu_file {
-    qu_file_source source;
-
-    char name[QU_FILE_NAME_LENGTH];
-    size_t size;
-
-    void *context;
-} qu_file;
 
 typedef struct qu_image_loader
 {
@@ -420,13 +402,6 @@ void qu_mat4_scale(qu_mat4 *mat, float x, float y, float z);
 void qu_mat4_rotate(qu_mat4 *mat, float rad, float x, float y, float z);
 void qu_mat4_inverse(qu_mat4 *dst, qu_mat4 const *src);
 qu_vec2f qu_mat4_transform_point(qu_mat4 const *mat, qu_vec2f p);
-
-qu_file *qu_open_file_from_path(char const *path);
-qu_file *qu_open_file_from_buffer(void const *data, size_t size);
-void qu_close_file(qu_file *file);
-int64_t qu_file_read(void *buffer, size_t size, qu_file *file);
-int64_t qu_file_tell(qu_file *file);
-int64_t qu_file_seek(qu_file *file, int64_t offset, int origin);
 
 qu_image_loader *qu_open_image_loader(qu_file *file);
 void qu_close_image_loader(qu_image_loader *loader);
