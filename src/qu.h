@@ -61,6 +61,7 @@
 #include "qu_log.h"
 #include "qu_math.h"
 #include "qu_platform.h"
+#include "qu_resource_loader.h"
 #include "qu_util.h"
 
 //------------------------------------------------------------------------------
@@ -86,19 +87,6 @@ typedef enum qu_result
     QU_FAILURE = -1,
     QU_SUCCESS = 0,
 } qu_result;
-
-typedef enum qu_image_loader_format
-{
-    QU_IMAGE_LOADER_STBI,
-    QU_TOTAL_IMAGE_LOADERS,
-} qu_image_loader_format;
-
-typedef enum qu_audio_loader_format
-{
-    QU_AUDIO_LOADER_WAVE,
-    QU_AUDIO_LOADER_VORBIS,
-    QU_TOTAL_AUDIO_LOADERS,
-} qu_audio_loader_format;
 
 typedef enum qu_event_type
 {
@@ -166,30 +154,6 @@ typedef enum qu_graphics_api
     QU_GRAPHICS_API_GL33,
     QU_GRAPHICS_API_ES20,
 } qu_graphics_api;
-
-typedef struct qu_image_loader
-{
-    qu_image_loader_format format;
-
-    int width;
-    int height;
-    int channels;
-
-    qu_file *file;
-    void *context;
-} qu_image_loader;
-
-typedef struct qu_audio_loader
-{
-    qu_audio_loader_format format;
-
-    int16_t num_channels;
-    int64_t num_samples;
-    int64_t sample_rate;
-
-    qu_file *file;
-    void *context;
-} qu_audio_loader;
 
 typedef struct qu_keyboard_event
 {
@@ -387,15 +351,6 @@ extern qu_audio_impl const qu_sles_audio_impl;
 //------------------------------------------------------------------------------
 
 void qu_atexit(void (*callback)(void));
-
-qu_image_loader *qu_open_image_loader(qu_file *file);
-void qu_close_image_loader(qu_image_loader *loader);
-qu_result qu_image_loader_load(qu_image_loader *loader, unsigned char *pixels);
-
-qu_audio_loader *qu_open_audio_loader(qu_file *file);
-void qu_close_audio_loader(qu_audio_loader *loader);
-int64_t qu_audio_loader_read(qu_audio_loader *loader, int16_t *samples, int64_t max_samples);
-int64_t qu_audio_loader_seek(qu_audio_loader *loader, int64_t sample_offset);
 
 void qu_initialize_core(void);
 void qu_terminate_core(void);
