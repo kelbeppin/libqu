@@ -3,9 +3,9 @@ name: CI*
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 env:
   CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm_modules
