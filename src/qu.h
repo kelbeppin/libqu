@@ -58,21 +58,12 @@
 #include <windows.h>
 #endif
 
+#include "qu_log.h"
 #include "qu_platform.h"
 
 //------------------------------------------------------------------------------
 
 #define QU_FILE_NAME_LENGTH     (256)
-
-#if defined(NDEBUG)
-#define QU_LOGD(...)
-#else
-#define QU_LOGD(...)    qu_log_printf(QU_LOG_LEVEL_DEBUG, QU_MODULE, __VA_ARGS__)
-#endif
-
-#define QU_LOGI(...)    qu_log_printf(QU_LOG_LEVEL_INFO, QU_MODULE, __VA_ARGS__)
-#define QU_LOGW(...)    qu_log_printf(QU_LOG_LEVEL_WARNING, QU_MODULE, __VA_ARGS__)
-#define QU_LOGE(...)    qu_log_printf(QU_LOG_LEVEL_ERROR, QU_MODULE, __VA_ARGS__)
 
 #define QU_HALT(...) \
     do { \
@@ -101,14 +92,6 @@ typedef enum qu_result
     QU_FAILURE = -1,
     QU_SUCCESS = 0,
 } qu_result;
-
-typedef enum qu_log_level
-{
-    QU_LOG_LEVEL_DEBUG,
-    QU_LOG_LEVEL_INFO,
-    QU_LOG_LEVEL_WARNING,
-    QU_LOG_LEVEL_ERROR,
-} qu_log_level;
 
 typedef enum qu_file_source
 {
@@ -444,9 +427,6 @@ void qu_mat4_scale(qu_mat4 *mat, float x, float y, float z);
 void qu_mat4_rotate(qu_mat4 *mat, float rad, float x, float y, float z);
 void qu_mat4_inverse(qu_mat4 *dst, qu_mat4 const *src);
 qu_vec2f qu_mat4_transform_point(qu_mat4 const *mat, qu_vec2f p);
-
-void qu_log_puts(qu_log_level level, char const *tag, char const *str);
-void qu_log_printf(qu_log_level level, char const *tag, char const *fmt, ...);
 
 char *qu_strdup(char const *str);
 
