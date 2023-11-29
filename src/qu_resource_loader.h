@@ -29,6 +29,8 @@
 
 //------------------------------------------------------------------------------
 
+typedef enum qu_result qu_result;
+
 typedef enum qu_image_loader_format
 {
     QU_IMAGE_LOADER_STBI,
