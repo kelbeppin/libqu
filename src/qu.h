@@ -58,6 +58,8 @@
 #include <windows.h>
 #endif
 
+#include "qu_platform.h"
+
 //------------------------------------------------------------------------------
 
 #define QU_FILE_NAME_LENGTH     (256)
@@ -196,8 +198,6 @@ typedef enum qu_graphics_api
     QU_GRAPHICS_API_ES20,
 } qu_graphics_api;
 
-typedef struct pl_thread pl_thread;
-typedef struct pl_mutex pl_mutex;
 typedef struct qu_handle_list qu_handle_list;
 
 typedef struct qu_mat4
@@ -432,25 +432,6 @@ extern qu_audio_impl const qu_xaudio2_audio_impl;
 extern qu_audio_impl const qu_sles_audio_impl;
 
 //------------------------------------------------------------------------------
-
-void *pl_malloc(size_t size);
-void *pl_calloc(size_t count, size_t size);
-void *pl_realloc(void *data, size_t size);
-void pl_free(void *data);
-uint32_t pl_get_ticks_mediump(void);
-uint64_t pl_get_ticks_highp(void);
-pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *arg);
-void pl_detach_thread(pl_thread *thread);
-intptr_t pl_wait_thread(pl_thread *thread);
-pl_mutex *pl_create_mutex(void);
-void pl_destroy_mutex(pl_mutex *mutex);
-void pl_lock_mutex(pl_mutex *mutex);
-void pl_unlock_mutex(pl_mutex *mutex);
-void pl_sleep(double seconds);
-void *pl_open_dll(char const *path);
-void pl_close_dll(void *dll);
-void *pl_get_dll_proc(void *dll, char const *name);
-void pl_get_date_time(qu_date_time *date_time);
 
 void qu_atexit(void (*callback)(void));
 
