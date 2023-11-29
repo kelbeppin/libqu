@@ -47,7 +47,6 @@
 
 //------------------------------------------------------------------------------
 
-#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -60,6 +59,7 @@
 
 #include "qu_fs.h"
 #include "qu_log.h"
+#include "qu_math.h"
 #include "qu_platform.h"
 #include "qu_util.h"
 
@@ -166,11 +166,6 @@ typedef enum qu_graphics_api
     QU_GRAPHICS_API_GL33,
     QU_GRAPHICS_API_ES20,
 } qu_graphics_api;
-
-typedef struct qu_mat4
-{
-    float m[16];
-} qu_mat4;
 
 typedef struct qu_image_loader
 {
@@ -392,16 +387,6 @@ extern qu_audio_impl const qu_sles_audio_impl;
 //------------------------------------------------------------------------------
 
 void qu_atexit(void (*callback)(void));
-
-void qu_mat4_identity(qu_mat4 *mat);
-void qu_mat4_copy(qu_mat4 *dst, qu_mat4 const *src);
-void qu_mat4_multiply(qu_mat4 *a, qu_mat4 const *b);
-void qu_mat4_ortho(qu_mat4 *mat, float l, float r, float b, float t);
-void qu_mat4_translate(qu_mat4 *mat, float x, float y, float z);
-void qu_mat4_scale(qu_mat4 *mat, float x, float y, float z);
-void qu_mat4_rotate(qu_mat4 *mat, float rad, float x, float y, float z);
-void qu_mat4_inverse(qu_mat4 *dst, qu_mat4 const *src);
-qu_vec2f qu_mat4_transform_point(qu_mat4 const *mat, qu_vec2f p);
 
 qu_image_loader *qu_open_image_loader(qu_file *file);
 void qu_close_image_loader(qu_image_loader *loader);
