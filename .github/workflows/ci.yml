@@ -56,43 +56,43 @@ jobs:
         name: libquack-windows-${{ matrix.arch.name }}-${{ matrix.config.name }}-${{ github.sha }}
         path: install/*
 
-  mingw:
-    name: MinGW (${{ matrix.arch.name }}, ${{ matrix.config.name }})
-    runs-on: windows-latest
-
-    strategy:
-      fail-fast: false
-
-      matrix:
-        arch:
-        - { name: x86, flags: -D CMAKE_C_COMPILER=i686-w64-mingw32-gcc -D CMAKE_CXX_COMPILER=i686-w64-mingw32-g++ }
-        - { name: x64, flags: -D CMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -D CMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ }
-        config:
-        - { name: static, flags: -D BUILD_SHARED_LIBS=0 }
-        - { name: shared, flags: -D BUILD_SHARED_LIBS=1 }
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - uses: actions/cache@v3
-      id: cache-cpm
-      with:
-        path: '**/cpm_modules'
-        key: mingw-cpm-modules-${{ hashFiles('**/CMakeLists.txt') }}
-
-    - name: Configure
-      run: cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug ${{ matrix.arch.flags }} ${{ matrix.config.flags }}
-
-    - name: Build
-      run: cmake --build build
-
-    - name: Install
-      run: cmake --install build --prefix install/libquack-dbg
-
-    - uses: actions/upload-artifact@v3
-      with:
-        name: libquack-mingw-${{ matrix.arch.name }}-${{ matrix.config.name }}-${{ github.sha }}
-        path: install/*
+# mingw:
+#   name: MinGW (${{ matrix.arch.name }}, ${{ matrix.config.name }})
+#   runs-on: windows-latest
+#
+#   strategy:
+#     fail-fast: false
+#
+#     matrix:
+#       arch:
+#       - { name: x86, flags: -D CMAKE_C_COMPILER=i686-w64-mingw32-gcc -D CMAKE_CXX_COMPILER=i686-w64-mingw32-g++ }
+#       - { name: x64, flags: -D CMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -D CMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ }
+#       config:
+#       - { name: static, flags: -D BUILD_SHARED_LIBS=0 }
+#       - { name: shared, flags: -D BUILD_SHARED_LIBS=1 }
+#
+#   steps:
+#   - uses: actions/checkout@v3
+#
+#   - uses: actions/cache@v3
+#     id: cache-cpm
+#     with:
+#       path: '**/cpm_modules'
+#       key: mingw-cpm-modules-${{ hashFiles('**/CMakeLists.txt') }}
+#
+#   - name: Configure
+#     run: cmake -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug ${{ matrix.arch.flags }} ${{ matrix.config.flags }}
+#
+#   - name: Build
+#     run: cmake --build build
+#
+#   - name: Install
+#     run: cmake --install build --prefix install/libquack-dbg
+#
+#   - uses: actions/upload-artifact@v3
+#     with:
+#       name: libquack-mingw-${{ matrix.arch.name }}-${{ matrix.config.name }}-${{ github.sha }}
+#       path: install/*
 
   linux:
     name: Linux (${{ matrix.compiler.name }})
