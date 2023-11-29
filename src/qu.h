@@ -60,6 +60,7 @@
 
 #include "qu_log.h"
 #include "qu_platform.h"
+#include "qu_util.h"
 
 //------------------------------------------------------------------------------
 
@@ -78,12 +79,6 @@
             abort(); \
         } \
     } while (0);
-
-#define QU_ARRAY_SIZE(array) \
-    sizeof(array) / sizeof(array[0])
-
-#define QU_ALLOC_ARRAY(ptr, size) \
-    ptr = pl_malloc(sizeof(*(ptr)) * (size))
 
 //------------------------------------------------------------------------------
 
@@ -180,8 +175,6 @@ typedef enum qu_graphics_api
     QU_GRAPHICS_API_GL33,
     QU_GRAPHICS_API_ES20,
 } qu_graphics_api;
-
-typedef struct qu_handle_list qu_handle_list;
 
 typedef struct qu_mat4
 {
@@ -427,16 +420,6 @@ void qu_mat4_scale(qu_mat4 *mat, float x, float y, float z);
 void qu_mat4_rotate(qu_mat4 *mat, float rad, float x, float y, float z);
 void qu_mat4_inverse(qu_mat4 *dst, qu_mat4 const *src);
 qu_vec2f qu_mat4_transform_point(qu_mat4 const *mat, qu_vec2f p);
-
-char *qu_strdup(char const *str);
-
-qu_handle_list *qu_create_handle_list(size_t element_size, void (*dtor)(void *));
-void qu_destroy_handle_list(qu_handle_list *list);
-int32_t qu_handle_list_add(qu_handle_list *list, void *data);
-void qu_handle_list_remove(qu_handle_list *list, int32_t id);
-void *qu_handle_list_get(qu_handle_list *list, int32_t id);
-void *qu_handle_list_get_first(qu_handle_list *list);
-void *qu_handle_list_get_next(qu_handle_list *list);
 
 qu_file *qu_open_file_from_path(char const *path);
 qu_file *qu_open_file_from_buffer(void const *data, size_t size);
