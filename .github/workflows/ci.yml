@@ -1,5 +1,5 @@
 
-name: CI*
+name: CI
 
 on:
   push:
@@ -17,8 +17,6 @@ jobs:
     runs-on: windows-latest
 
     strategy:
-      fail-fast: false
-
       matrix:
         arch:
         - { name: x86, flags: -A Win32 }
@@ -26,6 +24,7 @@ jobs:
         config:
         - { name: static, flags: -D BUILD_SHARED_LIBS=0 }
         - { name: shared, flags: -D BUILD_SHARED_LIBS=1 }
+        build_type: [ Debug, Release ]
 
     steps:
     - uses: actions/checkout@v3
@@ -39,21 +38,15 @@ jobs:
     - name: Configure
       run: cmake -B build ${{ matrix.arch.flags }} ${{ matrix.config.flags }}
 
-    - name: Build (Debug)
-      run: cmake --build build --config Debug
+    - name: Build
+      run: cmake --build build --config ${{ matrix.build_type }}
 
-    - name: Install (Debug)
-      run: cmake --install build --config Debug --prefix install/libquack-dbg
-
-    - name: Build (Release)
-      run: cmake --build build --config Release
-
-    - name: Install (Release)
-      run: cmake --install build --config Release --prefix install/libquack-rel
+    - name: Install
+      run: cmake --install build --config ${{ matrix.build_type }} --prefix install/libquack-${{ github.sha }}
 
     - uses: actions/upload-artifact@v3
       with:
-        name: libquack-windows-${{ matrix.arch.name }}-${{ matrix.config.name }}-${{ github.sha }}
+        name: libquack-windows-${{ matrix.arch.name }}-${{ matrix.config.name }}-${{ matrix.build_type }}-${{ github.sha }}
         path: install/*
 
 # mingw:
@@ -95,16 +88,15 @@ jobs:
 #       path: install/*
 
   linux:
-    name: Linux (${{ matrix.compiler.name }})
+    name: Linux (${{ matrix.compiler.name }}, ${{ matrix.build_type }})
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
-
       matrix:
         compiler:
         - { name: GNU, c: gcc, cxx: g++ }
         - { name: Clang, c: clang, cxx: clang++ }
+        build_type: [ Debug, Release ]
 
     steps:
     - uses: actions/checkout@v3
@@ -122,14 +114,12 @@ jobs:
 
     - name: Configure
       run: >
-        cmake -B build -G "Ninja Multi-Config"
+        cmake -B build -G "Ninja"
         -D BUILD_SHARED_LIBS=0
+        -D CMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -D CMAKE_C_COMPILER=${{ matrix.compiler.c }}
         -D CMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
 
-    - name: Build (Debug)
-      run: cmake --build build --config Debug
-
-    - name: Build (Release)
-      run: cmake --build build --config Release
+    - name: Build
+      run: cmake --build build
 
