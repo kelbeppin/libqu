@@ -53,7 +53,7 @@ jobs:
 
     - uses: actions/upload-artifact@v3
       with:
-        name: libquack-windows-${{ matrix.arch.name }}-${{ matrix.config.name }}
+        name: libquack-windows-${{ matrix.arch.name }}-${{ matrix.config.name }}-${{ github.sha }}
         path: install/*
 
   linux:
