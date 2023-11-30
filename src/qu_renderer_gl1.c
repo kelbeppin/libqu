@@ -17,16 +17,6 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "renderer-gl1"
-
-#include "qu.h"
-#include "qu_core.h"
-
-#include <GL/gl.h>
-#include <GL/glext.h>
-
-//------------------------------------------------------------------------------
 // qu_renderer_gl1.c: Legacy OpenGL renderer
 //
 // This renderer targets OpenGL 1.5, which was released back in 2005.
@@ -36,6 +26,13 @@
 // * EXT_framebuffer_blit
 // * EXT_framebuffer_multisample
 //------------------------------------------------------------------------------
+
+#include <GL/gl.h>
+#include <GL/glext.h>
+
+#include "qu_core.h"
+#include "qu_graphics.h"
+#include "qu_log.h"
 
 //------------------------------------------------------------------------------
 // Debug messages and error checks

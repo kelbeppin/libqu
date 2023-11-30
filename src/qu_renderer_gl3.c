@@ -17,18 +17,14 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "renderer-gl3"
-
-#include "qu.h"
-#include "qu_core.h"
+// qu_renderer_gl3.c: OpenGL 3.3 renderer
+//------------------------------------------------------------------------------
 
 #include <GL/gl.h>
 #include <GL/glext.h>
 
-//------------------------------------------------------------------------------
-// qu_renderer_gl3.c: OpenGL 3.3 renderer
-//------------------------------------------------------------------------------
+#include "qu_core.h"
+#include "qu_graphics.h"
 
 //------------------------------------------------------------------------------
 // Debug messages and error checks

@@ -20,16 +20,13 @@
 // qu_text.c: Text rendering module
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "text"
-
-//------------------------------------------------------------------------------
-
-#include "qu.h"
-
 #include <hb-ft.h>
 #include <stb_ds.h>
 
 #include "qu_fs.h"
+#include "qu_graphics.h"
+#include "qu_log.h"
+#include "qu_text.h"
 
 //------------------------------------------------------------------------------
 

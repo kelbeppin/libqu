@@ -17,11 +17,8 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "renderer-es2"
-
-#include "qu.h"
-#include "qu_core.h"
+// qu_renderer_es2.c: OpenGL ES 2.0 (WebGL) renderer
+//------------------------------------------------------------------------------
 
 #ifdef __EMSCRIPTEN__
 #define GL_GLEXT_PROTOTYPES
@@ -30,9 +27,9 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
-//------------------------------------------------------------------------------
-// qu_renderer_es2.c: OpenGL ES 2.0 (WebGL) renderer
-//------------------------------------------------------------------------------
+#include "qu_core.h"
+#include "qu_graphics.h"
+#include "qu_log.h"
 
 //------------------------------------------------------------------------------
 // Debug messages and error checks

@@ -51,9 +51,7 @@
 #include <windows.h>
 #endif
 
-#include "qu_graphics.h"
 #include "qu_log.h"
-#include "qu_math.h"
 #include "qu_platform.h"
 #include "qu_text.h"
 #include "qu_util.h"

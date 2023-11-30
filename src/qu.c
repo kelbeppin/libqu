@@ -34,6 +34,7 @@
 
 #include "qu.h"
 #include "qu_core.h"
+#include "qu_graphics.h"
 
 #include <stb_ds.h>
 #include <stb_image.h>

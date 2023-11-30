@@ -17,14 +17,12 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_graphics.c: Graphics module
+//------------------------------------------------------------------------------
 
-#define QU_MODULE "graphics"
-
-#include "qu.h"
+#include "qu_graphics.h"
 #include "qu_resource_loader.h"
 
-//------------------------------------------------------------------------------
-// qu_graphics.c: Graphics module
 //------------------------------------------------------------------------------
 
 static qu_renderer_impl const *supported_renderer_impl_list[] = {

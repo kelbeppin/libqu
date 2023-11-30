@@ -17,12 +17,11 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "math"
-#include "qu.h"
-
-//------------------------------------------------------------------------------
 // qu_math.c: linear algebra
+//------------------------------------------------------------------------------
+
+#include "qu_math.h"
+
 //------------------------------------------------------------------------------
 
 void qu_mat4_identity(qu_mat4 *mat)

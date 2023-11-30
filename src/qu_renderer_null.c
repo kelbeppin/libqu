@@ -18,9 +18,8 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "renderer-null"
-
-#include "qu.h"
+#include "qu_graphics.h"
+#include "qu_log.h"
 
 //------------------------------------------------------------------------------
 
