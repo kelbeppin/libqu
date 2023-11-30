@@ -17,18 +17,17 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "joystick-linux"
-
-#include "qu.h"
+// qu_joystick_linux.c: Linux joystick module
+//------------------------------------------------------------------------------
 
 #include <linux/joystick.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 
-//------------------------------------------------------------------------------
-// qu_joystick_linux.c: Linux joystick module
+#include "qu_core.h"
+#include "qu_log.h"
+
 //------------------------------------------------------------------------------
 
 #define MAX_JOYSTICKS               4

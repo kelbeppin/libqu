@@ -17,13 +17,12 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "joystick-null"
-
-#include "qu.h"
-
-//------------------------------------------------------------------------------
 // qu_joystick_null.c: Dummy joystick module
+//------------------------------------------------------------------------------
+
+#include "qu_core.h"
+#include "qu_log.h"
+
 //------------------------------------------------------------------------------
 
 static qu_result joystick_null__precheck(void)

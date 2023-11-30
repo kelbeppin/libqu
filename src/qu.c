@@ -33,6 +33,7 @@
 //------------------------------------------------------------------------------
 
 #include "qu.h"
+#include "qu_core.h"
 
 #include <stb_ds.h>
 #include <stb_image.h>

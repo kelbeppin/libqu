@@ -20,11 +20,8 @@
 // qu_core_android.c: Android core module
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "android"
-
-//------------------------------------------------------------------------------
-
-#include "qu.h"
+#include "qu_core.h"
+#include "qu_log.h"
 
 #include <android/log.h>
 #include <android/native_activity.h>

@@ -17,6 +17,8 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_core_x11.c: Xlib-based core module
+//------------------------------------------------------------------------------
 
 #define _GNU_SOURCE
 
@@ -25,8 +27,6 @@
 #   define _XOPEN_SOURCE 500
 #endif
 
-#define QU_MODULE "x11"
-#include "qu.h"
 
 #include <errno.h>
 #include <pthread.h>
@@ -36,8 +36,9 @@
 #include <X11/XKBlib.h>
 #include <GL/glx.h>
 
-//------------------------------------------------------------------------------
-// qu_core_x11.c: Xlib-based core module
+#include "qu_core.h"
+#include "qu_log.h"
+
 //------------------------------------------------------------------------------
 
 enum

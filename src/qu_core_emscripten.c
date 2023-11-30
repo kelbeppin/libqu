@@ -18,9 +18,8 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "emscripten"
-
-#include "qu.h"
+#include "qu_core.h"
+#include "qu_log.h"
 
 #include <emscripten.h>
 #include <emscripten/html5.h>

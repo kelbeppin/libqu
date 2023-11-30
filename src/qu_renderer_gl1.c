@@ -21,6 +21,7 @@
 #define QU_MODULE "renderer-gl1"
 
 #include "qu.h"
+#include "qu_core.h"
 
 #include <GL/gl.h>
 #include <GL/glext.h>

@@ -17,16 +17,28 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
+// qu_core_win32.c: Win32-based core module
+//------------------------------------------------------------------------------
 
-#define QU_MODULE "win32"
-#include "qu.h"
+#if !defined(_UNICODE)
+#define _UNICODE
+#endif
+
+#if !defined(UNICODE)
+#define UNICODE
+#endif
+
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
 #include <windowsx.h>
 #include <dwmapi.h>
 #include <GL/gl.h>
 #include <GL/wglext.h>
 
-//------------------------------------------------------------------------------
-// qu_core_win32.c: Win32-based core module
+#include "qu_core.h"
+#include "qu_log.h"
+
 //------------------------------------------------------------------------------
 
 #ifndef WM_MOUSEHWHEEL

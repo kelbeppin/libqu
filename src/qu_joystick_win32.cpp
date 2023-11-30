@@ -17,18 +17,27 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "joystick-win32"
-
-extern "C" {
-#include "qu.h"
-}
-
-#include <Xinput.h>
-
-//------------------------------------------------------------------------------
 // qu_joystick_win32.cpp: Win32 joystick module
 // TODO: add DirectInput support?
+//------------------------------------------------------------------------------
+
+#if !defined(_UNICODE)
+#define _UNICODE
+#endif
+
+#if !defined(UNICODE)
+#define UNICODE
+#endif
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <Xinput.h>
+
+extern "C" {
+    #include "qu_core.h"
+    #include "qu_log.h"
+}
+
 //------------------------------------------------------------------------------
 
 static int const TOTAL_XINPUT_DEVICES = 4;

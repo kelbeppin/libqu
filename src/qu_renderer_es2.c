@@ -21,6 +21,7 @@
 #define QU_MODULE "renderer-es2"
 
 #include "qu.h"
+#include "qu_core.h"
 
 #ifdef __EMSCRIPTEN__
 #define GL_GLEXT_PROTOTYPES
