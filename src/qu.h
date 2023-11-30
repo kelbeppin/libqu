@@ -25,31 +25,10 @@
 
 //------------------------------------------------------------------------------
 
-#if defined(_WIN32)
-
-#if !defined(_UNICODE)
-#define _UNICODE
-#endif
-
-#if !defined(UNICODE)
-#define UNICODE
-#endif
-
-#define WIN32_LEAN_AND_MEAN
-
-#endif // defined(_WIN32)
-
-//------------------------------------------------------------------------------
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-
 #include <libqu.h>
-
-#if defined(_WIN32)
-#include <windows.h>
-#endif
 
 //------------------------------------------------------------------------------
 
