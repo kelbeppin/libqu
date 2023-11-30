@@ -24,15 +24,12 @@
 #define _GNU_SOURCE
 #endif
 
-#define QU_MODULE "platform-posix"
-
-//------------------------------------------------------------------------------
-
 #include <dlfcn.h>
 #include <errno.h>
 #include <pthread.h>
 
 #include "qu.h"
+#include "qu_log.h"
 
 //------------------------------------------------------------------------------
 

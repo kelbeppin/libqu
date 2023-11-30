@@ -25,6 +25,7 @@
 
 #include "qu_core.h"
 #include "qu_graphics.h"
+#include "qu_log.h"
 
 //------------------------------------------------------------------------------
 // Debug messages and error checks
