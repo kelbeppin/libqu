@@ -152,12 +152,6 @@ typedef struct qu_event
 
 //------------------------------------------------------------------------------
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//------------------------------------------------------------------------------
-
 void qu_atexit(void (*callback)(void));
 
 void qu_enqueue_event(qu_event const *event);
@@ -177,12 +171,6 @@ int64_t np_android_asset_seek(void *asset, int64_t offset, int whence);
 
 QU_API int QU_CALL qu_get_desired_graphics_api(void);
 QU_API void QU_CALL qu_set_desired_graphics_api(char const *api);
-
-//------------------------------------------------------------------------------
-
-#ifdef __cplusplus
-}
-#endif
 
 //------------------------------------------------------------------------------
 

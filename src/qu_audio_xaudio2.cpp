@@ -19,7 +19,10 @@
 //------------------------------------------------------------------------------
 
 #define QU_MODULE "xaudio2"
+
+extern "C" {
 #include "qu.h"
+}
 
 #include <xaudio2.h>
 

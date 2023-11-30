@@ -20,7 +20,9 @@
 
 #define QU_MODULE "joystick-win32"
 
+extern "C" {
 #include "qu.h"
+}
 
 #include <Xinput.h>
 
