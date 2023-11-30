@@ -65,6 +65,7 @@
 #include "qu_math.h"
 #include "qu_platform.h"
 #include "qu_resource_loader.h"
+#include "qu_text.h"
 #include "qu_util.h"
 
 //------------------------------------------------------------------------------
@@ -166,9 +167,6 @@ extern "C" {
 void qu_atexit(void (*callback)(void));
 
 void qu_enqueue_event(qu_event const *event);
-
-void qu_initialize_text(void);
-void qu_terminate_text(void);
 
 #if defined(ANDROID)
 
