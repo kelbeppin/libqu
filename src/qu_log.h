@@ -25,6 +25,10 @@
 
 //------------------------------------------------------------------------------
 
+#if !defined(QU_MODULE)
+#define QU_MODULE      "?"__FILE__
+#endif
+
 #if defined(NDEBUG)
 #define QU_LOGD(...)
 #else
