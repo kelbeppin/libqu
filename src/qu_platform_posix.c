@@ -24,12 +24,14 @@
 #define _GNU_SOURCE
 #endif
 
+#include <math.h>
+
 #include <dlfcn.h>
 #include <errno.h>
 #include <pthread.h>
 
-#include "qu.h"
 #include "qu_log.h"
+#include "qu_platform.h"
 
 //------------------------------------------------------------------------------
 

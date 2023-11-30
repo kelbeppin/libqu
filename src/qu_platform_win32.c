@@ -20,8 +20,20 @@
 // qu_platform_win32.c: Win32-specific platform code
 //------------------------------------------------------------------------------
 
-#include "qu.h"
+#if !defined(_UNICODE)
+#define _UNICODE
+#endif
+
+#if !defined(UNICODE)
+#define UNICODE
+#endif
+
+#define WIN32_LEAN_AND_MEAN
+
+#include <windows.h>
+
 #include "qu_log.h"
+#include "qu_platform.h"
 
 //------------------------------------------------------------------------------
 
