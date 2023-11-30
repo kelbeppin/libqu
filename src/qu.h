@@ -51,7 +51,6 @@
 #include <windows.h>
 #endif
 
-#include "qu_audio.h"
 #include "qu_core.h"
 #include "qu_fs.h"
 #include "qu_graphics.h"

@@ -29,6 +29,8 @@
 
 //------------------------------------------------------------------------------
 
+typedef enum qu_result qu_result;
+
 typedef enum qu_graphics_api
 {
     QU_GRAPHICS_API_NULL,

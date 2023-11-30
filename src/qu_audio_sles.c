@@ -27,8 +27,8 @@
 // 4. Probably I should implement mixing manually.
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "audio-sles"
-#include "qu.h"
+#include "qu_audio.h"
+#include "qu_log.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>

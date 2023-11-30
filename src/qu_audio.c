@@ -17,13 +17,12 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#define QU_MODULE "audio"
-
-#include "qu.h"
-
+// qu_audio.c: abstract audio module
 //------------------------------------------------------------------------------
-// qu_audio.c: Audio module
+
+#include "qu_audio.h"
+#include "qu_log.h"
+
 //------------------------------------------------------------------------------
 
 static struct qu_audio_impl const *supported_audio_impl_list[] = {

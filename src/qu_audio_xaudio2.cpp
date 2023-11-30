@@ -18,10 +18,9 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "xaudio2"
-
 extern "C" {
-#include "qu.h"
+    #include "qu_audio.h"
+    #include "qu_log.h"
 }
 
 #include <xaudio2.h>

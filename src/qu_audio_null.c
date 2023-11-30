@@ -20,8 +20,8 @@
 // qu_audio_null.c: dummy audio module
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "audio-null"
-#include "qu.h"
+#include "qu_audio.h"
+#include "qu_log.h"
 
 //------------------------------------------------------------------------------
 
