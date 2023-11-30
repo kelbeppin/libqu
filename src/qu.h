@@ -58,6 +58,7 @@
 #endif
 
 #include "qu_audio.h"
+#include "qu_core.h"
 #include "qu_fs.h"
 #include "qu_graphics.h"
 #include "qu_log.h"
@@ -156,73 +157,14 @@ typedef struct qu_event
 
 //------------------------------------------------------------------------------
 
-typedef struct qu_core_impl
-{
-    qu_result (*precheck)(void);
-    qu_result (*initialize)(void);
-    void (*terminate)(void);
-    bool (*process_input)(void);
-    void (*swap_buffers)(void);
-
-    char const *(*get_graphics_context_name)(void);
-
-    void *(*gl_proc_address)(char const *name);
-    int (*get_gl_multisample_samples)(void);
-
-    char const *(*get_window_title)(void);
-    void (*set_window_title)(char const *title);
-
-    qu_vec2i (*get_window_size)(void);
-    void (*set_window_size)(int width, int height);
-
-    int (*get_window_aa_level)(void);
-    void (*set_window_aa_level)(int level);
-} qu_core_impl;
-
-typedef struct qu_joystick_impl
-{
-    qu_result (*precheck)(void);
-    qu_result (*initialize)(void);
-    void (*terminate)(void);
-    void (*process)(void);
-    bool (*is_connected)(int id);
-    char const *(*get_name)(int id);
-    int (*get_button_count)(int id);
-    int (*get_axis_count)(int id);
-    char const *(*get_button_name)(int id, int button);
-    char const *(*get_axis_name)(int id, int axis);
-    bool (*is_button_pressed)(int id, int button);
-    float (*get_axis_value)(int id, int axis);
-} qu_joystick_impl;
-
-//------------------------------------------------------------------------------
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //------------------------------------------------------------------------------
 
-extern qu_core_impl const qu_android_core_impl;
-extern qu_core_impl const qu_emscripten_core_impl;
-extern qu_core_impl const qu_win32_core_impl;
-extern qu_core_impl const qu_x11_core_impl;
-
-extern qu_joystick_impl const qu_null_joystick_impl;
-extern qu_joystick_impl const qu_win32_joystick_impl;
-extern qu_joystick_impl const qu_linux_joystick_impl;
-
-//------------------------------------------------------------------------------
-
 void qu_atexit(void (*callback)(void));
 
-void qu_initialize_core(void);
-void qu_terminate_core(void);
-bool qu_handle_events(void);
-void qu_swap_buffers(void);
-char const *qu_get_graphics_context_name(void);
-void *qu_gl_get_proc_address(char const *name);
-int qu_gl_get_samples(void);
 void qu_enqueue_event(qu_event const *event);
 
 void qu_initialize_text(void);
