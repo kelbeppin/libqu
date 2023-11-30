@@ -23,6 +23,7 @@
 #include "qu_audio.h"
 #include "qu_log.h"
 #include "qu_resource_loader.h"
+#include "qu_util.h"
 
 //------------------------------------------------------------------------------
 
