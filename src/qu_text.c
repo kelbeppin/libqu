@@ -29,6 +29,8 @@
 #include <hb-ft.h>
 #include <stb_ds.h>
 
+#include "qu_fs.h"
+
 //------------------------------------------------------------------------------
 
 #define INITIAL_VERTEX_BUFFER_SIZE  256

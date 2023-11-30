@@ -21,6 +21,7 @@
 #define QU_MODULE "graphics"
 
 #include "qu.h"
+#include "qu_resource_loader.h"
 
 //------------------------------------------------------------------------------
 // qu_graphics.c: Graphics module

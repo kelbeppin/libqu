@@ -20,14 +20,11 @@
 // qu_resource_loader.c: resource loader
 //------------------------------------------------------------------------------
 
-#define QU_MODULE "rl"
-
-//------------------------------------------------------------------------------
-
 #include <stb_image.h>
 #include <vorbis/vorbisfile.h>
 
-#include "qu.h"
+#include "qu_log.h"
+#include "qu_resource_loader.h"
 
 //------------------------------------------------------------------------------
 // Image pseudo-format: stb_image
