@@ -57,6 +57,7 @@
 #include <windows.h>
 #endif
 
+#include "qu_audio.h"
 #include "qu_fs.h"
 #include "qu_graphics.h"
 #include "qu_log.h"
@@ -153,21 +154,6 @@ typedef struct qu_event
     } data;
 } qu_event;
 
-typedef struct qu_audio_buffer
-{
-    int16_t *data;      // sample data
-    size_t samples;     // number of samples
-    intptr_t priv[4];   // implementation-specific data
-} qu_audio_buffer;
-
-typedef struct qu_audio_source
-{
-    int channels;       // number of channels (1 or 2)
-    int sample_rate;    // sample rate (usually 44100)
-    int loop;           // should this source loop (-1 if yes)
-    intptr_t priv[4];   // implementation-specific data
-} qu_audio_source;
-
 //------------------------------------------------------------------------------
 
 typedef struct qu_core_impl
@@ -209,23 +195,6 @@ typedef struct qu_joystick_impl
     float (*get_axis_value)(int id, int axis);
 } qu_joystick_impl;
 
-typedef struct qu_audio_impl
-{
-    qu_result (*check)(void);
-    qu_result (*initialize)(void);
-    void (*terminate)(void);
-
-    void (*set_master_volume)(float volume);
-
-    qu_result (*create_source)(qu_audio_source *source);
-    void (*destroy_source)(qu_audio_source *source);
-    bool (*is_source_used)(qu_audio_source *source);
-    qu_result (*queue_buffer)(qu_audio_source *source, qu_audio_buffer *buffer);
-    int (*get_queued_buffers)(qu_audio_source *source);
-    qu_result (*start_source)(qu_audio_source *source);
-    qu_result (*stop_source)(qu_audio_source *source);
-} qu_audio_impl;
-
 //------------------------------------------------------------------------------
 
 #ifdef __cplusplus
@@ -243,11 +212,6 @@ extern qu_joystick_impl const qu_null_joystick_impl;
 extern qu_joystick_impl const qu_win32_joystick_impl;
 extern qu_joystick_impl const qu_linux_joystick_impl;
 
-extern qu_audio_impl const qu_null_audio_impl;
-extern qu_audio_impl const qu_openal_audio_impl;
-extern qu_audio_impl const qu_xaudio2_audio_impl;
-extern qu_audio_impl const qu_sles_audio_impl;
-
 //------------------------------------------------------------------------------
 
 void qu_atexit(void (*callback)(void));
@@ -263,9 +227,6 @@ void qu_enqueue_event(qu_event const *event);
 
 void qu_initialize_text(void);
 void qu_terminate_text(void);
-
-void qu_initialize_audio(void);
-void qu_terminate_audio(void);
 
 #if defined(ANDROID)
 
