@@ -29,6 +29,14 @@
 
 //------------------------------------------------------------------------------
 
+typedef enum qu_graphics_api
+{
+    QU_GRAPHICS_API_NULL,
+    QU_GRAPHICS_API_GL15,
+    QU_GRAPHICS_API_GL33,
+    QU_GRAPHICS_API_ES20,
+} qu_graphics_api;
+
 typedef struct qu_core_impl
 {
     qu_result (*precheck)(void);

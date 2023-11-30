@@ -103,14 +103,6 @@ typedef enum qu_event_type
     QU_EVENT_TYPE_WINDOW_RESIZE,
 } qu_event_type;
 
-typedef enum qu_graphics_api
-{
-    QU_GRAPHICS_API_NULL,
-    QU_GRAPHICS_API_GL15,
-    QU_GRAPHICS_API_GL33,
-    QU_GRAPHICS_API_ES20,
-} qu_graphics_api;
-
 typedef struct qu_keyboard_event
 {
     qu_key key;
