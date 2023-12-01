@@ -165,7 +165,7 @@ static void key_release_callback(qu_key key)
 static int update(void)
 {
     app.event_flags = 0;
-    app.keyboard_state = *qu_get_keyboard_state();
+    qu_get_keyboard_state(&app.keyboard_state);
 
     return 0;
 }

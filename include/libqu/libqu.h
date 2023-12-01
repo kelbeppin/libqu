@@ -742,9 +742,10 @@ QU_API bool QU_CALL qu_is_window_active(void);
 /**
  * Get current keyboard state.
  * 
- * @return Pointer to a struct that holds keyboard state.
+ * @param state Pointer to qu_keyboard_state struct where keyboard state
+ *              will be stored.
  */
-QU_API qu_keyboard_state const * QU_CALL qu_get_keyboard_state(void);
+QU_API void QU_CALL qu_get_keyboard_state(qu_keyboard_state *state);
 
 /**
  * Get current state of a particular key.

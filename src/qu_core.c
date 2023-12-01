@@ -645,9 +645,9 @@ bool qu_is_window_active(void)
     return priv.window_active;
 }
 
-qu_keyboard_state const *qu_get_keyboard_state(void)
+void qu_get_keyboard_state(qu_keyboard_state *state)
 {
-    return &priv.keyboard;
+    memcpy(state, &priv.keyboard, sizeof(qu_keyboard_state));
 }
 
 qu_key_state qu_get_key_state(qu_key key)
