@@ -532,12 +532,6 @@ typedef struct qu_blend_mode
 } qu_blend_mode;
 
 /**
- * Callback function for the main loop.
- * @return False if the loop should stop, and true otherwise.
- */
-typedef bool (*qu_loop_fn)(void);
-
-/**
  * Update function.
  * @return 0 if the loop should continue running, any other value if not.
  */
