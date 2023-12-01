@@ -24,6 +24,7 @@
 #include <vorbis/vorbisfile.h>
 
 #include "qu_log.h"
+#include "qu_platform.h"
 #include "qu_resource_loader.h"
 
 //------------------------------------------------------------------------------

@@ -38,6 +38,7 @@
 
 #include "qu_core.h"
 #include "qu_log.h"
+#include "qu_platform.h"
 
 //------------------------------------------------------------------------------
 
@@ -565,10 +566,10 @@ static bool process(void)
             });
             break;
         case EnterNotify:
-            qu_enqueue_event(&(qu_event) { QU_EVENT_TYPE_ACTIVATE });
+            qu_enqueue_event(&(qu_event) { .type = QU_EVENT_TYPE_ACTIVATE });
             break;
         case LeaveNotify:
-            qu_enqueue_event(&(qu_event) { QU_EVENT_TYPE_DEACTIVATE });
+            qu_enqueue_event(&(qu_event) { .type = QU_EVENT_TYPE_DEACTIVATE });
             break;
         default:
             QU_LOGD("Unhandled event: 0x%04x\n", event.type);

@@ -20,11 +20,12 @@
 // qu_audio_openal.c: OpenAL-based audio module
 //------------------------------------------------------------------------------
 
-#include "qu_audio.h"
-#include "qu_log.h"
-
 #include <al.h>
 #include <alc.h>
+
+#include "qu_audio.h"
+#include "qu_log.h"
+#include "qu_platform.h"
 
 //------------------------------------------------------------------------------
 

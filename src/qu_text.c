@@ -26,6 +26,7 @@
 #include "qu_fs.h"
 #include "qu_graphics.h"
 #include "qu_log.h"
+#include "qu_platform.h"
 #include "qu_text.h"
 
 //------------------------------------------------------------------------------

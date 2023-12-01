@@ -115,9 +115,9 @@ pl_thread *pl_create_thread(char const *name, intptr_t (*func)(void *), void *ar
     }
 
     if (!name || name[0] == '\0') {
-        strncpy(thread->name, "(unnamed)", THREAD_NAME_LENGTH);
+        strncpy(thread->name, "(unnamed)", THREAD_NAME_LENGTH - 1);
     } else {
-        strncpy(thread->name, name, THREAD_NAME_LENGTH);
+        strncpy(thread->name, name, THREAD_NAME_LENGTH - 1);
     }
 
     thread->func = func;

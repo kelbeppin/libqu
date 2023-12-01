@@ -190,7 +190,7 @@ qu_file *qu_open_file_from_path(char const *path)
     file->source = source;
     file->context = context;
 
-    strncpy(file->name, path, sizeof(file->name));
+    strncpy(file->name, path, sizeof(file->name) - 1);
 
     fs_callbacks[file->source].seek(file->context, 0, SEEK_END);
     file->size = (size_t) fs_callbacks[file->source].tell(file->context);

@@ -458,7 +458,7 @@ static void vertex_format_apply(qu_vertex_format format)
             GLsizei stride = sizeof(float) * desc->stride;
 
             CHECK_GL(glEnableVertexAttribArray(i));
-            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
+            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) (intptr_t) offset));
             offset += sizeof(float) * size;
         } else {
             CHECK_GL(glDisableVertexAttribArray(i));
@@ -502,7 +502,7 @@ static void vao_vertex_format_update(qu_vertex_format format)
             GLsizei size = vertex_attribute_desc[i].size;
             GLsizei stride = sizeof(float) * desc->stride;
 
-            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
+            CHECK_GL(glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) (intptr_t) offset));
             offset += sizeof(float) * size;
         }
     }

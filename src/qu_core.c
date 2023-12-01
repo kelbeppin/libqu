@@ -580,7 +580,7 @@ char const *qu_get_window_title(void)
 void qu_set_window_title(char const *title)
 {
     if (!priv.initialized) {
-        strncpy(priv.params.window_title, title, WINDOW_TITLE_LENGTH);
+        strncpy(priv.params.window_title, title, WINDOW_TITLE_LENGTH - 1);
         return;
     }
 

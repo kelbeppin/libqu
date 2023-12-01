@@ -65,6 +65,7 @@ typedef enum qu_vertex_format
 
 typedef enum qu_brush
 {
+    QU_BRUSH_UNDEFINED = -1,
     QU_BRUSH_SOLID, // single color
     QU_BRUSH_TEXTURED, // textured
     QU_BRUSH_FONT,

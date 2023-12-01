@@ -20,6 +20,13 @@
 // qu.c: Gateway
 //------------------------------------------------------------------------------
 
+#include "qu.h"
+#include "qu_core.h"
+#include "qu_graphics.h"
+#include "qu_platform.h"
+
+//------------------------------------------------------------------------------
+
 #define STB_DS_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 
@@ -29,12 +36,6 @@
 #define STBI_MALLOC(size)               pl_malloc(size)
 #define STBI_REALLOC(ptr, size)         pl_realloc(ptr, size)
 #define STBI_FREE(ptr)                  pl_free(ptr)
-
-//------------------------------------------------------------------------------
-
-#include "qu.h"
-#include "qu_core.h"
-#include "qu_graphics.h"
 
 #include <stb_ds.h>
 #include <stb_image.h>

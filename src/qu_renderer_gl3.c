@@ -655,7 +655,7 @@ static void gl3_upload_vertex_data(qu_vertex_format vertex_format, float const *
             GLsizei size = vertex_attribute_desc[i].size;
             GLsizei stride = sizeof(float) * vertex_format_desc[vertex_format].stride;
 
-            CHECK_GL(ext.glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) offset));
+            CHECK_GL(ext.glVertexAttribPointer(i, size, GL_FLOAT, GL_FALSE, stride, (void *) (intptr_t) offset));
             offset += sizeof(float) * size;
         }
     }
