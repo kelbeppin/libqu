@@ -20,6 +20,10 @@
 // qu.c: Gateway
 //------------------------------------------------------------------------------
 
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
+
 #include "qu.h"
 #include "qu_core.h"
 #include "qu_graphics.h"
@@ -54,6 +58,68 @@ struct gateway_priv
 };
 
 static struct gateway_priv priv;
+
+//------------------------------------------------------------------------------
+// Game Loop
+
+static struct
+{
+    int tick_rate;
+    double frame_duration;
+    double frame_start_time;
+    double frame_lag_time;
+    qu_update_fn update_fn;
+    qu_draw_fn draw_fn;
+} loop_state;
+
+static void init_loop(int tick_rate, qu_update_fn update_fn, qu_draw_fn draw_fn)
+{
+    loop_state.tick_rate = tick_rate;
+    loop_state.frame_duration = 1.0 / tick_rate;
+    loop_state.frame_start_time = 0.0;
+    loop_state.frame_lag_time = 0.0;
+    loop_state.update_fn = update_fn;
+    loop_state.draw_fn = draw_fn;
+}
+
+static int main_loop(void)
+{
+    double current_time = qu_get_time_highp();
+    double elapsed_time = current_time - loop_state.frame_start_time;
+
+    loop_state.frame_start_time = current_time;
+    loop_state.frame_lag_time += elapsed_time;
+
+    int rc = 0;
+
+    while (loop_state.frame_lag_time >= loop_state.frame_duration) {
+        rc = loop_state.update_fn();
+
+        if (rc) {
+            break;
+        }
+
+        loop_state.frame_lag_time -= loop_state.frame_duration;
+    }
+
+    double lag_offset = loop_state.frame_lag_time * loop_state.tick_rate;
+    loop_state.draw_fn(lag_offset);
+
+    return rc;
+}
+
+#if defined(__EMSCRIPTEN__)
+
+static void main_loop_for_emscripten(void *arg)
+{
+    if (qu_process() && main_loop() == 0) {
+        return;
+    }
+
+    emscripten_cancel_main_loop();
+}
+
+#endif
 
 //------------------------------------------------------------------------------
 // Internal API
@@ -103,43 +169,28 @@ bool qu_process(void)
     return qu_handle_events();
 }
 
+int qu_execute_game_loop(int tick_rate, qu_update_fn update_fn, qu_draw_fn draw_fn)
+{
+    init_loop(tick_rate, update_fn, draw_fn);
+
 #if defined(__EMSCRIPTEN__)
-
-#include <emscripten.h>
-
-static void main_loop(void *arg)
-{
-    if (qu_process()) {
-        qu_loop_fn loop_fn = (qu_loop_fn) arg;
-        loop_fn();
-    } else {
-        qu_terminate();
-        emscripten_cancel_main_loop();
-    }
-}
-
-void qu_execute(qu_loop_fn loop_fn)
-{
-    emscripten_set_main_loop_arg(main_loop, loop_fn, 0, 1);
-    exit(EXIT_SUCCESS);
-}
-
+    emscripten_set_main_loop_arg(main_loop_for_emscripten, NULL, 0, 1);
 #else
+    while (qu_process()) {
+        int rc = main_loop();
 
-void qu_execute(qu_loop_fn loop_fn)
-{
-    while (qu_process() && loop_fn()) {
-        // Intentionally left blank
+        if (rc) {
+            return rc;
+        }
     }
-
-    qu_terminate();
-    exit(EXIT_SUCCESS);
-}
-
 #endif
+
+    return 0;
+}
 
 void qu_present(void)
 {
     qu_flush_graphics();
     qu_swap_buffers();
 }
+

@@ -17,15 +17,15 @@
 //    misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
 //------------------------------------------------------------------------------
-
-#include "qu_core.h"
-#include "qu_log.h"
+// qu_core_emscripten.c: Emscripten core module
+//------------------------------------------------------------------------------
 
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-//------------------------------------------------------------------------------
-// qu_core_emscripten.c: Emscripten core module
+#include "qu_core.h"
+#include "qu_log.h"
+
 //------------------------------------------------------------------------------
 
 #define CHECK_EMSCRIPTEN(call, error) \
@@ -572,3 +572,4 @@ qu_core_impl const qu_emscripten_core_impl = {
     .get_window_aa_level = get_window_aa_level,
     .set_window_aa_level = set_window_aa_level,
 };
+

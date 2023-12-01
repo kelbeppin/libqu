@@ -538,6 +538,17 @@ typedef struct qu_blend_mode
 typedef bool (*qu_loop_fn)(void);
 
 /**
+ * Update function.
+ * @return 0 if the loop should continue running, any other value if not.
+ */
+typedef int (*qu_update_fn)(void);
+
+/**
+ * Draw function.
+ */
+typedef void (*qu_draw_fn)(double lag_offset);
+
+/**
  * Keyboard event callback.
  */
 typedef void (*qu_key_fn)(qu_key key);
@@ -613,9 +624,13 @@ QU_API bool QU_CALL qu_process(void);
  * platforms.
  * This function does not return.
  * 
- * @param loop_fn Callback function that will be called every frame.
+ * @param tick_rate How many times per second update function should be called.
+ * @param update_fn Update function, which will be called tick_rate
+ *                  times per second (or at least there will be an attempt
+ *                  to do so).
+ * @param draw_fn Draw function, which will be called every frame.
  */
-QU_API QU_NO_RET void QU_CALL qu_execute(qu_loop_fn loop_fn);
+QU_API int QU_CALL qu_execute_game_loop(int tick_rate, qu_update_fn update_fn, qu_draw_fn draw_fn);
 
 /**
  * Swap buffers.
