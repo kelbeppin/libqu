@@ -371,6 +371,7 @@ int main(int argc, char *argv[])
     qu_set_canvas_flags(QU_CANVAS_SMOOTH);
 
     qu_initialize();
+    atexit(qu_terminate);
 
     app.duck_texture = qu_load_texture("assets/duck.png");
 
@@ -388,7 +389,11 @@ int main(int argc, char *argv[])
     qu_on_mouse_button_pressed(mouse_button_press_callback);
     qu_on_mouse_button_released(mouse_button_release_callback);
 
-    qu_execute(loop);
+    while (qu_process()) {
+        if (!loop()) {
+            break;
+        }
+    }
 
     return 0;
 }

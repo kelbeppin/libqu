@@ -5,9 +5,6 @@
 
 //------------------------------------------------------------------------------
 
-#define TICK_RATE               (10)
-#define FRAME_DURATION          (1.0 / TICK_RATE)
-
 #define PRESS_EVENT_FLAG        (1 << 0)
 #define REPEAT_EVENT_FLAG       (1 << 1)
 #define RELEASE_EVENT_FLAG      (1 << 2)
@@ -126,9 +123,6 @@ static char const *key_names[] = {
 
 struct app
 {
-    double frame_start_time;
-    double frame_lag;
-
     qu_font font12;
     qu_font font16;
     qu_font font18;
@@ -168,13 +162,15 @@ static void key_release_callback(qu_key key)
 
 //------------------------------------------------------------------------------
 
-static void update(void)
+static int update(void)
 {
     app.event_flags = 0;
     app.keyboard_state = *qu_get_keyboard_state();
+
+    return 0;
 }
 
-static void draw(float lag_offset)
+static void draw(double lag_offset)
 {
     qu_clear(QU_COLOR(0, 0, 0));
 
@@ -204,24 +200,6 @@ static void draw(float lag_offset)
     qu_present();
 }
 
-static bool loop(void)
-{
-    double current_time = qu_get_time_highp();
-    double elapsed_time = current_time - app.frame_start_time;
-
-    app.frame_start_time = current_time;
-    app.frame_lag += elapsed_time;
-
-    while (app.frame_lag >= FRAME_DURATION) {
-        update();
-        app.frame_lag -= FRAME_DURATION;
-    }
-
-    draw((float) app.frame_lag * TICK_RATE);
-
-    return true;
-}
-
 //------------------------------------------------------------------------------
 
 int main(int argc, char *argv[])
@@ -244,5 +222,6 @@ int main(int argc, char *argv[])
     qu_on_key_repeated(key_repeat_callback);
     qu_on_key_released(key_release_callback); 
 
-    qu_execute(loop);
+    return qu_execute_game_loop(10, update, draw);
 }
+

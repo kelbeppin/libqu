@@ -6,11 +6,6 @@
 #include <stdio.h>
 
 //------------------------------------------------------------------------------
-// Forward declarations
-
-static void exit_loop(void);
-
-//------------------------------------------------------------------------------
 // Application
 
 enum
@@ -112,7 +107,7 @@ static void app_initialize(void)
     app.dx_camera = 8.f;
 }
 
-static void app_update(void)
+static int app_update(void)
 {
     qu_date_time date_time = qu_get_date_time();
 
@@ -123,6 +118,8 @@ static void app_update(void)
     format_date(app.message, sizeof(app.message) - 1, &date_time);
 
     app.x_camera += app.dx_camera;
+
+    return 0;
 }
 
 static void draw_clock(int hours, int minutes, int seconds)
@@ -142,21 +139,22 @@ static void draw_clock(int hours, int minutes, int seconds)
     qu_vec2f hm_box = qu_calculate_text_box(hm_font, hm_buf);
     qu_vec2f s_box = qu_calculate_text_box(s_font, s_buf);
 
-    float x = 240.f / 2.f - (hm_box.x + s_box.x) / 2.f;
+    float hm_x = 110.f - hm_box.x / 2.f;
     float hm_y = 100.f;
+    float s_x = 110.f + hm_box.x / 2.f;
     float s_y = 110.f;
 
-    qu_draw_text_fmt(hm_font, x + 2.f, hm_y + 2.f, shadow, hm_buf);
-    qu_draw_text_fmt(hm_font, x, hm_y, color, hm_buf);
+    qu_draw_text_fmt(hm_font, hm_x + 2.f, hm_y + 2.f, shadow, hm_buf);
+    qu_draw_text_fmt(hm_font, hm_x, hm_y, color, hm_buf);
 
-    qu_draw_text_fmt(s_font, x + hm_box.x + 2.f, s_y + 2.f, shadow, s_buf);
-    qu_draw_text_fmt(s_font, x + hm_box.x, s_y, color, s_buf);
+    qu_draw_text_fmt(s_font, s_x + 2.f, s_y + 2.f, shadow, s_buf);
+    qu_draw_text_fmt(s_font, s_x, s_y, color, s_buf);
 
     qu_draw_text(app.fonts[FONT_ROMULUS16], 9.f, 141.f, QU_COLOR(0, 0, 0), app.message);
     qu_draw_text(app.fonts[FONT_ROMULUS16], 8.f, 140.f, QU_COLOR(210, 199, 234), app.message);
 }
 
-static void app_draw(float lagOffset)
+static void app_draw(double lagOffset)
 {
     qu_clear(0xff800080);
 
@@ -184,70 +182,6 @@ static void app_draw(float lagOffset)
 }
 
 //------------------------------------------------------------------------------
-// Loop [TODO: integrate into libquack]
-
-struct loop
-{
-    bool running;
-
-    int tick_rate;
-    double frame_duration;
-
-    double frame_start_time;
-    double frame_lag_time;
-
-    void (*update_callback)(void);
-    void (*draw_callback)(float);
-};
-
-static struct loop loop;
-
-static bool loop_callback(void)
-{
-    if (!loop.running) {
-        return false;
-    }
-
-    double currentTime = qu_get_time_highp();
-    double elapsedTime = currentTime - loop.frame_start_time;
-
-    loop.frame_start_time = currentTime;
-    loop.frame_lag_time += elapsedTime;
-
-    while (loop.frame_lag_time >= loop.frame_duration) {
-        loop.update_callback();
-        loop.frame_lag_time -= loop.frame_duration;
-    }
-
-    loop.draw_callback((float) loop.frame_lag_time * loop.tick_rate);
-
-    return true;
-}
-
-static int execute_loop(int tickRate, void (*updateCallback)(void), void (*drawCallback)(float))
-{
-    loop.running = true;
-
-    loop.tick_rate = tickRate;
-    loop.frame_duration = 1.0 / tickRate;
-
-    loop.frame_start_time = 0.0;
-    loop.frame_lag_time = 0.0;
-
-    loop.update_callback = updateCallback;
-    loop.draw_callback = drawCallback;
-
-    qu_execute(loop_callback);
-
-    return 0;
-}
-
-static void exit_loop(void)
-{
-    loop.running = false;
-}
-
-//------------------------------------------------------------------------------
 
 int main(int argc, char *argv[])
 {
@@ -258,8 +192,9 @@ int main(int argc, char *argv[])
     qu_set_canvas_size(240, 160);
 
     qu_initialize();
+    atexit(qu_terminate);
 
     app_initialize();
 
-    return execute_loop(10, app_update, app_draw);
+    return qu_execute_game_loop(10, app_update, app_draw);
 }

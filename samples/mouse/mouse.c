@@ -5,16 +5,12 @@
 
 //------------------------------------------------------------------------------
 
-#define TICK_RATE               (10)
-#define FRAME_DURATION          (1.0 / TICK_RATE)
 #define MAX_CIRCLES             (8)
 
 //------------------------------------------------------------------------------
 
 struct app
 {
-    double frame_start_time;
-    double frame_lag;
     bool enable_crosshair;
     float background_brightness;
 };
@@ -71,7 +67,7 @@ static void mouse_wheel_scroll_callback(int x_delta, int y_delta)
 
 //------------------------------------------------------------------------------
 
-static void update(void)
+static int update(void)
 {
     for (int i = 0; i < MAX_CIRCLES; i++) {
         if (circles.radius[i] < 0.f) {
@@ -80,9 +76,11 @@ static void update(void)
 
         circles.radius[i] += circles.d_radius[i];
     }
+
+    return 0;
 }
 
-static void draw(float lag_offset)
+static void draw(double lag_offset)
 {
     int red = 0;
     int green = 160 * app.background_brightness;
@@ -115,24 +113,6 @@ static void draw(float lag_offset)
     qu_present();
 }
 
-static bool loop(void)
-{
-    double current_time = qu_get_time_highp();
-    double elapsed_time = current_time - app.frame_start_time;
-
-    app.frame_start_time = current_time;
-    app.frame_lag += elapsed_time;
-
-    while (app.frame_lag >= FRAME_DURATION) {
-        update();
-        app.frame_lag -= FRAME_DURATION;
-    }
-
-    draw((float) app.frame_lag * TICK_RATE);
-
-    return true;
-}
-
 //------------------------------------------------------------------------------
 
 int main(int argc, char *argv[])
@@ -147,5 +127,5 @@ int main(int argc, char *argv[])
     qu_on_mouse_button_released(mouse_button_release_callback);
     qu_on_mouse_wheel_scrolled(mouse_wheel_scroll_callback);
 
-    qu_execute(loop);
+    return qu_execute_game_loop(10, update, draw);
 }
