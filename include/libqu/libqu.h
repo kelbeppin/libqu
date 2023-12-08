@@ -444,6 +444,14 @@ typedef struct qu_vec2i
 } qu_vec2i;
 
 /**
+ * Image handle.
+ */
+typedef struct qu_image
+{
+    int32_t id;                 /*!< Identifier */
+} qu_image;
+
+/**
  * Texture handle.
  */
 typedef struct qu_texture
@@ -1249,9 +1257,67 @@ QU_API void QU_CALL qu_draw_circle(float x, float y, float radius,
 /**@}*/
 
 /**
+ * @name Images.
+ * @{
+ */
+
+/**
+ * Create image object.
+ */
+QU_API qu_image QU_CALL qu_create_image(int width, int height, int channels);
+
+/**
+ * Load image object from file.
+ */
+QU_API qu_image QU_CALL qu_load_image(char const *path, int channels);
+
+/**
+ * Load image object from memory buffer.
+ */
+QU_API qu_image QU_CALL qu_load_image_from_memory(void *buffer, size_t size, int channels);
+
+/**
+ * Destroy image object.
+ */
+QU_API void QU_CALL qu_destroy_image(qu_image image);
+
+/**
+ * Get the size of an image.
+ */
+QU_API qu_vec2i QU_CALL qu_get_image_size(qu_image image);
+
+/**
+ * Get the number of channels of an image.
+ */
+QU_API int QU_CALL qu_get_image_channels(qu_image image);
+
+/**
+ * Access pixels of an image. Size of returned buffer doesn't
+ * exceed width * height * channels bytes.
+ */
+QU_API unsigned char * QU_CALL qu_get_image_pixels(qu_image);
+
+/**
+ * Fill the whole image with a single value.
+ */
+QU_API void QU_CALL qu_fill_image(qu_image image, uint32_t value);
+
+/**@}*/
+
+/**
  * @name Textures.
  * @{
  */
+
+/**
+ * Create empty texture. Usable with qu_update_texture().
+ */
+QU_API qu_texture QU_CALL qu_create_texture(int width, int height, int channels);
+
+/**
+ * Create texture from image.
+ */
+QU_API qu_texture QU_CALL qu_create_texture_from_image(qu_image image);
 
 /**
  * Load texture from given path.
@@ -1262,6 +1328,11 @@ QU_API qu_texture QU_CALL qu_load_texture(char const *path);
  * Delete texture.
  */
 QU_API void QU_CALL qu_delete_texture(qu_texture texture);
+
+/**
+ * Update texture with an image.
+ */
+QU_API void QU_CALL qu_update_texture(qu_texture texture, qu_image image);
 
 /**
  * Enable or disable texture smoothing.

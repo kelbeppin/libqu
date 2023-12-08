@@ -1214,6 +1214,36 @@ qu_texture qu_create_texture(int width, int height, int channels)
     };
 }
 
+qu_texture qu_create_texture_from_image(qu_image image)
+{
+    qu_vec2i size = qu_get_image_size(image);
+    int channels = qu_get_image_channels(image);
+    unsigned char *pixels = qu_get_image_pixels(image);
+
+    if (size.x == -1 || size.y == -1 || channels == -1 || !pixels) {
+        return (qu_texture) { .id = 0 };
+    }
+
+    qu_texture_obj texture = {
+        .width = size.x,
+        .height = size.y,
+        .channels = channels,
+        .pixels = pl_malloc(size.x * size.y * channels),
+    };
+
+    if (!texture.pixels) {
+        return (qu_texture) { .id = 0 };
+    }
+
+    memcpy(texture.pixels, pixels, size.x * size.y * channels);
+
+    priv.renderer->load_texture(&texture);
+
+    return (qu_texture) {
+        .id = qu_handle_list_add(priv.textures, &texture),
+    };
+}
+
 qu_texture qu_load_texture(char const *path)
 {
     qu_file *file = qu_open_file_from_path(path);
@@ -1276,7 +1306,31 @@ void qu_set_texture_smooth(qu_texture texture, bool smooth)
     priv.renderer->set_texture_smooth(texture_p, smooth);
 }
 
-void qu_update_texture(qu_texture texture, int x, int y, int w, int h, uint8_t const *pixels)
+void qu_update_texture(qu_texture handle, qu_image image)
+{
+    qu_texture_obj *texture = qu_handle_list_get(priv.textures, handle.id);
+
+    if (!texture) {
+        return;
+    }
+
+    qu_vec2i img_size = qu_get_image_size(image);
+
+    if (texture->width != img_size.x || texture->height != img_size.y) {
+        return;
+    }
+    
+    int img_channels = qu_get_image_channels(image);
+
+    if (texture->channels != img_channels) {
+        return;
+    }
+
+    memcpy(texture->pixels, qu_get_image_pixels(image), texture->width * texture->height * texture->channels);
+    priv.renderer->load_texture(texture);
+}
+
+void qu_update_texture_ex(qu_texture texture, int x, int y, int w, int h, uint8_t const *pixels)
 {
     qu_texture_obj *texture_p = qu_handle_list_get(priv.textures, texture.id);
 

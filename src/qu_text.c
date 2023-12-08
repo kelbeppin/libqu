@@ -309,7 +309,7 @@ static struct glyph *cache_glyph(struct font *font, unsigned long codepoint, flo
     unsigned char *bitmap16 = conv_8bit_to_16bit(bitmap8, bitmap_w, bitmap_h);
 
     // Update on-VRAM texture portion.
-    qu_update_texture(atlas->texture, atlas->cursor_x, atlas->cursor_y,
+    qu_update_texture_ex(atlas->texture, atlas->cursor_x, atlas->cursor_y,
         bitmap_w, bitmap_h, bitmap16);
 
     pl_free(bitmap16);

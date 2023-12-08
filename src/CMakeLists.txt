@@ -9,6 +9,7 @@ add_library(${PROJECT_NAME}
     qu_core.c
     qu_fs.c
     qu_graphics.c
+    qu_image.c
     qu_joystick_null.c
     qu_log.c
     qu_math.c
